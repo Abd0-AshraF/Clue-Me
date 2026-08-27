@@ -68,44 +68,37 @@ html.cm-v20.cm-float-dragging body {
   overflow: visible;
 }
 
-/* Dragging affordance on the log header — the modern pointer-events recipe:
-   touch-action/user-select/touch-callout all disabled on the grip. */
-.cm-v20 .cm-side-row > .cm-dock .cm-dock-head,
-.cm-v20 .cm-side-row > .cm-dock .cm-dock-head * {
+/* Dragging affordance on the floating log window — whole surface is draggable like an Android floating window. */
+.cm-v20 .cm-dock,
+.cm-v20 .cm-dock *,
+.cm-v20 .cm-side-row > .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock * {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
 
+.cm-v20 .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
   cursor: grab;
-}
-
-.cm-v20 .cm-side-row > .cm-dock .cm-dock-head::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 0.55rem;
-  height: 1.15rem;
-  margin-inline-end: 0.15rem;
-  background-image: radial-gradient(currentColor 1px, transparent 1.4px);
-  background-size: 0.55rem 0.38rem;
-  background-repeat: repeat-y;
-  opacity: 0.45;
 }
 
 /* While dragging: lifted look, zero transition. */
 .cm-v20 .cm-dock.cm-dock-dragging {
   transition: none !important;
   box-shadow:
-    0 6px 20px rgb(0 0 0 / 28%),
-    0 26px 60px rgb(0 0 0 / 42%) !important;
-  cursor: grabbing;
+    0 16px 44px rgb(0 0 0 / 40%),
+    0 4px 16px rgb(0 0 0 / 26%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  cursor: grabbing !important;
   opacity: 1;
 }
 
-.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-head {
-  cursor: grabbing;
+.cm-v20 .cm-dock.cm-dock-dragging,
+.cm-v20 .cm-dock.cm-dock-dragging * {
+  cursor: grabbing !important;
 }
 
 /* Diagnosed room errors (game-room-v20.js replaces the generic message). */
@@ -705,44 +698,76 @@ html.cm-v20.mani-dark {
 /* ---------------------------------------------------------------------------
    4. Floating event log (all sizes) + floating toggle button (from JS).
    ------------------------------------------------------------------------- */
+.cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
   position: fixed;
   inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
   inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
   z-index: 46;
   display: flex !important; /* re-enable on ≤360px where base hid it */
-  width: min(88vw, 19rem);
-  height: min(46dvh, 22rem);
-  min-height: 7.5rem;
+  flex-direction: column;
+  width: min(90vw, 20.5rem);
+  max-width: calc(100vw - 12px);
+  height: min(48dvh, 23rem);
+  max-height: calc(100dvh - 12px);
+  min-height: 8rem;
+  box-sizing: border-box;
   flex: none;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--cm-surface) 52%, transparent) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 45%, rgba(255, 255, 255, 0.22));
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(12px);
+  transform: translateY(12px) scale(0.97);
   transform-origin: 0 100%;
   transition:
     opacity 0.18s ease,
     transform 0.2s var(--cm-ease),
     visibility 0.2s;
   box-shadow:
-    0 4px 16px rgb(0 0 0 / 22%),
-    0 18px 48px rgb(0 0 0 / 34%);
+    0 12px 36px rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   will-change: transform, opacity;
 }
 
+[dir="ltr"] .cm-v20 .cm-dock,
 [dir="ltr"] .cm-v20 .cm-side-row > .cm-dock {
   transform-origin: 100% 100%;
 }
 
-.cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
-  height: min(72dvh, 32rem);
+.cm-v20 .cm-dock-android-handle {
+  width: 36px;
+  height: 4px;
+  margin: 7px auto 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-ink) 26%, transparent);
+  flex: 0 0 auto;
+  pointer-events: none;
+  transition: background-color 0.15s ease, width 0.15s ease;
 }
 
+.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle {
+  background: var(--cm-blue);
+  width: 44px;
+}
+
+.cm-v20 .cm-dock.cm-dock-tall,
+.cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
+  height: min(74dvh, 33rem);
+}
+
+.cm-v20 .cm-dock.cm-dock-collapsed,
 .cm-v20 .cm-side-row > .cm-dock.cm-dock-collapsed {
   height: auto;
   min-height: 0;
 }
 
+.cm-v20.cm-log-open .cm-dock,
 .cm-v20.cm-log-open .cm-side-row > .cm-dock {
   opacity: 1;
   visibility: visible;
@@ -750,13 +775,143 @@ html.cm-v20.mani-dark {
   transform: translateY(0) scale(1);
 }
 
+.cm-v20 .cm-dock .cm-dock-head,
 .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
-  padding: 0.45rem 0.5rem 0.45rem 0.55rem;
-  border-bottom: 1px solid var(--cm-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0.65rem 0.45rem;
+  background: color-mix(in srgb, var(--cm-surface) 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--cm-border) 45%, transparent);
 }
 
-.cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev {
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list,
+.cm-v20 .cm-dock .cm-dock-list {
+  background: transparent !important;
+}
+
+.cm-v20 .cm-dock-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.cm-v20 .cm-dock-size-toggle {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--cm-border) 70%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cm-surface-soft) 85%, transparent);
+  color: var(--cm-ink-soft);
+  cursor: pointer;
+  touch-action: manipulation !important;
+  transition: all 0.15s ease;
+}
+
+.cm-v20 .cm-dock-size-toggle:hover {
+  color: var(--cm-ink);
+  background: color-mix(in srgb, var(--cm-blue) 15%, var(--cm-surface));
+  border-color: var(--cm-blue);
+}
+
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev,
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev {
   max-width: none;
+  background: color-mix(in srgb, var(--cm-surface) 86%, transparent) !important;
+  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 75%, transparent) !important;
+  border-radius: 12px;
+  padding: 0.42rem 0.55rem;
+  margin-bottom: 0.28rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  color: var(--cm-ink) !important;
+  font-weight: 600;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-red {
+  background: color-mix(in srgb, var(--cm-red-brand) 14%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-red-brand) 65%, transparent) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--cm-red-brand) 20%, transparent);
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-blue {
+  background: color-mix(in srgb, var(--cm-blue-brand) 14%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-blue-brand) 65%, transparent) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--cm-blue-brand) 20%, transparent);
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-positive {
+  background: color-mix(in srgb, var(--cm-success) 16%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-success) 70%, transparent) !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-danger {
+  background: color-mix(in srgb, var(--cm-card-assassin) 18%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-card-assassin) 70%, transparent) !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body {
+  color: var(--cm-ink) !important;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink {
+  color: var(--cm-ink) !important;
+  font-weight: 800 !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft {
+  color: var(--cm-ink) !important;
+  opacity: 0.9 !important;
+  font-weight: 600 !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-time {
+  color: var(--cm-ink) !important;
+  opacity: 0.8 !important;
+  font-weight: 700 !important;
+  font-size: 0.68rem !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 8px;
+  background: var(--cm-surface-soft) !important;
+  color: var(--cm-ink) !important;
+  border: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-red .cm-ev-icon {
+  background: var(--cm-red-brand) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-blue .cm-ev-icon {
+  background: var(--cm-blue-brand) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list .cm-dock-empty {
+  color: var(--cm-ink) !important;
+  font-weight: 700 !important;
+  opacity: 0.9;
+  text-align: center;
+  padding: 1rem;
 }
 
 /* The floating toggle button (created by game-room-v20.js on <body>). */
@@ -2761,12 +2916,17 @@ html.cm-v20.cm-min-effects .cm-petals i {
 }
 
 .cm-v20 .cm-game-shell > main {
-  width: min(100%, 96rem);
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   max-height: 100%;
   margin-inline: auto;
   padding-block-end: max(0.35rem, env(safe-area-inset-bottom));
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
 }
 
 .cm-v20 .cm-board-row,
@@ -2787,6 +2947,11 @@ html.cm-v20.cm-min-effects .cm-petals i {
   max-width: var(--cm-stage-fit-width);
   margin-inline: auto;
   align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width,

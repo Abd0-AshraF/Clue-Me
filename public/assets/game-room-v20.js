@@ -2760,14 +2760,15 @@
   var lastLinkedFloatDock = null;
 
   function clampToViewport(left, top, w, h) {
-    var headerEl = document.querySelector(".cm-game-page > header");
-    var minX = 4;
-    var minY = headerEl ? headerEl.getBoundingClientRect().bottom + 4 : 4;
-    var maxX = window.innerWidth - w - 4;
-    var maxY = window.innerHeight - 36;
+    var winW = window.innerWidth || document.documentElement.clientWidth || 360;
+    var winH = window.innerHeight || document.documentElement.clientHeight || 600;
+    var minX = 6;
+    var minY = 6;
+    var maxX = Math.max(minX, winW - (w || 48) - 6);
+    var maxY = Math.max(minY, winH - (h || 48) - 6);
     return {
-      left: Math.min(Math.max(left, minX), Math.max(minX, maxX)),
-      top: Math.min(Math.max(top, minY), Math.max(minY, maxY))
+      left: Math.min(Math.max(left, minX), maxX),
+      top: Math.min(Math.max(top, minY), maxY)
     };
   }
 
@@ -3147,8 +3148,11 @@
       }
       var stepDx = x - state.lastX;
       var stepDy = y - state.lastY;
-      state.lastV = { left: x - state.gx, top: y - state.gy };
-      applyAt(state.lastV.left, state.lastV.top, state.base);
+      var rawLeft = x - state.gx;
+      var rawTop = y - state.gy;
+      var clamped = clampToViewport(rawLeft, rawTop, state.baseW, state.baseH);
+      state.lastV = clamped;
+      applyAt(clamped.left, clamped.top, state.base);
       emitTrail(el, stepDx, stepDy);
       state.lastX = x;
       state.lastY = y;
@@ -3428,6 +3432,48 @@
       return;
     }
 
+    /* When the floating dock is open, clamp the dock itself strictly to the screen */
+    if (open && dock) {
+      var dockRect = dock.getBoundingClientRect();
+      var dockCurrent = readTranslate(dock);
+      var dockBase = {
+        left: dockRect.left - dockCurrent.x,
+        top: dockRect.top - dockCurrent.y,
+        width: dockRect.width || 320,
+        height: dockRect.height || 260
+      };
+      var targetDock;
+      if (saved && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
+        targetDock = clampToViewport(
+          dockBase.left + saved.tx,
+          dockBase.top + saved.ty,
+          dockBase.width,
+          dockBase.height
+        );
+      } else if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+        targetDock = clampToViewport(
+          saved.x * window.innerWidth,
+          saved.y * window.innerHeight,
+          dockBase.width,
+          dockBase.height
+        );
+      } else {
+        targetDock = clampToViewport(
+          dockBase.left,
+          dockBase.top,
+          dockBase.width,
+          dockBase.height
+        );
+      }
+      var dTx = targetDock.left - dockBase.left;
+      var dTy = targetDock.top - dockBase.top;
+      dock.style.transform = 'translate3d(' + dTx + 'px,' + dTy + 'px,0)';
+      fab.style.transform = dock.style.transform;
+      lastLinkedFloatSignature = signature;
+      lastLinkedFloatDock = dock;
+      return;
+    }
+
     /* While the hybrid drawer is open the FAB is intentionally hidden and its
        rect is 0 × 0. Keep the stored v2 offset verbatim so a React redraw of
        the dock cannot corrupt its position from a zero-sized measurement. */
@@ -3552,7 +3598,39 @@
   function ensureDockCloseButton(dock, head) {
     if (!dock || !head) return;
     disableDockCollapse(dock, head);
-    var close = head.querySelector('.cm-dock-close');
+
+    /* Android Floating Window top handle */
+    if (!dock.querySelector('.cm-dock-android-handle')) {
+      var handle = document.createElement('div');
+      handle.className = 'cm-dock-android-handle';
+      handle.setAttribute('aria-hidden', 'true');
+      dock.insertBefore(handle, dock.firstChild);
+    }
+
+    var controls = head.querySelector('.cm-dock-controls');
+    if (!controls) {
+      controls = document.createElement('div');
+      controls.className = 'cm-dock-controls';
+      head.appendChild(controls);
+    }
+
+    var sizeToggle = controls.querySelector('.cm-dock-size-toggle');
+    if (!sizeToggle) {
+      sizeToggle = document.createElement('button');
+      sizeToggle.type = 'button';
+      sizeToggle.className = 'cm-dock-size-toggle';
+      sizeToggle.setAttribute('aria-label', (html.getAttribute('lang') || 'ar').startsWith('en') ? 'Toggle size' : 'تكبير / تصغير');
+      sizeToggle.title = (html.getAttribute('lang') || 'ar').startsWith('en') ? 'Toggle size' : 'تكبير / تصغير';
+      sizeToggle.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+      sizeToggle.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        dock.classList.toggle('cm-dock-tall');
+      });
+      controls.appendChild(sizeToggle);
+    }
+
+    var close = controls.querySelector('.cm-dock-close');
     if (!close) {
       close = document.createElement('button');
       close.type = 'button';
@@ -3574,7 +3652,7 @@
           height: rect.height
         });
       });
-      head.appendChild(close);
+      controls.appendChild(close);
     } else {
       close.setAttribute('aria-label', t('close'));
       close.title = t('close');
@@ -3583,7 +3661,9 @@
 
   function persistFabTransformOffset() {
     try {
-      var offset = readTranslate(fab);
+      var dock = linkedDock();
+      var source = (open && dock) ? dock : fab;
+      var offset = readTranslate(source);
       localStorage.setItem(FAB_POS_KEY, JSON.stringify({
         v: 2,
         tx: offset.x,
@@ -3597,22 +3677,22 @@
     var head = dock && dock.querySelector('.cm-dock-head');
     if (!head) return;
     ensureDockCloseButton(dock, head);
-    if (dock.__cmDragHead === head) {
+    if (dock.__cmDragDock === dock) {
       if (!isFloatDragging()) applyLinkedSavedTransform();
       return;
     }
 
     dock.dataset.cmDrag = '1';
-    dock.__cmDragHead = head;
+    dock.__cmDragDock = dock;
     dockDragCtl = makeDraggable({
-      grip: head,
+      grip: dock,
       el: dock,
       storageKey: FAB_POS_KEY,
       resettable: true,
-      /* × is a normal button. The rest of the bar, including the title, is
-         the drag surface; a tap deliberately does nothing (no collapse). */
+      /* Interactive controls work normally, while anywhere on the dock surface drags the window */
       ignoreDragTarget: function (target) {
-        return !!(target && target.closest && target.closest('.cm-dock-close'));
+        if (!target || !target.closest) return false;
+        return !!target.closest('.cm-dock-close, .cm-dock-size-toggle, .cm-dock-size, input, select, textarea, a');
       },
       onTap: function () {},
       onStart: function () {
@@ -3624,8 +3704,6 @@
         dock.style.willChange = 'transform';
       },
       onMove: function () {
-        /* The comet/drag effect belongs only to the closed FAB, never to the
-           open drawer header. */
         mirrorFloatTransform(dock);
       },
       onEnd: function () {
@@ -4271,19 +4349,19 @@
     var availableWidth =
       mode === 'desktop' || sideTeamsActive
         ? Math.max(360, (mainRect.width || box.width) - rosterWidth * 2 - gap * 2)
-        : Math.max(220, Math.min(mainRect.width || box.width, box.width - 10));
+        : Math.max(220, Math.min(mainRect.width || box.width, box.width - 8));
     var stageMax =
-      mode === 'desktop' ? Math.min(availableWidth, clamp(box.width * 0.72, 640, 1120)) :
-      mode === 'tablet' ? clamp(box.width * 0.9, 460, 820) :
-      mode === 'phone-landscape' ? clamp(box.width * 0.84, 260, 560) :
-      Math.max(220, Math.min(mainRect.width || box.width, box.width - 12));
+      mode === 'desktop' ? Math.min(availableWidth, Math.max(720, box.width * 0.92)) :
+      mode === 'tablet' ? Math.min(availableWidth, Math.max(500, box.width * 0.96)) :
+      mode === 'phone-landscape' ? Math.min(availableWidth, Math.max(300, box.width * 0.95)) :
+      availableWidth;
     var boardFitMaxWidth = Math.floor(Math.min(stageMax, availableWidth));
-    var boardWidth = Math.min(stageMax, availableWidth, boardHeight * (4 / 3));
+    var boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
     var desiredMinBoard = mode === 'desktop' ? 620 : mode === 'tablet' ? 380 : mode === 'phone-landscape' ? 270 : 290;
     if (boardWidth < desiredMinBoard) {
       sideTarget = Math.max(sideMin, sideTarget - (desiredMinBoard - boardWidth) * 0.72);
       boardHeight = Math.max(120, usableHeight - sideTarget);
-      boardWidth = Math.min(stageMax, availableWidth, boardHeight * (4 / 3));
+      boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
     }
     boardWidth = Math.max(210, Math.floor(boardWidth));
     sideTarget = Math.max(sideMin, Math.floor(sideTarget));
