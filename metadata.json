@@ -1,0 +1,8 @@
+{
+  "name": "Clue Me",
+  "description": "Arabic & English word-guessing game (Codenames style) with real-time multiplayer, game rooms, timer, clues, and team turns.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Clue Me — كلمة واحدة… تصنع الفوز. لعبة تخمين كلمات متعددة اللاعبين مصمّمة للعربية أولاً."
+    />
+    <!-- SOCIAL_META_START -->
+    <meta name="theme-color" content="#B83A3A" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="https://clueme.wisp.uno/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Clue Me" />
+    <meta property="og:locale" content="ar_EG" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="Clue Me — كلمة واحدة… تصنع الفوز" />
+    <meta property="og:description" content="لعبة تخمين كلمات عربية جماعية للأصدقاء — أنشئ غرفة وابدأ اللعب مباشرة." />
+    <meta property="og:url" content="https://clueme.wisp.uno/" />
+    <meta property="og:image" content="https://clueme.wisp.uno/discord-embed-v1.png" />
+    <meta property="og:image:secure_url" content="https://clueme.wisp.uno/discord-embed-v1.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Clue Me — Arabic-first multiplayer word game" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Clue Me — كلمة واحدة… تصنع الفوز" />
+    <meta name="twitter:description" content="لعبة تخمين كلمات عربية جماعية للأصدقاء." />
+    <meta name="twitter:image" content="https://clueme.wisp.uno/discord-embed-v1.png" />
+    <!-- SOCIAL_META_END -->
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Clue Me — كلمة واحدة… تصنع الفوز</title>
+    <style>
+      html, body, #root { min-height: 100%; }
+      html.cm-discord-activity, html.cm-discord-activity body, html.cm-discord-activity #root {
+        height: 100%;
+        min-height: 100%;
+        background: #17131a;
+      }
+      html.cm-discord-activity body {
+        margin: 0;
+      }
+      html.cm-discord-activity .min-h-dvh {
+        min-height: 100vh !important;
+      }
+      html.cm-discord-activity #root > div {
+        min-height: 100%;
+      }
+      html.cm-discord-activity .cm-game-page,
+      html.cm-discord-activity .cm-game-shell {
+        min-height: 100%;
+        height: 100%;
+      }
+    </style>
+    <!-- Apply stored language/direction/theme before first paint to avoid a flash. -->
+    <script>
+      (function () {
+        try {
+          var qs = new URLSearchParams(location.search);
+          if (qs.has('frame_id') || qs.has('instance_id') || qs.get('activity') === 'mock') {
+            document.documentElement.classList.add('cm-discord-activity');
+          }
+          var lang = localStorage.getItem('clue-me:lang');
+          if (lang !== 'ar' && lang !== 'en') lang = 'en';
+          document.documentElement.lang = lang;
+          document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+          var theme = localStorage.getItem('clue-me:theme');
+          var dark =
+            theme === 'dark' ||
+            theme === 'mani-dark' ||
+            ((theme === null || theme === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var mani = theme === 'mani' || theme === 'mani-dark';
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.classList.toggle('mani', mani);
+          document.documentElement.classList.toggle('mani-dark', theme === 'mani-dark');
+        } catch (e) {
+          /* storage unavailable — keep static defaults */
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-discord-v30.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=88">
+    <script defer src="/assets/game-room-v20.js?v=130"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

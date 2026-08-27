@@ -1,0 +1,23 @@
+{
+  "name": "clue-me",
+  "version": "0.3.7",
+  "private": true,
+  "type": "module",
+  "description": "Clue Me — self-contained production bundle (zero runtime npm dependencies)",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "main": "index.js",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js",
+    "build": "echo \"[clue-me] already built — nothing to do\"",
+    "db:generate": "echo \"[clue-me] database client is bundled — nothing to generate\"",
+    "db:migrate": "node scripts/check-config.mjs --database-only",
+    "config:check": "node scripts/check-config.mjs",
+    "test": "node --test tests/game-engine.test.mjs"
+  }
+}

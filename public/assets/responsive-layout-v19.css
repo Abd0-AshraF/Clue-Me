@@ -1,0 +1,879 @@
+/* Clue Me — responsive game body
+   The application header stays fixed. The board, teams, clue controls and
+   history all resize below it. Clue controls + history always live under the
+   board, side by side (history 1 : clue 1.7). */
+
+.cm-game-page,
+.cm-game-shell,
+.cm-game-shell > main,
+.cm-board-row,
+.cm-play-center,
+.cm-side,
+.cm-side-row,
+.cm-side-clue,
+.cm-dock {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The only fixed/sticky part. */
+.cm-game-page > header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  flex: 0 0 3.5rem;
+  width: 100%;
+}
+
+.cm-game-shell {
+  --cm-fluid-gap: clamp(0.28rem, min(0.8vw, 1dvh), 0.65rem);
+  --cm-fluid-pad-x: clamp(0.45rem, 1vw, 0.9rem);
+  --cm-fluid-pad-y: clamp(0.3rem, 0.9dvh, 0.8rem);
+  --cm-lower-min-h: clamp(7.75rem, 21dvh, 11.75rem);
+}
+
+.cm-game-shell > main {
+  gap: var(--cm-fluid-gap);
+  padding: var(--cm-fluid-pad-y) var(--cm-fluid-pad-x);
+}
+
+.cm-game-shell > main > [aria-live="polite"] {
+  flex: 0 0 auto;
+  padding: clamp(0.26rem, 0.6dvh, 0.42rem) clamp(0.65rem, 1.4vw, 0.95rem);
+  font-size: clamp(0.68rem, min(1.2vw, 1.7dvh), 0.875rem);
+  line-height: 1.15;
+}
+
+.cm-turn-hint {
+  flex: 0 1 auto;
+  margin: 0;
+  font-size: clamp(0.56rem, min(0.95vw, 1.45dvh), 0.68rem);
+  line-height: 1.1;
+}
+
+.cm-board-row {
+  flex: 1 1 auto;
+  width: 100%;
+  gap: var(--cm-fluid-gap);
+  overflow: hidden;
+}
+
+/* Compact team strip is fluid too. */
+.cm-teambar {
+  flex: 0 0 auto;
+  width: min(100%, 34rem);
+  max-width: 34rem;
+  gap: var(--cm-fluid-gap);
+}
+
+.cm-teambar-side {
+  min-height: 0;
+  padding: clamp(0.28rem, 0.75dvh, 0.5rem) clamp(0.42rem, 0.9vw, 0.65rem);
+}
+
+/* Desktop roster rails shrink/grow with the available game area. */
+@media (min-width: 1024px) {
+  .cm-board-row {
+    --cm-roster-width: clamp(7rem, 10.5vw, 12rem);
+    container-type: size;
+    display: grid;
+    grid-template-columns:
+      minmax(var(--cm-roster-width), 1fr)
+      auto
+      minmax(var(--cm-roster-width), 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .cm-board-row > .cm-play-center {
+    --cm-stage-width: min(
+      calc((100cqh - var(--cm-lower-min-h) - var(--cm-fluid-gap)) / 0.75),
+      calc(
+        100cqw - var(--cm-roster-width) - var(--cm-roster-width) -
+          var(--cm-fluid-gap) - var(--cm-fluid-gap)
+      )
+    );
+    grid-column: 2;
+    grid-row: 1;
+    width: var(--cm-stage-width) !important;
+    justify-self: center;
+  }
+
+  .cm-roster-col {
+    grid-row: 1;
+    justify-self: center;
+    width: var(--cm-roster-width) !important;
+    flex: 0 0 var(--cm-roster-width);
+    gap: clamp(0.3rem, 0.85dvh, 0.55rem);
+  }
+
+  .cm-roster-head {
+    width: 100%;
+    min-height: clamp(3.25rem, 8dvh, 4.5rem);
+    gap: clamp(0.3rem, 0.75vw, 0.6rem);
+    padding: clamp(0.45rem, 1dvh, 0.7rem) clamp(0.5rem, 0.9vw, 0.85rem);
+    font-size: clamp(0.76rem, min(1.05vw, 1.9dvh), 0.95rem);
+    line-height: 1.15;
+    white-space: nowrap;
+    box-shadow: var(--cm-shadow-card);
+  }
+
+  .cm-roster-col > div > p[class*="border-dashed"],
+  .cm-roster-col > p[class*="border-dashed"] {
+    display: flex;
+    min-height: clamp(3rem, 8dvh, 4.5rem);
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 0.45rem;
+    border-radius: 14px;
+    font-size: clamp(0.7rem, min(0.95vw, 1.7dvh), 0.85rem);
+  }
+
+  .cm-roster-chip {
+    gap: clamp(0.22rem, 0.6vw, 0.45rem);
+    padding: clamp(0.28rem, 0.65dvh, 0.42rem) clamp(0.28rem, 0.6vw, 0.5rem);
+  }
+
+  .cm-roster-chip > span {
+    font-size: clamp(0.6rem, min(0.88vw, 1.5dvh), 0.78rem) !important;
+  }
+
+  .cm-roster-chip > .h-8.w-8 {
+    width: clamp(1.35rem, 3.6dvh, 1.9rem);
+    height: clamp(1.35rem, 3.6dvh, 1.9rem);
+    font-size: clamp(0.56rem, 1.4dvh, 0.72rem);
+  }
+}
+
+/* One responsive column: board first, then clue/history underneath. */
+.cm-play-center {
+  container-type: size;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  width: 100% !important;
+  height: 100%;
+  max-width: none;
+  max-height: 100%;
+  gap: var(--cm-fluid-gap);
+}
+
+.cm-play-center > .cm-board-frame.cm-game-width {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-self: center;
+  width: min(
+    100%,
+    calc((100cqh - var(--cm-lower-min-h) - var(--cm-fluid-gap)) / 0.75)
+  );
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 4 / 3;
+}
+
+.cm-board-frame {
+  padding: clamp(4px, 0.75dvh, 8px);
+}
+
+.cm-board-frame > .grid {
+  gap: clamp(3px, 0.65dvh, 8px);
+}
+
+/* Stronger contrast for still-hidden cards. The word sits on an opaque plate,
+   so the decorative crosshatch can never compete with the letter shapes. */
+.cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  position: relative;
+  z-index: 6;
+  display: inline-flex;
+  max-width: 88%;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2em 0.55em;
+  border: 1.5px solid var(--cm-border-strong);
+  border-radius: 8px;
+  background: var(--cm-surface);
+  color: var(--cm-ink) !important;
+  font-weight: 900;
+  line-height: 1.12;
+  text-shadow: 0 1px 0 var(--cm-paper);
+  box-shadow:
+    0 2px 7px rgb(0 0 0 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 18%);
+}
+
+@supports (background: color-mix(in srgb, white, black)) {
+  .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+    background: color-mix(in srgb, var(--cm-surface) 94%, var(--cm-paper));
+    border-color: color-mix(in srgb, var(--cm-ink) 42%, var(--cm-border));
+  }
+}
+
+/* Full-width lower panel matches the board width and consumes all remaining
+   height. Its inner columns are: history 1fr, clue/role controls 1.7fr. */
+.cm-play-center > .cm-side {
+  align-self: center;
+  flex: 1 1 var(--cm-lower-min-h);
+  width: min(
+    100%,
+    calc((100cqh - var(--cm-lower-min-h) - var(--cm-fluid-gap)) / 0.75)
+  );
+  height: auto;
+  min-height: var(--cm-lower-min-h);
+  max-height: none;
+  margin: 0;
+}
+
+.cm-side-row,
+.cm-side-row:has(> .cm-dock.cm-dock-tall) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--cm-fluid-gap);
+}
+
+.cm-side-row > .cm-dock,
+[dir="ltr"] .cm-side-row > .cm-dock {
+  display: flex;
+  order: 1;
+}
+
+.cm-side-row > .cm-side-clue,
+[dir="ltr"] .cm-side-row > .cm-side-clue {
+  order: 2;
+}
+
+.cm-side-clue {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.cm-side-clue > * {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.cm-side-clue form > div,
+.cm-side-clue input,
+.cm-side-clue button[type="submit"] {
+  max-width: none;
+}
+
+/* All controls become denser together when screen height is limited. */
+@media (max-height: 700px) {
+  .cm-side {
+    gap: 0.25rem;
+    padding: clamp(0.28rem, 0.8dvh, 0.42rem);
+    border-radius: clamp(11px, 2.3dvh, 17px);
+  }
+
+  .cm-side-row {
+    gap: 0.3rem;
+  }
+
+  .cm-side-clue > * {
+    padding: clamp(0.28rem, 0.8dvh, 0.42rem) !important;
+  }
+
+  .cm-side-clue form {
+    gap: 0.3rem;
+  }
+
+  .cm-side-clue input,
+  .cm-side-clue button[type="submit"],
+  .cm-side-clue .cm-stepper-compact {
+    height: clamp(1.85rem, 5.5dvh, 2.2rem);
+  }
+
+  .cm-dock-head {
+    padding-block: 0.18rem;
+  }
+
+  .cm-dock-title {
+    padding-block: 0.2rem;
+    font-size: clamp(0.65rem, 1.8dvh, 0.76rem);
+  }
+
+  .cm-dock-list {
+    gap: 0.2rem;
+    padding: 0.28rem;
+  }
+
+  .cm-ev {
+    gap: 0.28rem;
+    padding: 0.28rem 0.36rem;
+    font-size: clamp(0.62rem, 1.65dvh, 0.74rem);
+  }
+
+  .cm-word {
+    font-size: clamp(0.6rem, 14cqw, 1.22rem);
+    line-height: 1.1;
+  }
+
+  .cm-word-plate {
+    max-width: 92%;
+    padding: 0.13em 0.4em;
+  }
+}
+
+/* Low landscape: preserve team details and shrink them into one line. */
+@media (min-width: 600px) and (max-height: 600px) {
+  .cm-game-shell > main {
+    gap: 0.2rem;
+    padding-block: 0.26rem;
+  }
+
+  .cm-game-shell {
+    --cm-lower-min-h: clamp(7.75rem, 21dvh, 8rem);
+  }
+
+  .cm-teambar {
+    width: min(92%, 34rem);
+    max-width: 34rem;
+    gap: 0.3rem;
+  }
+
+  .cm-teambar-side {
+    min-height: 1.9rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .cm-teambar-players {
+    flex: 1;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  .cm-teambar-player {
+    max-width: 5.5rem;
+  }
+
+  .cm-turn-hint {
+    display: block;
+    font-size: 0.56rem;
+  }
+}
+
+@media (max-width: 460px) {
+  .cm-game-shell > main {
+    gap: 0.3rem;
+    padding: 0.38rem 0.45rem;
+  }
+
+  .cm-game-shell {
+    --cm-lower-min-h: clamp(7rem, 18dvh, 9rem);
+  }
+
+  .cm-board-frame {
+    border-width: 1.5px;
+    border-radius: 1rem;
+    padding: 4px;
+  }
+
+  .cm-board-frame > .grid {
+    gap: 0.22rem;
+  }
+
+  .cm-face,
+  .cm-flip,
+  .cm-flip > button {
+    border-radius: 7px;
+  }
+
+  .cm-word {
+    min-width: 0;
+    font-size: clamp(0.58rem, 14cqw, 0.9rem);
+    line-height: 1.08;
+  }
+
+  .cm-word-plate {
+    border-radius: 6px;
+  }
+
+  .cm-side-row,
+  .cm-side-row:has(> .cm-dock.cm-dock-tall) {
+    /* Keep the requested side-by-side ratio on phones too. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  }
+}
+
+/* A landscape phone or a very short desktop cannot keep a useful 5×5 board
+   and the requested lower panels visible at once. Scroll only the game body;
+   the application header remains fixed. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .cm-game-shell {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    --cm-lower-min-h: 8rem;
+  }
+
+  .cm-game-shell > main {
+    flex: 0 0 auto;
+    min-height: 35rem;
+  }
+
+  .cm-board-row,
+  .cm-play-center {
+    min-height: 28rem;
+  }
+}
+
+/* Dark Mani: the playful pink/purple identity with a genuinely dark surface. */
+.dark.mani,
+.mani-dark {
+  color-scheme: dark;
+  --cm-paper: #120f14;
+  --cm-surface: #1d171d;
+  --cm-surface-soft: #2a2029;
+  --cm-border: #4a3544;
+  --cm-border-strong: #67495d;
+  --cm-ink: #fff1f7;
+  --cm-ink-soft: #c9aeba;
+  --cm-ink-faint: #907986;
+  --cm-red: #d9708d;
+  --cm-red-strong: #ee8da7;
+  --cm-red-soft: #94465f;
+  --cm-red-pale: #3a202c;
+  --cm-blue: #9a82b3;
+  --cm-blue-strong: #bda8d0;
+  --cm-blue-soft: #604d73;
+  --cm-blue-pale: #2d2437;
+  --cm-success: #7fba99;
+  --cm-success-pale: #20342a;
+  --cm-card-red: #a94d68;
+  --cm-card-red-ink: #fff4f8;
+  --cm-card-blue: #66517d;
+  --cm-card-blue-ink: #faf5ff;
+  --cm-card-neutral: #5a5037;
+  --cm-card-neutral-ink: #fff3c9;
+  --cm-card-assassin: #0c090d;
+  --cm-card-assassin-ink: #fff1f8;
+  --cm-shadow-card: 0 2px 8px #0009, 0 0 0 1px #ffffff0a;
+  --cm-shadow-lift: 0 8px 28px #000c, 0 0 24px #d9708d1f;
+  --cm-cover-line: #9a82b35c;
+  --cm-cover-mark: #fff1f717;
+}
+
+.dark.mani .cm-side,
+.dark.mani .cm-dock,
+.dark.mani .cm-menu-choice,
+.dark.mani .cm-role-tile,
+.dark.mani .cm-team-panel,
+.mani-dark .cm-side,
+.mani-dark .cm-dock,
+.mani-dark .cm-menu-choice,
+.mani-dark .cm-role-tile,
+.mani-dark .cm-team-panel {
+  background-color: var(--cm-surface);
+  border-color: var(--cm-border);
+}
+
+/* Every clue notice gets one complete, deterministic animation. The component is
+   keyed by clue sequence, so these animations restart exactly once per clue. */
+.cm-clue-announce,
+.cm-clue-card,
+.cm-clue-ring {
+  animation-duration: 4.4s;
+  animation-iteration-count: 1;
+}
+
+.cm-clue-announce {
+  animation-name: cm-clue-notice-centered;
+  animation-timing-function: var(--cm-ease);
+  animation-fill-mode: both;
+  will-change: opacity;
+}
+
+.cm-clue-card {
+  animation-name: cm-clue-card-centered;
+  animation-timing-function: var(--cm-ease);
+  animation-fill-mode: both;
+  width: min(90vw, 38rem);
+  min-width: min(82vw, 22rem);
+  padding: clamp(1.5rem, 5vw, 2.5rem) clamp(1.25rem, 7vw, 3.5rem) !important;
+}
+
+.cm-clue-card > p {
+  max-width: 100% !important;
+  font-size: clamp(3rem, 13vw, 5.5rem) !important;
+  line-height: 1.05 !important;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.cm-clue-ring {
+  animation-name: cm-clue-ring-centered;
+  animation-timing-function: var(--cm-ease);
+  animation-fill-mode: both;
+}
+
+.cm-clue-card,
+.cm-clue-ring {
+  will-change: opacity, transform;
+}
+
+@keyframes cm-clue-notice-centered {
+  0%, 100% { opacity: 0; }
+  7%, 92% { opacity: 1; }
+}
+
+@keyframes cm-clue-card-centered {
+  0% { opacity: 0; transform: scale(0.72) translateY(16px); }
+  8% { opacity: 1; transform: scale(1.04) translateY(0); }
+  15%, 92% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.97) translateY(0); }
+}
+
+@keyframes cm-clue-ring-centered {
+  0% { opacity: 0; transform: scale(0.7); }
+  10% { opacity: 0.85; transform: scale(1.02); }
+  32%, 88% { opacity: 0.35; transform: scale(1.12); }
+  100% { opacity: 0; transform: scale(1.22); }
+}
+
+/* Keep the clue announcement visible on desktop systems that have Windows/macOS
+   reduced-motion enabled. The base stylesheet previously collapsed it to 0.01ms,
+   which made the notification effectively invisible. */
+@media (prefers-reduced-motion: reduce) {
+  .cm-clue-announce {
+    animation: cm-clue-notice-accessible 4.4s linear both !important;
+  }
+
+  .cm-clue-card {
+    animation: cm-clue-card-accessible 4.4s ease-out both !important;
+  }
+
+  .cm-clue-ring {
+    animation: cm-clue-ring-accessible 4.4s ease-out both !important;
+  }
+}
+
+@keyframes cm-clue-notice-accessible {
+  0%, 100% { opacity: 0; }
+  5%, 93% { opacity: 1; }
+}
+
+@keyframes cm-clue-card-accessible {
+  0% { opacity: 0; transform: translateY(8px); }
+  7%, 93% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+
+@keyframes cm-clue-ring-accessible {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  8%, 90% { opacity: 0.45; transform: scale(1.04); }
+}
+
+/* Touch controls: the hand button is removed on phones. A normal tap points
+   at a card; pressing and holding selects/guesses it. */
+@media (pointer: coarse), (hover: none) {
+  /* Backdrop blur can flicker in Android/Discord WebViews while a fixed layer
+     animates. The solid dimmer keeps the same readability without that glitch. */
+  .cm-clue-announce {
+    background-color: rgb(0 0 0 / 45%);
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .cm-point-btn {
+    display: none !important;
+  }
+
+  .cm-flip > button:not(:disabled) {
+    -webkit-touch-callout: none;
+  }
+
+  .cm-touch-point-card {
+    touch-action: none !important;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cm-point-tags {
+    max-width: 76%;
+    transform: scale(0.82);
+    transform-origin: top left;
+  }
+}
+
+/* Live player connectivity. The slash badge is attached to the avatar and the
+   text label remains visible beside the name for colour-independent status. */
+.cm-player-avatar-status {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.cm-player-disconnect-mark {
+  position: absolute;
+  inset-inline-end: -0.18rem;
+  inset-block-end: -0.15rem;
+  z-index: 8;
+  display: block;
+  width: 0.72rem;
+  height: 0.72rem;
+  border: 2px solid var(--cm-surface);
+  border-radius: 999px;
+  background: #343038;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 45%);
+}
+
+.cm-player-disconnect-mark::after {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 0.46rem;
+  height: 1.5px;
+  border-radius: 999px;
+  background: #fff;
+  content: "";
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.cm-player-disconnected {
+  opacity: 0.7;
+  filter: saturate(0.35);
+}
+
+.cm-player-disconnected .cm-player-avatar-status > :first-child {
+  filter: grayscale(0.85);
+}
+
+.cm-player-offline-label {
+  flex: 0 0 auto;
+  padding: 0.05rem 0.28rem;
+  border: 1px solid var(--cm-border-strong);
+  border-radius: 999px;
+  background: var(--cm-surface-soft);
+  color: var(--cm-ink-soft);
+  font-size: 0.52rem;
+  font-weight: 900;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Mobile roster chips: captains and operatives are visually separate instead
+   of running together. A 480ms hold sends the same player effect as desktop. */
+.cm-teambar-players {
+  align-items: stretch;
+  gap: 0.2rem;
+}
+
+.cm-mobile-roster-chip {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 1.55rem;
+  overflow: hidden;
+  padding: 0.16rem 0.28rem;
+  border: 1px solid rgb(255 255 255 / 48%);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 17%);
+  text-align: start;
+  transition:
+    transform 0.14s var(--cm-ease),
+    background-color 0.14s var(--cm-ease),
+    border-color 0.14s var(--cm-ease);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cm-mobile-roster-chip::after {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 0;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+  opacity: 0.85;
+}
+
+.cm-mobile-roster-chip:active {
+  transform: scale(0.97);
+}
+
+.cm-mobile-roster-chip:active::after {
+  animation: cm-mobile-cheer-hold 480ms linear both;
+}
+
+.cm-mobile-roster-captain {
+  border-color: rgb(255 221 117 / 88%);
+  background: rgb(255 215 95 / 24%);
+  box-shadow: inset 3px 0 0 rgb(255 218 103 / 92%);
+}
+
+[dir="rtl"] .cm-mobile-roster-captain {
+  box-shadow: inset -3px 0 0 rgb(255 218 103 / 92%);
+}
+
+.cm-mobile-roster-operative {
+  border-color: rgb(255 255 255 / 45%);
+  background: rgb(0 0 0 / 12%);
+}
+
+.cm-mobile-roster-me {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.cm-mobile-roster-captain .cm-teambar-role {
+  background: rgb(255 221 117 / 88%);
+  border-color: rgb(255 244 196 / 92%);
+  color: #3a2a08;
+}
+
+.cm-mobile-roster-operative .cm-teambar-role {
+  background: rgb(255 255 255 / 76%);
+  border-color: rgb(255 255 255 / 88%);
+  color: #28232a;
+}
+
+@keyframes cm-mobile-cheer-hold {
+  to { width: 100%; }
+}
+
+@media (min-width: 600px) and (max-height: 600px) {
+  .cm-mobile-roster-chip {
+    width: auto;
+    max-width: 7rem;
+    flex: 1 1 0;
+    padding-block: 0.1rem;
+  }
+}
+
+/* Spymaster clue-target selection. Clicking unrevealed map cards marks them in
+   order; the badge count is mirrored by the clue-number control. */
+.cm-clue-target {
+  z-index: 18;
+  border-radius: 10px;
+  transform: translateY(-2px);
+  transition:
+    transform 0.16s var(--cm-ease),
+    box-shadow 0.16s var(--cm-ease);
+}
+
+.cm-clue-target-red {
+  box-shadow:
+    0 0 0 3px var(--cm-red),
+    0 0 18px color-mix(in srgb, var(--cm-red) 58%, transparent);
+}
+
+.cm-clue-target-blue {
+  box-shadow:
+    0 0 0 3px var(--cm-blue),
+    0 0 18px color-mix(in srgb, var(--cm-blue) 58%, transparent);
+}
+
+.cm-clue-target-badge {
+  position: absolute;
+  inset-block-start: -0.45rem;
+  inset-inline-start: -0.45rem;
+  z-index: 40;
+  display: inline-flex;
+  width: 1.45rem;
+  height: 1.45rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--cm-surface);
+  border-radius: 999px;
+  background: var(--cm-ink);
+  color: var(--cm-surface);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-clue-target-red .cm-clue-target-badge {
+  background: var(--cm-red);
+  color: #fff;
+}
+
+.cm-clue-target-blue .cm-clue-target-badge {
+  background: var(--cm-blue);
+  color: #fff;
+}
+
+/* Coloured lobby aura for both team panels. */
+.cm-team-panel-red {
+  background:
+    radial-gradient(circle at 85% 8%, rgba(184, 58, 58, 0.24), transparent 58%),
+    var(--cm-surface);
+  box-shadow:
+    0 0 0 1px rgba(184, 58, 58, 0.52),
+    0 0 30px rgba(184, 58, 58, 0.3),
+    var(--cm-shadow-card);
+}
+
+.cm-team-panel-blue {
+  background:
+    radial-gradient(circle at 15% 8%, rgba(49, 92, 136, 0.26), transparent 58%),
+    var(--cm-surface);
+  box-shadow:
+    0 0 0 1px rgba(49, 92, 136, 0.54),
+    0 0 30px rgba(49, 92, 136, 0.3),
+    var(--cm-shadow-card);
+}
+
+.dark .cm-team-panel-red {
+  background:
+    radial-gradient(
+      circle at 85% 8%,
+      rgba(199, 107, 107, 0.28),
+      transparent 62%
+    ),
+    var(--cm-surface);
+  box-shadow:
+    0 0 0 1px rgba(199, 107, 107, 0.55),
+    0 0 34px rgba(199, 107, 107, 0.3),
+    var(--cm-shadow-card);
+}
+
+.dark .cm-team-panel-blue {
+  background:
+    radial-gradient(
+      circle at 15% 8%,
+      rgba(127, 166, 207, 0.3),
+      transparent 62%
+    ),
+    var(--cm-surface);
+  box-shadow:
+    0 0 0 1px rgba(127, 166, 207, 0.56),
+    0 0 34px rgba(127, 166, 207, 0.3),
+    var(--cm-shadow-card);
+}
+
+/* Waiting-room adjustments, including the fixed player-limit slider. */
+@media (max-width: 540px) {
+  input[type="range"] {
+    min-height: 1.5rem;
+  }
+
+  .cm-team-panel {
+    min-height: 0;
+  }
+
+  .cm-team-body {
+    padding: 0.7rem;
+  }
+
+  .cm-team-slots {
+    gap: 0.35rem;
+  }
+}
