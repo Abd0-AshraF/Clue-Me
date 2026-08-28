@@ -3524,7 +3524,7 @@ function createApp(options = {}) {
     res.json(payload);
   });
   app2.get("/.well-known/discord", (_req, res) => {
-    const verification = process.env.DISCORD_DOMAIN_VERIFICATION?.trim() || "dh=25c4ae9e0f4fc78390d8c9b14b8be9c204750154";
+    const verification = process.env.DISCORD_DOMAIN_VERIFICATION?.trim() || "dh=55cf526805f47c766ac5dd57b422bfe681af9400";
     res.setHeader("Cache-Control", "no-store");
     res.type("text/plain").send(verification);
   });

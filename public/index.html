@@ -66,26 +66,29 @@
           if (lang !== 'ar' && lang !== 'en') lang = 'en';
           document.documentElement.lang = lang;
           document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-          var theme = localStorage.getItem('clue-me:theme');
+          var theme = localStorage.getItem('clue-me:theme') || 'mot';
           var dark =
             theme === 'dark' ||
             theme === 'mani-dark' ||
-            ((theme === null || theme === 'system') &&
+            theme === 'mot' ||
+            (theme === 'system' &&
               window.matchMedia('(prefers-color-scheme: dark)').matches);
           var mani = theme === 'mani' || theme === 'mani-dark';
+          var mot = theme === 'mot';
           document.documentElement.classList.toggle('dark', dark);
           document.documentElement.classList.toggle('mani', mani);
           document.documentElement.classList.toggle('mani-dark', theme === 'mani-dark');
+          document.documentElement.classList.toggle('mot', mot);
         } catch (e) {
           /* storage unavailable — keep static defaults */
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-discord-v30.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css">
-    <link rel="stylesheet" href="/assets/responsive-layout-v19.css">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=92">
-    <script defer src="/assets/game-room-v20.js?v=131"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v30.js?v=153"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=153">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=153">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=153">
+    <script defer src="/assets/game-room-v20.js?v=153"></script>
   </head>
   <body>
     <div id="root"></div>

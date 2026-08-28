@@ -39,6 +39,12 @@
 
 .cm-game-shell > main > [aria-live="polite"] {
   flex: 0 0 auto;
+  align-self: center;
+  margin-inline: auto;
+  justify-content: center;
+  text-align: center;
+  width: fit-content;
+  max-width: min(100%, var(--cm-stage-fit-width, 100%));
   padding: clamp(0.26rem, 0.6dvh, 0.42rem) clamp(0.65rem, 1.4vw, 0.95rem);
   font-size: clamp(0.68rem, min(1.2vw, 1.7dvh), 0.875rem);
   line-height: 1.15;
@@ -46,7 +52,9 @@
 
 .cm-turn-hint {
   flex: 0 1 auto;
-  margin: 0;
+  align-self: center;
+  margin: 0 auto;
+  text-align: center;
   font-size: clamp(0.56rem, min(0.95vw, 1.45dvh), 0.68rem);
   line-height: 1.1;
 }
@@ -470,7 +478,12 @@
 .mani-dark .cm-dock,
 .mani-dark .cm-menu-choice,
 .mani-dark .cm-role-tile,
-.mani-dark .cm-team-panel {
+.mani-dark .cm-team-panel,
+.mot .cm-side,
+.mot .cm-dock,
+.mot .cm-menu-choice,
+.mot .cm-role-tile,
+.mot .cm-team-panel {
   background-color: var(--cm-surface);
   border-color: var(--cm-border);
 }

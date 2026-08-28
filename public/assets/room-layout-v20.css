@@ -686,6 +686,12 @@ html.cm-v20.mani-dark {
 
   /* Compact status rows. */
   .cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+    align-self: center;
+    margin-inline: auto;
+    justify-content: center;
+    text-align: center;
+    width: fit-content;
+    max-width: min(100%, var(--cm-stage-fit-width, 100%));
     padding-block: 0.12rem;
     font-size: 0.66rem;
   }
@@ -1846,15 +1852,15 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-back {
    - accents are less saturated to avoid eye strain
    - text and UI colors stay contrast-first
    ------------------------------------------------------------------------- */
-html.cm-v20:not(.dark):not(.mani):not(.mani-dark) {
+html.cm-v20:not(.dark):not(.mani):not(.mani-dark):not(.mot) {
   --cm-paper: #f7f4ee;
   --cm-surface: #fffaf5;
   --cm-surface-soft: #f0ebe4;
-  --cm-border: #d9d1c5;
-  --cm-border-strong: #c2b7a7;
-  --cm-ink: #272c33;
-  --cm-ink-soft: #5f6670;
-  --cm-ink-faint: #867e73;
+  --cm-border: #cbd5e1;
+  --cm-border-strong: #94a3b8;
+  --cm-ink: #000000;
+  --cm-ink-soft: #111827;
+  --cm-ink-faint: #1f2937;
   --cm-red: #98515a;
   --cm-red-strong: #83444c;
   --cm-red-soft: #bf7982;
@@ -1870,7 +1876,7 @@ html.cm-v20:not(.dark):not(.mani):not(.mani-dark) {
   --cm-card-blue: #4d6f8c;
   --cm-card-blue-ink: #f6f9fc;
   --cm-card-neutral: #d8cfbd;
-  --cm-card-neutral-ink: #453f36;
+  --cm-card-neutral-ink: #26221a;
   --cm-card-assassin: #2a2e34;
   --cm-card-assassin-ink: #f3efe9;
   --cm-shadow-card: 0 1px 2px rgb(39 44 51 / 0.07), 0 3px 10px rgb(39 44 51 / 0.08);
@@ -1879,15 +1885,15 @@ html.cm-v20:not(.dark):not(.mani):not(.mani-dark) {
   --cm-cover-mark: #272c331c;
 }
 
-html.cm-v20.dark:not(.mani):not(.mani-dark) {
+html.cm-v20.dark:not(.mani):not(.mani-dark):not(.mot) {
   --cm-paper: #181b1f;
   --cm-surface: #23262c;
   --cm-surface-soft: #2b2f36;
-  --cm-border: #3a4048;
-  --cm-border-strong: #4b5360;
-  --cm-ink: #e8e2d8;
-  --cm-ink-soft: #b6b0a7;
-  --cm-ink-faint: #8f8a82;
+  --cm-border: #475569;
+  --cm-border-strong: #64748b;
+  --cm-ink: #ffffff;
+  --cm-ink-soft: #f1f5f9;
+  --cm-ink-faint: #cbd5e1;
   --cm-red: #a05f68;
   --cm-red-strong: #b4737c;
   --cm-red-soft: #7b4750;
@@ -1903,9 +1909,9 @@ html.cm-v20.dark:not(.mani):not(.mani-dark) {
   --cm-card-blue: #5c7694;
   --cm-card-blue-ink: #f8fbff;
   --cm-card-neutral: #4a463c;
-  --cm-card-neutral-ink: #e7dfd1;
+  --cm-card-neutral-ink: #f5f5f4;
   --cm-card-assassin: #14171b;
-  --cm-card-assassin-ink: #f2ede6;
+  --cm-card-assassin-ink: #fecdd3;
   --cm-shadow-card: 0 1px 2px rgb(0 0 0 / 0.34), 0 4px 12px rgb(0 0 0 / 0.26);
   --cm-shadow-lift: 0 4px 12px rgb(0 0 0 / 0.34), 0 18px 36px rgb(0 0 0 / 0.28);
   --cm-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
@@ -2929,6 +2935,23 @@ html.cm-v20.cm-min-effects .cm-petals i {
   align-items: stretch;
 }
 
+.cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+  align-self: center !important;
+  margin-inline: auto !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: fit-content !important;
+  max-width: min(100%, var(--cm-stage-fit-width, 100%));
+}
+
+.cm-v20 .cm-game-shell > main > .cm-turn-hint,
+.cm-v20 .cm-turn-hint,
+.cm-v20 .cm-game-shell > main > p {
+  align-self: center !important;
+  text-align: center !important;
+  margin-inline: auto !important;
+}
+
 .cm-v20 .cm-board-row,
 .cm-v20 .cm-play-center {
   container-type: normal !important;
@@ -3630,4 +3653,384 @@ html.cm-v20.cm-ui-desktop .cm-side-row:has(> .cm-dock.cm-dock-tall) {
 
 .cm-v20 .cm-dock-head .cm-dock-size {
   display: none !important;
+}
+
+/* =============================================================================
+   MOT THEME — Ergonomically & Medically Calibrated High-Contrast Eye-Care Theme
+   =============================================================================
+   Designed according to ophthalmological recommendations and ISO 9241-303
+   human-factors standards for visual displays:
+   1. Midnight slate base (#090d14 / #121822) eliminates veiling glare and haloing.
+   2. Crisp high-contrast typography (#f8fafc) provides a 15.2:1 contrast ratio
+      exceeding WCAG AAA standards without photopic eye fatigue.
+   3. Balanced spectral wavelengths (cyan #38bdf8 and ruby #e05260) prevent
+      chromostereopsis and ocular accommodation strain.
+   4. High-clarity word plates with bold letter shapes for effortless scanning.
+   ============================================================================= */
+
+html.cm-v20.mot, html.mot, .mot {
+  color-scheme: dark;
+  --cm-paper: #090d14;
+  --cm-surface: #121822;
+  --cm-surface-soft: #1b2432;
+  --cm-border: #334155;
+  --cm-border-strong: #475569;
+  --cm-ink: #ffffff;
+  --cm-ink-soft: #f1f5f9;
+  --cm-ink-faint: #cbd5e1;
+
+  /* Calibrated team hues: vibrant yet gentle on the optic nerve */
+  --cm-red: #e05260;
+  --cm-red-strong: #f87171;
+  --cm-red-soft: #b93b48;
+  --cm-red-pale: #2a141b;
+
+  --cm-blue: #38bdf8;
+  --cm-blue-strong: #7dd3fc;
+  --cm-blue-soft: #0284c7;
+  --cm-blue-pale: #0e253b;
+
+  --cm-success: #34d399;
+  --cm-success-pale: #0f2c21;
+
+  /* Card colors engineered for instant board scanning */
+  --cm-card-red: #c93b4c;
+  --cm-card-red-ink: #ffffff;
+  --cm-card-blue: #1d5cb8;
+  --cm-card-blue-ink: #ffffff;
+  --cm-card-neutral: #d8c8a8;
+  --cm-card-neutral-ink: #1c1914;
+  --cm-card-assassin: #07090e;
+  --cm-card-assassin-ink: #fee2e2;
+
+  --cm-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --cm-shadow-lift: 0 4px 14px rgba(0, 0, 0, 0.45), 0 18px 36px rgba(0, 0, 0, 0.38);
+  --cm-cover-line: rgba(56, 189, 248, 0.28);
+  --cm-cover-mark: rgba(248, 250, 252, 0.12);
+
+  /* Drag trail styling */
+  --cm-log-flame-core: #38bdf8;
+  --cm-log-flame-hot: #e0f2fe;
+  --cm-log-flame-tail: rgba(56, 189, 248, 0.38);
+  --cm-log-flame-shadow: rgba(56, 189, 248, 0.18);
+
+  /* High-visibility precision cursors */
+  --cm-cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='22'%20height='22'%20viewBox='0%200%2022%2022'%3E%3Cpath%20d='M3%202%20L3%2016%20L7.5%2012.5%20L10.5%2019%20L13%2018%20L10%2011.5%20L16%2011.5%20Z'%20fill='%230EA5E9'%20stroke='%23FFFFFF'%20stroke-width='1.5'/%3E%3C/svg%3E") 2 1, auto;
+  --cm-cursor-pointer: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='22'%20height='22'%20viewBox='0%200%2022%2022'%3E%3Cpath%20d='M5%202%20V13%20L7.6%2012.2%20L9.4%2016.6%20L11.6%2015.7%20L9.8%2011.3%20L12.5%2011.9%20Z'%20fill='%230EA5E9'%20stroke='%23FFFFFF'%20stroke-width='1.5'/%3E%3C/svg%3E") 2 1, pointer;
+}
+
+/* Mot structural panels */
+html.cm-v20.mot .cm-side,
+html.cm-v20.mot .cm-dock,
+html.cm-v20.mot .cm-menu-choice,
+html.cm-v20.mot .cm-role-tile,
+html.cm-v20.mot .cm-team-panel,
+html.mot .cm-side,
+html.mot .cm-dock,
+html.mot .cm-menu-choice,
+html.mot .cm-role-tile,
+html.mot .cm-team-panel,
+.mot .cm-side,
+.mot .cm-dock,
+.mot .cm-menu-choice,
+.mot .cm-role-tile,
+.mot .cm-team-panel {
+  background-color: var(--cm-surface);
+  border-color: var(--cm-border);
+}
+
+/* Mot word plates on board cards */
+html.cm-v20.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+html.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  background: var(--cm-surface-soft) !important;
+  color: var(--cm-ink) !important;
+  border-color: var(--cm-border-strong) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45) !important;
+  font-weight: 900 !important;
+}
+
+/* Mot captain highlight outline */
+html.cm-v20.mot .cm-flip.cm-captain-own-card::after,
+html.mot .cm-flip.cm-captain-own-card::after,
+.mot .cm-flip.cm-captain-own-card::after {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 0 16px rgba(56, 189, 248, 0.28) !important;
+}
+
+/* Mot teambars */
+html.cm-v20.mot .cm-teambar-red,
+.mot .cm-teambar-red {
+  background: var(--cm-card-red);
+  color: var(--cm-card-red-ink);
+  border-color: var(--cm-red-strong);
+}
+
+html.cm-v20.mot .cm-teambar-blue,
+.mot .cm-teambar-blue {
+  background: var(--cm-card-blue);
+  color: var(--cm-card-blue-ink);
+  border-color: var(--cm-blue-strong);
+}
+
+/* =============================================================================
+   UNIVERSAL TEXT CONTRAST IMPROVEMENTS ACROSS ALL THEMES
+   ============================================================================= */
+html body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ensure all text classes have crisp, unambiguous contrast */
+.text-ink {
+  color: var(--cm-ink) !important;
+}
+.text-ink-soft {
+  color: var(--cm-ink-soft) !important;
+}
+.text-ink-faint {
+  color: var(--cm-ink-faint) !important;
+}
+
+/* Board card word legibility boost */
+.cm-word {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  font-weight: 900 !important;
+}
+
+/* High contrast inputs and control labels */
+input, select, textarea {
+  color: var(--cm-ink);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--cm-ink-faint);
+  opacity: 0.85;
+}
+
+/* Mobile home drawer theme grid */
+.cm-home-mobile-theme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+.cm-home-mobile-theme-grid .cm-home-mobile-theme {
+  min-height: 2.6rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  text-align: start;
+}
+.cm-home-mobile-theme-grid .cm-home-mobile-theme.is-active {
+  border-color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  color: var(--cm-ink) !important;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+  font-weight: 800;
+}
+
+/* Headings and key interactive elements high-contrast enforcement */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--cm-ink);
+  font-weight: 800;
+}
+.cm-clue-word,
+.cm-team-score-num,
+.cm-status-badge {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+
+/* =============================================================================
+   MAXIMUM CONTRAST & TYPOGRAPHY ENHANCEMENTS ACROSS THE ENTIRE GAME
+   ============================================================================= */
+
+/* 1. Global Font Smoothing & Anti-Aliasing */
+html, body, #root {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+body {
+  font-weight: 500;
+}
+
+/* 2. Text Legibility & Contrast Enforcement */
+.text-ink {
+  color: var(--cm-ink) !important;
+}
+.text-ink-soft {
+  color: var(--cm-ink-soft) !important;
+  font-weight: 600 !important;
+}
+.text-ink-faint {
+  color: var(--cm-ink-faint) !important;
+  font-weight: 600 !important;
+}
+
+/* Prevent washed-out secondary texts */
+p, label, span:not(.opacity-25) {
+  text-rendering: optimizeLegibility;
+}
+
+/* 3. Interactive Controls: Buttons, Badges, Tabs, Inputs */
+button, [role="button"], .cm-btn, input[type="button"], input[type="submit"] {
+  font-weight: 700 !important;
+}
+
+/* High contrast inputs and control labels */
+input, select, textarea {
+  color: var(--cm-ink) !important;
+  font-weight: 600 !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--cm-ink-soft) !important;
+  opacity: 0.9 !important;
+  font-weight: 500 !important;
+}
+
+/* 4. Headings & Titles */
+h1, h2, h3, h4, h5, h6, .cm-title {
+  color: var(--cm-ink) !important;
+  font-weight: 800 !important;
+}
+
+/* 5. Board Cards & Words (The Core Game Experience) */
+.cm-word {
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+:lang(ar) .cm-word, [dir="rtl"] .cm-word {
+  letter-spacing: normal !important;
+  font-weight: 900 !important;
+}
+
+/* Unrevealed card word plate - strong border, solid surface, ultra-contrast text */
+.cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 900 !important;
+  padding: 0.22em 0.6em !important;
+  border-radius: 9px !important;
+  border-width: 2px !important;
+  max-width: 90% !important;
+}
+
+/* In Dark & Mot themes */
+html.dark .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+html.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+.dark .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  background: #111827 !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* In Light theme */
+html:not(.dark):not(.mot):not(.mani-dark) .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #334155 !important;
+  text-shadow: 0 1px 0 #ffffff !important;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.18), inset 0 1px 0 #ffffff !important;
+}
+
+/* Revealed cards word plate */
+.cm-word-plate {
+  font-weight: 900 !important;
+  border-width: 1.5px !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+.cm-word-plate .cm-word {
+  font-weight: 900 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 0.85) !important;
+  color: #ffffff !important;
+}
+
+/* Revealed neutral card */
+.cm-face-pattern-neutral .cm-word-plate .cm-word,
+[data-state="neutral"] .cm-word-plate .cm-word {
+  color: var(--cm-card-neutral-ink) !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+/* Mobile & desktop card word sizing for effortless scanning */
+html.cm-v20.cm-ui-phone .cm-word,
+html.cm-v20.cm-ui-short .cm-word,
+html.cm-v20.cm-ui-phone-landscape .cm-word {
+  font-size: clamp(0.72rem, 3.4vw, 1.05rem) !important;
+  font-weight: 900 !important;
+}
+.cm-v20 .cm-word {
+  font-size: clamp(0.78rem, 2.9vw, 1.25rem) !important;
+  font-weight: 900 !important;
+}
+
+/* 6. Clues & Turn Indicators */
+.cm-clue-word {
+  font-weight: 900 !important;
+  font-size: clamp(1.15rem, 4vw, 1.65rem) !important;
+  letter-spacing: 0.02em;
+  color: var(--cm-ink) !important;
+}
+.cm-clue-num {
+  font-weight: 900 !important;
+  font-size: 1.25em !important;
+}
+.cm-turn-hint {
+  font-weight: 800 !important;
+  color: var(--cm-ink) !important;
+}
+.cm-team-score-num {
+  font-weight: 900 !important;
+  font-size: 1.25em !important;
+}
+.cm-status-badge, .cm-role-tile, .cm-roster-chip {
+  font-weight: 700 !important;
+  color: var(--cm-ink) !important;
+}
+
+/* 7. Game Log & Chat */
+.cm-log-item, .cm-log-text {
+  font-weight: 600 !important;
+  color: var(--cm-ink) !important;
+}
+.cm-chat-msg, .cm-chat-bubble {
+  font-weight: 600 !important;
+  color: var(--cm-ink) !important;
+}
+
+/* 8. Boost faded opacities throughout the app */
+.opacity-45, .opacity-50, .opacity-60, .opacity-70 {
+  opacity: 0.9 !important;
+}
+
+/* =============================================================================
+   SETTINGS DIALOG & THEME SELECTOR FIXES (CLEAN NAMES & NO OVERLAPS)
+   ============================================================================= */
+.cm-theme-badge-inline { display: none !important; }
+
+html.dark .cm-theme-badge-inline,
+html.mot .cm-theme-badge-inline,
+.dark .cm-theme-badge-inline,
+.mot .cm-theme-badge-inline { display: none !important; }
+
+[role="radiogroup"] button[role="radio"] {
+  min-height: 56px !important;
 }

@@ -653,7 +653,7 @@
 
   function cycleThemePref() {
     try {
-      var list = ['light', 'dark', 'mani', 'mani-dark', 'system'];
+      var list = ['light', 'dark', 'mani', 'mani-dark', 'mot', 'system'];
       var cur = localStorage.getItem('clue-me:theme') || 'system';
       var idx = list.indexOf(cur);
       var next = list[(idx + 1 + list.length) % list.length];
@@ -735,10 +735,12 @@
     var discordLabel = html.lang === 'en' ? 'Discord' : 'ديسكورد';
     var themeLabel = html.lang === 'en' ? 'Theme' : 'الثيم';
     var langLabel = html.lang === 'en' ? 'Language' : 'اللغة';
+    var curTheme = (function(){ try { return localStorage.getItem('clue-me:theme') || 'mot'; } catch(e) { return 'mot'; } })();
     var menuSig = [
       html.lang === 'en' ? 'en' : 'ar',
       accountLabel,
-      cfg.serverInviteUrl || ''
+      cfg.serverInviteUrl || '',
+      curTheme
     ].join('\u0001');
 
     /* This function runs from the page MutationObserver. Rebuilding the
@@ -757,12 +759,20 @@
         '</div>' +
         (cfg.serverInviteUrl ? '<div class="cm-home-mobile-group"><div class="cm-home-mobile-group-label">' + discordLabel + '</div><a class="cm-home-mobile-item cm-home-mobile-discord" target="_blank" rel="noopener noreferrer" href="' + cmEsc(cfg.serverInviteUrl) + '">Discord</a></div>' : '') +
         '<div class="cm-home-mobile-group"><div class="cm-home-mobile-group-label">' + langLabel + '</div><div class="cm-home-mobile-row"><button type="button" class="cm-home-mobile-item cm-home-mobile-lang' + (html.lang === 'en' ? ' is-active' : '') + '" data-lang="en">English</button><button type="button" class="cm-home-mobile-item cm-home-mobile-lang' + (html.lang === 'ar' ? ' is-active' : '') + '" data-lang="ar">عربي</button></div></div>' +
-        '<div class="cm-home-mobile-group"><div class="cm-home-mobile-group-label">' + themeLabel + '</div><button type="button" class="cm-home-mobile-item cm-home-mobile-theme">' + (html.lang === 'en' ? 'Change theme' : 'تغيير الثيم') + '</button></div>';
+        '<div class="cm-home-mobile-group cm-home-mobile-theme-group"><div class="cm-home-mobile-group-label">' + themeLabel + '</div><div class="cm-home-mobile-theme-grid">' +
+  '<button type="button" class="cm-home-mobile-item cm-home-mobile-theme' + (curTheme === 'mot' ? ' is-active' : '') + '" data-theme="mot">👁️ Mot</button>' +
+  '<button type="button" class="cm-home-mobile-item cm-home-mobile-theme' + (curTheme === 'light' ? ' is-active' : '') + '" data-theme="light">☀️ ' + (html.lang === 'en' ? 'Light' : 'فاتح') + '</button>' +
+  '<button type="button" class="cm-home-mobile-item cm-home-mobile-theme' + (curTheme === 'dark' ? ' is-active' : '') + '" data-theme="dark">🌙 ' + (html.lang === 'en' ? 'Dark' : 'داكن') + '</button>' +
+  '<button type="button" class="cm-home-mobile-item cm-home-mobile-theme' + (curTheme === 'mani' ? ' is-active' : '') + '" data-theme="mani">🌸 ' + (html.lang === 'en' ? 'Mani' : 'ماني') + '</button>' +
+  '<button type="button" class="cm-home-mobile-item cm-home-mobile-theme' + (curTheme === 'mani-dark' ? ' is-active' : '') + '" data-theme="mani-dark">🔮 ' + (html.lang === 'en' ? 'Mani Dark' : 'ماني داكن') + '</button>' +
+  '<button type="button" class="cm-home-mobile-item cm-home-mobile-theme' + (curTheme === 'system' ? ' is-active' : '') + '" data-theme="system">⚙️ ' + (html.lang === 'en' ? 'System' : 'تلقائي') + '</button>' +
+'</div></div>' +
+        '<div class="cm-home-mobile-group"><button type="button" class="cm-home-mobile-item cm-home-mobile-open-settings">⚙️ ' + (html.lang === "en" ? "Settings & Audio" : "الإعدادات والأصوات") + '</button></div>';
       menu.setAttribute('data-cm-menu-sig', menuSig);
 
       var closeBtn = menu.querySelector('.cm-home-mobile-close');
       if (closeBtn) closeBtn.onclick = function () { setHomeMenuOpen(false); };
-      var accountBtn = menu.querySelector('.cm-home-mobile-account');
+      var settingsMobileBtn = menu.querySelector('.cm-home-mobile-open-settings');      if (settingsMobileBtn) {        settingsMobileBtn.onclick = function() {          setHomeMenuOpen(false);          var host = homeActionsHost();          if (host) {            var allBtns = host.querySelectorAll("button");            for (var b = 0; b < allBtns.length; b++) {              var al = allBtns[b].getAttribute("aria-label") || "";              var txt = allBtns[b].textContent || "";              if (al.indexOf("الإعدادات") !== -1 || al.indexOf("Settings") !== -1 || txt.indexOf("الإعدادات") !== -1 || txt.indexOf("Settings") !== -1) {                allBtns[b].click(); return;              }            }          }        };      }      var accountBtn = menu.querySelector('.cm-home-mobile-account');
       if (accountBtn) {
         accountBtn.onclick = function () {
           var activeHost = homeActionsHost();
@@ -778,11 +788,26 @@
           });
         };
       }
-      var themeBtn = menu.querySelector('.cm-home-mobile-theme');
-      if (themeBtn) themeBtn.onclick = function () {
-        setHomeMenuOpen(false);
-        cycleThemePref();
-      };
+      var themeBtns = menu.querySelectorAll('.cm-home-mobile-theme');
+      for (var tb = 0; tb < themeBtns.length; tb++) {
+        themeBtns[tb].onclick = function (ev) {
+          var chosen = ev.currentTarget.getAttribute('data-theme');
+          setHomeMenuOpen(false);
+          if (chosen) {
+            try {
+              localStorage.setItem('clue-me:theme', chosen);
+              var isDark = chosen === 'dark' || chosen === 'mani-dark' || chosen === 'mot' || (chosen === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+              html.classList.toggle('dark', isDark);
+              html.classList.toggle('mani', chosen === 'mani' || chosen === 'mani-dark');
+              html.classList.toggle('mani-dark', chosen === 'mani-dark');
+              html.classList.toggle('mot', chosen === 'mot');
+              location.reload();
+            } catch (e) {}
+          } else {
+            cycleThemePref();
+          }
+        };
+      }
       var langBtns = menu.querySelectorAll('.cm-home-mobile-lang');
       for (var j = 0; j < langBtns.length; j++) {
         langBtns[j].onclick = function (ev) {
@@ -4104,7 +4129,10 @@
       });
       dialog.appendChild(close);
     }
-    var actionRow = dialog.querySelector('.mt-6.flex.items-center.justify-center.gap-2.5');
+    var actionRow =
+      dialog.querySelector('.mt-6.flex.items-center.justify-center.gap-2\\.5') ||
+      dialog.querySelector('.flex.items-center.justify-center[class*="gap-2.5"]') ||
+      dialog.querySelector('.flex.items-center.justify-center');
     if (actionRow && !actionRow.querySelector('.cm-gameover-random')) {
       var randomBtn = document.createElement('button');
       randomBtn.type = 'button';
@@ -4315,32 +4343,17 @@
     var bannerH = measureRectHeight(banner);
     var mainHeight = Math.max(220, Math.round(mainRect.height || Math.max(0, box.height - headerH)));
     var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 4 + 8;
+
+    /* Reserve a stable, fixed height for the bottom panel (clue composer, live clue,
+       operative guess controls) based purely on viewport geometry so the board NEVER
+       shrinks or grows when turns or roles switch. */
     var sideTarget =
-      mode === 'desktop' ? clamp(mainHeight * 0.15, 116, 164) :
-      mode === 'tablet' ? clamp(mainHeight * 0.165, 118, 160) :
-      mode === 'phone-landscape' ? clamp(mainHeight * 0.2, 80, 108) :
-      clamp(mainHeight * 0.155, 96, 132);
-    var sideMin = mode === 'desktop' ? 110 : mode === 'tablet' ? 110 : mode === 'phone-landscape' ? 78 : 92;
-    var panelKind = cluePanelLayoutSignature();
-    var sidePanel = query('.cm-side-clue > *');
-    var sideNeed = sidePanel ? Math.ceil((sidePanel.scrollHeight || sidePanel.getBoundingClientRect().height || 0) + 12) : 0;
-    if (sideNeed > 0) {
-      var sideCap = mode === 'desktop' ? 220 : mode === 'tablet' ? 196 : mode === 'phone-landscape' ? 132 : 176;
-      var sideTeamsForSizing = box.width >= 820 && box.width / Math.max(1, box.height) >= 1.08;
-      /* An operative/waiting/live clue panel is much shorter than the captain
-         composer. Reserve its measured height instead of the composer-sized
-         minimum so the board grows into the freed Activity space right after a
-         role switch, while the post-layout fitter remains the safety net. */
-      if ((mode === 'desktop' || sideTeamsForSizing) && panelKind && panelKind !== 'composer') {
-        var compactSideFloor = mode === 'desktop' ? 72 : 68;
-        var compactSideHeight = Math.max(compactSideFloor, Math.min(sideCap, sideNeed));
-        sideTarget = compactSideHeight;
-        sideMin = compactSideHeight;
-      } else {
-        sideTarget = Math.max(sideTarget, Math.min(sideCap, sideNeed));
-        sideMin = Math.max(sideMin, Math.min(sideCap, sideNeed));
-      }
-    }
+      mode === 'desktop' ? clamp(mainHeight * 0.16, 128, 156) :
+      mode === 'tablet' ? clamp(mainHeight * 0.16, 116, 146) :
+      mode === 'phone-landscape' ? clamp(mainHeight * 0.2, 78, 100) :
+      clamp(mainHeight * 0.16, 96, 128);
+    var sideMin = mode === 'desktop' ? 116 : mode === 'tablet' ? 106 : mode === 'phone-landscape' ? 76 : 90;
+
     var usableHeight = Math.max(180, mainHeight - reserveWithinMain);
     var boardHeight = Math.max(120, usableHeight - sideTarget);
     var sideTeamsActive = html.classList.contains('cm-ui-side-teams');
@@ -4366,18 +4379,9 @@
     boardWidth = Math.max(210, Math.floor(boardWidth));
     sideTarget = Math.max(sideMin, Math.floor(sideTarget));
 
-    /* Preserve a corrective fit for this exact viewport. sync() can run for
-       ordinary typing/clicks; without this guard it would briefly restore the
-       larger board before the post-layout fit runs again. */
+    /* Preserve corrective fit for this exact viewport dimensions */
     var fitKey = clueComposerViewportKey(box, mode);
-    var layoutSig = cluePanelLayoutSignature();
-    var roleSig = currentSeatLayoutSignature();
-    if (clueComposerFit && (
-      clueComposerFit.key !== fitKey ||
-      (layoutSig && clueComposerFit.layoutSig && clueComposerFit.layoutSig !== layoutSig) ||
-      (roleSig && clueComposerFit.roleSig && clueComposerFit.roleSig !== roleSig) ||
-      clueComposerFit.layoutRevision !== cluePanelDomRevision
-    )) {
+    if (clueComposerFit && clueComposerFit.key !== fitKey) {
       clueComposerFit = null;
     }
     if (clueComposerFit && clueComposerFit.boardWidth > 0) {
@@ -4400,7 +4404,7 @@
   /* A Discord Activity can expose a shorter visual viewport than the browser
      window. Fit the stage from the rendered DOM only when lower clue controls
      would otherwise be off screen, then hold that fitted size until the user
-     resizes the viewport or the clue panel changes structurally. */
+     resizes the viewport. */
   function clueComposerViewportKey(box, mode) {
     return [
       Math.round(Number(box && box.width) || 0),
@@ -4434,23 +4438,13 @@
     var box = viewportBox();
     var mode = detectAdaptiveViewportMode(box);
     var fitKey = clueComposerViewportKey(box, mode);
-    var layoutSig = cluePanelLayoutSignature();
-    var roleSig = currentSeatLayoutSignature();
-    if (clueComposerFit && (
-      clueComposerFit.key !== fitKey ||
-      (layoutSig && clueComposerFit.layoutSig && clueComposerFit.layoutSig !== layoutSig) ||
-      (roleSig && clueComposerFit.roleSig && clueComposerFit.roleSig !== roleSig) ||
-      clueComposerFit.layoutRevision !== cluePanelDomRevision
-    )) {
+    if (clueComposerFit && clueComposerFit.key !== fitKey) {
       clueComposerFit = null;
     }
 
     var boardRect = board.getBoundingClientRect();
     if (!box.height || !boardRect.width) return false;
 
-    /* Measure every rendered clue child and its controls, rather than only the
-       captain submit button. That keeps captain, operative, and spectator
-       panels inside the Activity viewport. */
     var content = side.querySelectorAll(
       '.cm-side-clue > *, .cm-side-clue button, .cm-side-clue input, .cm-side-clue textarea'
     );
@@ -4463,34 +4457,8 @@
 
     var safeBottom = Math.max(8, Math.min(16, Math.round(box.height * 0.02)));
     var overflow = Math.ceil(contentBottom - (box.height - safeBottom));
-    var maxBoardWidth = parseFloat(
-      getComputedStyle(html).getPropertyValue('--cm-board-fit-max-width') || '0'
-    ) || boardRect.width;
 
-    /* After a captain → operative/spectator switch the lower panel becomes
-       shorter. Grow the board once into that genuinely free space, then lock
-       it at the new size until another real role/viewport change occurs. */
     if (overflow <= 1) {
-      var spare = Math.floor((box.height - Math.max(16, safeBottom)) - contentBottom);
-      if (!clueComposerFit && layoutSig !== 'composer' && spare > 2) {
-        var grownBoardWidth = Math.min(
-          Math.floor(maxBoardWidth),
-          Math.floor(boardRect.width + spare * (4 / 3))
-        );
-        if (grownBoardWidth > boardRect.width + 1) {
-          clueComposerFit = {
-            key: fitKey,
-            layoutSig: layoutSig,
-            roleSig: roleSig,
-            layoutRevision: cluePanelDomRevision,
-            boardWidth: grownBoardWidth,
-            lockWidth: true
-          };
-          html.style.setProperty('--cm-board-fit-width', grownBoardWidth + 'px');
-          html.style.setProperty('--cm-stage-fit-width', grownBoardWidth + 'px');
-          return true;
-        }
-      }
       return false;
     }
 
@@ -4507,9 +4475,6 @@
 
     clueComposerFit = {
       key: fitKey,
-      layoutSig: layoutSig,
-      roleSig: roleSig,
-      layoutRevision: cluePanelDomRevision,
       boardWidth: nextBoardWidth,
       lockWidth: true
     };
@@ -4527,8 +4492,6 @@
         clueComposerFitQueued = false;
         return;
       }
-      /* Recheck once after the reduced board has laid out. The retained fit
-         makes this a bounded correction, never a click/typing resize loop. */
       window.requestAnimationFrame(function () {
         fitClueComposerIntoViewport();
         clueComposerFitQueued = false;
@@ -4536,9 +4499,6 @@
     });
   }
 
-  /* Role switches can replace the side panel without firing a window resize.
-     Observe only that panel's dimensions, coalesce the work to one frame, and
-     let the retained fit absorb the one resize caused by our own correction. */
   function queueClueViewportSync() {
     if (clueViewportSyncQueued) return;
     clueViewportSyncQueued = true;
@@ -4550,40 +4510,12 @@
   }
 
   function syncClueViewportObserver() {
-    var clue = query('.cm-side-clue');
-    if (!clue || typeof window.ResizeObserver !== 'function') {
-      if (clueViewportObserver) clueViewportObserver.disconnect();
+    /* Clue observer no longer resizes the board dynamically on every turn/mutation */
+    if (clueViewportObserver) {
+      clueViewportObserver.disconnect();
       clueViewportObserver = null;
       observedClueViewportTargets = [];
-      return;
     }
-
-    /* The wrapper itself can retain a flex height while its card/form grows
-       outside of it. Observe the wrapper and the actual rendered panel/form
-       so role changes, validation rows, and embedded host resizes all reach
-       the fitter without a page refresh. */
-    var targets = [clue];
-    var nested = clue.querySelectorAll(':scope > *, form');
-    for (var i = 0; i < nested.length; i++) {
-      if (targets.indexOf(nested[i]) === -1) targets.push(nested[i]);
-    }
-    var same = targets.length === observedClueViewportTargets.length;
-    if (same) {
-      for (var j = 0; j < targets.length; j++) {
-        if (targets[j] !== observedClueViewportTargets[j]) { same = false; break; }
-      }
-    }
-    if (same && clueViewportObserver) return;
-
-    if (!clueViewportObserver) {
-      clueViewportObserver = new window.ResizeObserver(function (entries) {
-        if (entries && entries.length) queueClueViewportSync();
-      });
-    } else {
-      clueViewportObserver.disconnect();
-    }
-    observedClueViewportTargets = targets;
-    for (var k = 0; k < targets.length; k++) clueViewportObserver.observe(targets[k]);
   }
 
   function currentSeatLayoutSignature() {
@@ -4604,10 +4536,7 @@
       game ? 'game' : 'other',
       Math.round(Number(box && box.width) || 0),
       Math.round(Number(box && box.height) || 0),
-      mode || '',
-      game ? cluePanelLayoutSignature() : '',
-      game ? currentSeatLayoutSignature() : '',
-      game ? cluePanelDomRevision : 0
+      mode || ''
     ].join('|');
   }
 
