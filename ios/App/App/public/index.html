@@ -84,6 +84,46 @@
         }
       })();
     </script>
+    
+    <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
+    <script>
+      (function() {
+        // Automatically route API and WebSocket traffic to production cloud server when running inside Android/iOS App
+        var PROD_SERVER = "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app";
+        var isNativeApp = window.Capacitor !== undefined || 
+                          location.protocol === "capacitor:" || 
+                          (location.protocol === "http:" && location.hostname === "localhost" && !location.port);
+        
+        var customServer = "";
+        try { customServer = localStorage.getItem("clue_me_custom_server") || ""; } catch(e){}
+        
+        var targetServer = (customServer || (isNativeApp ? PROD_SERVER : "")).replace(/\/$/, "");
+        window.__CLUE_ME_SERVER_URL__ = targetServer;
+
+        if (targetServer) {
+          // Intercept fetch calls starting with /api/ or relative endpoints
+          var origFetch = window.fetch;
+          window.fetch = function(input, init) {
+            if (typeof input === "string") {
+              if (input.startsWith("/api/")) {
+                input = targetServer + input;
+              } else if (input.startsWith("/")) {
+                // If it asks for root /api or relative endpoints
+                if (input.indexOf("/api") === 0 || input.indexOf("/socket.io") === 0) {
+                  input = targetServer + input;
+                }
+              }
+            } else if (input && typeof input.url === "string") {
+              if (input.url.startsWith("/api/")) {
+                input = new Request(targetServer + input.url, input);
+              }
+            }
+            return origFetch.call(this, input, init);
+          };
+        }
+      })();
+    </script>
+
     <script type="module" crossorigin src="/assets/index-discord-v30.js?v=153"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=153">
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=153">
