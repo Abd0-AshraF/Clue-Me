@@ -113,16 +113,35 @@
     <script>
       (function() {
         // Automatically route API and WebSocket traffic to production cloud server when running inside Android/iOS App
-        var PROD_SERVER = "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app";
+        var PROD_SERVER = "https://clue-me.ai.studio";
         var isNativeApp = window.Capacitor !== undefined || 
                           location.protocol === "capacitor:" || 
-                          (location.protocol === "http:" && location.hostname === "localhost" && !location.port);
+                          location.hostname === "localhost" ||
+                          location.hostname === "127.0.0.1";
         
         var customServer = "";
         try { customServer = localStorage.getItem("clue_me_custom_server") || ""; } catch(e){}
         
         var targetServer = (customServer || (isNativeApp ? PROD_SERVER : "")).replace(/\/$/, "");
         window.__CLUE_ME_SERVER_URL__ = targetServer;
+
+        window.cmConfigureServerUrl = function() {
+          var current = localStorage.getItem("clue_me_custom_server") || targetServer || "";
+          var input = prompt(
+            "أدخل رابط السيرفر للاتصال بالتطبيق أونلاين (Server URL):\n\nمثال سيرفر خارجي:\nhttps://your-server.onrender.com\n\nأو تجربة محلية Wi-Fi:\nhttp://192.168.1.100:3000",
+            current
+          );
+          if (input !== null) {
+            input = input.trim().replace(/\/$/, "");
+            if (input) {
+              localStorage.setItem("clue_me_custom_server", input);
+            } else {
+              localStorage.removeItem("clue_me_custom_server");
+            }
+            alert("تم حفظ عنوان السيرفر. جاري إعادة تحميل التطبيق...");
+            location.reload();
+          }
+        };
 
         if (targetServer) {
           // Intercept fetch calls starting with /api/ or relative endpoints

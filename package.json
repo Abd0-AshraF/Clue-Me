@@ -36,6 +36,7 @@
     "@capacitor/status-bar": "^8.0.3"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "sharp": "^0.35.4"
   }
 }
