@@ -147,20 +147,21 @@
           // Intercept fetch calls starting with /api/ or relative endpoints
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
-            if (typeof input === "string") {
-              if (input.startsWith("/api/")) {
-                input = targetServer + input;
-              } else if (input.startsWith("/")) {
-                // If it asks for root /api or relative endpoints
-                if (input.indexOf("/api") === 0 || input.indexOf("/socket.io") === 0) {
+            try {
+              if (typeof input === "string") {
+                if (input.startsWith("/api/") || input.startsWith("/socket.io")) {
                   input = targetServer + input;
+                } else if (input.startsWith("api/") || input.startsWith("socket.io")) {
+                  input = targetServer + "/" + input;
+                }
+              } else if (input && typeof input.url === "string") {
+                var u = input.url;
+                if (u.startsWith("/api/") || u.startsWith("api/")) {
+                  var newUrl = u.startsWith("/") ? targetServer + u : targetServer + "/" + u;
+                  input = new Request(newUrl, input);
                 }
               }
-            } else if (input && typeof input.url === "string") {
-              if (input.url.startsWith("/api/")) {
-                input = new Request(targetServer + input.url, input);
-              }
-            }
+            } catch(e) {}
             return origFetch.call(this, input, init);
           };
         }
