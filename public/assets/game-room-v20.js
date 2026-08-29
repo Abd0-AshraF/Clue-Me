@@ -3108,7 +3108,7 @@
   }
 
   function makeDraggable(opts) {
-    /* opts: { grip, el, storageKey, resettable, onTap } */
+    /* opts: { grip, el, storageKey, resettable, onTap, isDragTarget, ignoreDragTarget, dragThreshold } */
     var grip = opts.grip;
     var el = opts.el;
     var drag = null;
@@ -3116,10 +3116,19 @@
     var suppressNativeClickUntil = 0;
     var dragThreshold = Number(opts.dragThreshold);
     if (!Number.isFinite(dragThreshold) || dragThreshold < 0) dragThreshold = DRAG_THRESHOLD;
+    if (!opts.isDragTarget) {
+      grip.style.touchAction = "none";
+    }
 
-    grip.style.touchAction = "none";
-    grip.addEventListener('click', function (ev) {
-      if (opts.ignoreDragTarget && opts.ignoreDragTarget(ev.target)) return;
+    function canDrag(target) {
+      if (!target) return false;
+      if (opts.ignoreDragTarget && opts.ignoreDragTarget(target)) return false;
+      if (opts.isDragTarget && !opts.isDragTarget(target)) return false;
+      return true;
+    }
+
+    grip.addEventListener("click", function (ev) {
+      if (!canDrag(ev.target)) return;
       if (Date.now() > suppressNativeClickUntil) return;
       ev.preventDefault();
       ev.stopPropagation();
@@ -3138,7 +3147,7 @@
 
     function start(x, y, target, id) {
       if (drag) return false;
-      if (opts.ignoreDragTarget && opts.ignoreDragTarget(target)) return false;
+      if (!canDrag(target)) return false;
       var r = el.getBoundingClientRect();
       var cur = readTranslate(el);
       drag = {
@@ -3292,16 +3301,18 @@
     grip.addEventListener("touchstart", function (ev) {
       if (drag || ev.touches.length !== 1 || ev.changedTouches.length !== 1) return;
       var t = ev.changedTouches[0];
+      if (!canDrag(t.target)) return;
       if (!start(t.clientX, t.clientY, t.target, "t" + t.identifier)) return;
       window.addEventListener("touchmove", windowTouchMove, { capture: true, passive: false });
       window.addEventListener("touchend", touchFinish, { capture: true, passive: false });
       window.addEventListener("touchcancel", touchFinish, { capture: true, passive: false });
-      ev.preventDefault(); /* the browser can NEVER steal this gesture */
+      ev.preventDefault(); /* only prevent default when actually dragging from the frame handle */
     }, { passive: false });
 
     /* ---------------- DESKTOP mouse path ---------------- */
     grip.addEventListener("mousedown", function (ev) {
       if (ev.button !== 0) return;
+      if (!canDrag(ev.target)) return;
       if (!start(ev.clientX, ev.clientY, ev.target, "m")) return;
       ev.preventDefault();
       window.addEventListener("mousemove", mouseMove, true);
@@ -3314,6 +3325,7 @@
       move(ev.clientX, ev.clientY);
       ev.preventDefault();
     }
+
     function mouseUp(ev) {
       if (!drag || drag.id !== "m") return;
       window.removeEventListener("mousemove", mouseMove, true);
@@ -3322,6 +3334,7 @@
       end("up");
       ev.preventDefault();
     }
+
     function mouseCancel() {
       if (!drag || drag.id !== "m") return;
       window.removeEventListener("mousemove", mouseMove, true);
@@ -3331,7 +3344,7 @@
     }
 
     grip.addEventListener("dragstart", function (ev) {
-      ev.preventDefault();
+      if (canDrag(ev.target)) ev.preventDefault();
     });
 
     grip.addEventListener("contextmenu", function (ev) {
@@ -3348,9 +3361,7 @@
         applyAt(pos.left, pos.top, base);
       }
     };
-  }
-
-  function linkedDock() {
+  }  function linkedDock() {
     return document.querySelector('.cm-side-row > .cm-dock, .cm-dock');
   }
 
@@ -3699,34 +3710,46 @@
   }
 
   function attachDockDrag(dock) {
-    var head = dock && dock.querySelector('.cm-dock-head');
+    var head = dock && dock.querySelector(".cm-dock-head");
     if (!head) return;
     ensureDockCloseButton(dock, head);
     if (dock.__cmDragDock === dock) {
       if (!isFloatDragging()) applyLinkedSavedTransform();
       return;
     }
-
-    dock.dataset.cmDrag = '1';
+    dock.dataset.cmDrag = "1";
     dock.__cmDragDock = dock;
     dockDragCtl = makeDraggable({
       grip: dock,
       el: dock,
       storageKey: FAB_POS_KEY,
       resettable: true,
-      /* Interactive controls work normally, while anywhere on the dock surface drags the window */
-      ignoreDragTarget: function (target) {
+      /* Header, top drag bar & frame handle drag the window smoothly.
+         The inner list (.cm-dock-list) scrolls freely, while close/size buttons click normally. */
+      isDragTarget: function (target) {
         if (!target || !target.closest) return false;
-        return !!target.closest('.cm-dock-close, .cm-dock-size-toggle, .cm-dock-size, input, select, textarea, a');
+        if (target.closest(".cm-dock-close, .cm-dock-size-toggle, .cm-dock-size, input, select, textarea, a")) {
+          return false;
+        }
+        if (target.closest(".cm-dock-list")) {
+          return false;
+        }
+        return !!target.closest(".cm-dock-head, .cm-dock-title, .cm-dock-android-handle, .cm-dock");
+      },
+      ignoreDragTarget: function (target) {
+        if (!target || !target.closest) return true;
+        if (target.closest(".cm-dock-list")) return true;
+        if (target.closest(".cm-dock-close, .cm-dock-size-toggle, .cm-dock-size, input, select, textarea, a")) return true;
+        return false;
       },
       onTap: function () {},
       onStart: function () {
         blurActiveEditable();
         setFloatDraggingActive(true);
-        dock.dataset.cmDragging = '1';
-        dock.classList.add('cm-dock-dragging');
-        dock.style.transition = 'none';
-        dock.style.willChange = 'transform';
+        dock.dataset.cmDragging = "1";
+        dock.classList.add("cm-dock-dragging");
+        dock.style.transition = "none";
+        dock.style.willChange = "transform";
       },
       onMove: function () {
         mirrorFloatTransform(dock);
@@ -3734,9 +3757,9 @@
       onEnd: function () {
         setFloatDraggingActive(false);
         delete dock.dataset.cmDragging;
-        dock.classList.remove('cm-dock-dragging');
-        dock.style.transition = '';
-        dock.style.willChange = '';
+        dock.classList.remove("cm-dock-dragging");
+        dock.style.transition = "";
+        dock.style.willChange = "";
         mirrorFloatTransform(dock);
       },
       onReset: function () {
@@ -3750,9 +3773,7 @@
       }
     });
     applyLinkedSavedTransform(true);
-  }
-
-  /* ------------------------------------------------------------ log button */
+  }  /* ------------------------------------------------------------ log button */
   function attachFabDrag() {
     if (fab.dataset.cmDrag) {
       if (!isFloatDragging()) applyLinkedSavedTransform();
@@ -4017,34 +4038,10 @@
   }
 
   function syncMobileOperativeClueLayout() {
-    var host = document.querySelector('.cm-side-clue');
+    var host = document.querySelector(".cm-side-clue");
     if (!host) return;
-    host.classList.remove('cm-side-clue-mobile-guess');
-    if (window.innerWidth > 640) return;
-    var buttons = host.querySelectorAll('button');
-    var endTurnBtn = null;
-    for (var i = 0; i < buttons.length; i++) {
-      var txt = ((buttons[i].textContent || '') + '').replace(/\s+/g, ' ').trim();
-      if (txt.indexOf('End turn') !== -1 || txt.indexOf('إنهاء الدور') !== -1) {
-        endTurnBtn = buttons[i];
-        break;
-      }
-    }
-    if (!endTurnBtn) return;
-    var actions = endTurnBtn.parentElement;
-    var progress = actions ? actions.firstElementChild : null;
-    var layout = actions ? actions.parentElement : null;
-    var main = actions ? actions.previousElementSibling : null;
-    var wordRow = main ? main.querySelector('div.flex.items-baseline.gap-2') : null;
-    if (!actions || !progress || progress === endTurnBtn || progress.children.length < 2 || !layout) return;
-    host.classList.add('cm-side-clue-mobile-guess');
-    layout.classList.add('cm-side-clue-guess-layout');
-    main && main.classList.add('cm-side-clue-guess-main');
-    actions.classList.add('cm-side-clue-guess-actions');
-    progress.classList.add('cm-side-clue-guess-progress');
-    wordRow && wordRow.classList.add('cm-side-clue-guess-wordrow');
+    host.classList.remove("cm-side-clue-mobile-guess");
   }
-
   function syncClueComposerLayout() {
     var host = document.querySelector('.cm-side-clue');
     if (!host) return;
@@ -4175,36 +4172,44 @@
       return;
     }
     var lang = html.lang === "en" ? "en" : "ar";
-    var hasRealPanel = !!side.querySelector(".text-2xl");
+    var hasInteractivePanel = !!side.querySelector(".cm-operative-panel, .cm-captain-composer, form, textarea[name=\"clue-input\"], input[name=\"clue-input\"]");
+    if (!hasInteractivePanel) {
+      var allBtns = side.querySelectorAll("button");
+      for (var b = 0; b < allBtns.length; b++) {
+        var txt = ((allBtns[b].textContent || "") + "").trim();
+        if (txt.indexOf("End turn") !== -1 || txt.indexOf("إنهاء الدور") !== -1 || allBtns[b].type === "submit") {
+          hasInteractivePanel = true;
+          break;
+        }
+      }
+    }
+    if (hasInteractivePanel) {
+      if (existing && existing.parentElement) existing.remove();
+      return;
+    }
     if (!existing) {
       existing = document.createElement("div");
       existing.className = "cm-clue-live";
       existing.setAttribute("aria-live", "polite");
     }
-    if (hasRealPanel) {
-      if (existing.parentElement) existing.remove();
-      return;
-    }
     if (!existing.parentElement) side.insertBefore(existing, side.firstChild);
-
-    var liveSig = [lang, data.team || '', data.word || '', data.num || ''].join('\u0001');
-    if (existing.getAttribute('data-cm-live-sig') !== liveSig) {
+    var liveSig = [lang, data.team || "", data.word || "", data.num || ""].join("\u0001");
+    if (existing.getAttribute("data-cm-live-sig") !== liveSig) {
       existing.className = "cm-clue-live cm-clue-live-" + data.team;
       var label = lang === "ar" ? "التلميح الحالي" : "Current clue";
       existing.innerHTML =
-        '<span class="cm-clue-live-label">' + label + "</span>" +
-        '<div class="cm-clue-live-row">' +
-          '<span class="cm-clue-live-word" dir="auto"></span>' +
-          (data.num ? '<span class="cm-clue-live-num"></span>' : "") +
+        "<span class=\"cm-clue-live-label\">" + label + "</span>" +
+        "<div class=\"cm-clue-live-row\">" +
+          "<span class=\"cm-clue-live-word\" dir=\"auto\"></span>" +
+          (data.num ? "<span class=\"cm-clue-live-num\"></span>" : "") +
         "</div>";
       existing.querySelector(".cm-clue-live-word").textContent = data.word;
       var numEl = existing.querySelector(".cm-clue-live-num");
       if (numEl) numEl.textContent = data.num;
-      existing.setAttribute('data-cm-live-sig', liveSig);
+      existing.setAttribute("data-cm-live-sig", liveSig);
     }
     applyClueProgress(existing, data.team);
   }
-
   /* ------------------------------------------------- observer-driven sync */
   function query(sel) { return document.querySelector(sel); }
 
@@ -4348,11 +4353,11 @@
        operative guess controls) based purely on viewport geometry so the board NEVER
        shrinks or grows when turns or roles switch. */
     var sideTarget =
-      mode === 'desktop' ? clamp(mainHeight * 0.16, 128, 156) :
-      mode === 'tablet' ? clamp(mainHeight * 0.16, 116, 146) :
-      mode === 'phone-landscape' ? clamp(mainHeight * 0.2, 78, 100) :
-      clamp(mainHeight * 0.16, 96, 128);
-    var sideMin = mode === 'desktop' ? 116 : mode === 'tablet' ? 106 : mode === 'phone-landscape' ? 76 : 90;
+      mode === 'desktop' ? clamp(mainHeight * 0.075, 46, 60) :
+      mode === 'tablet' ? clamp(mainHeight * 0.075, 44, 58) :
+      mode === 'phone-landscape' ? clamp(mainHeight * 0.09, 36, 48) :
+      clamp(mainHeight * 0.08, 40, 52);
+    var sideMin = mode === 'desktop' ? 44 : mode === 'tablet' ? 42 : mode === 'phone-landscape' ? 34 : 38;
 
     var usableHeight = Math.max(180, mainHeight - reserveWithinMain);
     var boardHeight = Math.max(120, usableHeight - sideTarget);
@@ -4379,18 +4384,9 @@
     boardWidth = Math.max(210, Math.floor(boardWidth));
     sideTarget = Math.max(sideMin, Math.floor(sideTarget));
 
-    /* Preserve corrective fit for this exact viewport dimensions */
-    var fitKey = clueComposerViewportKey(box, mode);
-    if (clueComposerFit && clueComposerFit.key !== fitKey) {
-      clueComposerFit = null;
-    }
-    if (clueComposerFit && clueComposerFit.boardWidth > 0) {
-      boardWidth = clueComposerFit.lockWidth
-        ? Math.min(boardFitMaxWidth, clueComposerFit.boardWidth)
-        : Math.min(boardWidth, clueComposerFit.boardWidth);
-    }
-
-    var useHeightDrivenStage = mode === 'desktop' || sideTeamsActive;
+    /* Adaptive board width derived directly from viewport geometry */
+    clueComposerFit = null;
+  var useHeightDrivenStage = mode === 'desktop' || sideTeamsActive;
     var stageWidth = useHeightDrivenStage ? boardWidth : Math.max(boardWidth, Math.floor(availableWidth));
     html.classList.toggle('cm-ui-height-fit', useHeightDrivenStage);
     html.classList.toggle('cm-ui-width-fit', !useHeightDrivenStage);
@@ -4424,65 +4420,8 @@
   }
 
   function fitClueComposerIntoViewport() {
-    var game = query('.cm-game-page');
-    if (!game) {
-      clueComposerFit = null;
-      return false;
-    }
-    if (!html.classList.contains('cm-ui-height-fit')) return false;
-
-    var board = query('.cm-play-center > .cm-board-frame.cm-game-width');
-    var side = query('.cm-play-center > .cm-side');
-    if (!board || !side) return false;
-
-    var box = viewportBox();
-    var mode = detectAdaptiveViewportMode(box);
-    var fitKey = clueComposerViewportKey(box, mode);
-    if (clueComposerFit && clueComposerFit.key !== fitKey) {
-      clueComposerFit = null;
-    }
-
-    var boardRect = board.getBoundingClientRect();
-    if (!box.height || !boardRect.width) return false;
-
-    var content = side.querySelectorAll(
-      '.cm-side-clue > *, .cm-side-clue button, .cm-side-clue input, .cm-side-clue textarea'
-    );
-    var contentBottom = 0;
-    for (var i = 0; i < content.length; i++) {
-      var rect = content[i].getBoundingClientRect();
-      if (rect && rect.height > 0) contentBottom = Math.max(contentBottom, rect.bottom);
-    }
-    if (!contentBottom) return false;
-
-    var safeBottom = Math.max(8, Math.min(16, Math.round(box.height * 0.02)));
-    var overflow = Math.ceil(contentBottom - (box.height - safeBottom));
-
-    if (overflow <= 1) {
-      return false;
-    }
-
-    /* A 4:3 board loses 0.75px of height for every 1px of width removed. */
-    var minBoardWidth = html.classList.contains('cm-ui-desktop') ? 400 : 260;
-    var nextBoardWidth = Math.max(
-      minBoardWidth,
-      Math.floor(boardRect.width - (overflow + 8) * (4 / 3))
-    );
-    if (clueComposerFit && clueComposerFit.key === fitKey) {
-      nextBoardWidth = Math.min(nextBoardWidth, clueComposerFit.boardWidth);
-    }
-    if (nextBoardWidth >= boardRect.width - 1) return false;
-
-    clueComposerFit = {
-      key: fitKey,
-      boardWidth: nextBoardWidth,
-      lockWidth: true
-    };
-    html.style.setProperty('--cm-board-fit-width', nextBoardWidth + 'px');
-    html.style.setProperty('--cm-stage-fit-width', nextBoardWidth + 'px');
-    return true;
+    return false;
   }
-
   function queueClueComposerViewportFit() {
     if (clueComposerFitQueued) return;
     clueComposerFitQueued = true;

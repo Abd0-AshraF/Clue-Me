@@ -33,7 +33,7 @@ html.cm-v20 {
 }
 
 .cm-v20 .cm-game-shell {
-  --cm-lower-min-h: clamp(8rem, 17dvh, 10.75rem);
+  --cm-lower-min-h: 3.75rem;
 }
 
 /* Site-wide: the hero's rotated decoration cards can bleed a few pixels past
@@ -428,9 +428,8 @@ html.cm-v20.mani-dark {
    Team cards use the same exact lobby recipe, scaled for small screens.
    ------------------------------------------------------------------------- */
 @media (max-width: 1023.98px) {
-  /* Reserve a strip at the bottom so content never hides under the FAB. */
   .cm-v20 .cm-game-shell > main {
-    padding-block-end: calc(var(--cm-fab-size) + var(--cm-fab-gap) + 0.55rem);
+    padding-block-end: 0 !important;
   }
 
   .cm-v20 .cm-teambar {
@@ -593,7 +592,7 @@ html.cm-v20.mani-dark {
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
-    --cm-lower-min-h: 6.25rem;
+    --cm-lower-min-h: 3.5rem;
   }
 
   .cm-v20 .cm-game-shell > main {
@@ -712,8 +711,8 @@ html.cm-v20.mani-dark {
   z-index: 46;
   display: flex !important; /* re-enable on ≤360px where base hid it */
   flex-direction: column;
-  width: min(90vw, 20.5rem);
-  max-width: calc(100vw - 12px);
+  width: min(80vw, 15.25rem);
+  max-width: calc(100vw - 16px);
   height: min(48dvh, 23rem);
   max-height: calc(100dvh - 12px);
   min-height: 8rem;
@@ -1261,7 +1260,7 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-back {
   flex: 0 0 auto;
   flex-direction: column;
   gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0 !important;
   padding: 0.7rem 0.85rem;
   border: 2px solid var(--cm-red);
   border-radius: 1rem;
@@ -2169,10 +2168,18 @@ html.cm-v20.dark:not(.mani):not(.mani-dark):not(.mot) {
   min-width: 0;
 }
 
-.cm-v20 .cm-side-clue-compose-submit {
-  width: 100% !important;
-  max-width: none !important;
-  margin-inline: 0 !important;
+.cm-v20 .cm-side-clue-compose-submit,
+.cm-v20 .cm-side-clue button[type="submit"] {
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  max-width: 2.75rem !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -2927,7 +2934,7 @@ html.cm-v20.cm-min-effects .cm-petals i {
   height: 100%;
   max-height: 100%;
   margin-inline: auto;
-  padding-block-end: max(0.35rem, env(safe-area-inset-bottom));
+  padding-block-end: max(0.2rem, env(safe-area-inset-bottom, 0px)) !important;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2999,6 +3006,9 @@ html.cm-v20.cm-min-effects .cm-petals i {
   height: auto;
   max-height: none;
   overflow: visible;
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .cm-v20 .cm-side-row,
@@ -3016,7 +3026,7 @@ html.cm-v20.cm-min-effects .cm-petals i {
 }
 
 html.cm-v20.cm-ui-phone .cm-game-shell {
-  --cm-lower-min-h: 8rem;
+  --cm-lower-min-h: 3.75rem;
 }
 
 html.cm-v20.cm-ui-phone .cm-game-shell > main {
@@ -3082,7 +3092,7 @@ html.cm-v20.cm-ui-phone.cm-ui-short .cm-word {
 }
 
 html.cm-v20.cm-ui-phone-landscape .cm-game-shell {
-  --cm-lower-min-h: 6.4rem;
+  --cm-lower-min-h: 3.25rem;
 }
 
 html.cm-v20.cm-ui-phone-landscape .cm-game-shell > main {
@@ -3136,7 +3146,7 @@ html.cm-v20.cm-ui-phone-landscape .cm-turn-hint {
 }
 
 html.cm-v20.cm-ui-tablet {
-  --cm-lower-min-h: 9rem;
+  --cm-lower-min-h: 3.75rem;
 }
 
 html.cm-v20.cm-ui-tablet .cm-game-shell > main {
@@ -3152,7 +3162,7 @@ html.cm-v20.cm-ui-tablet .cm-word {
 }
 
 html.cm-v20.cm-ui-desktop {
-  --cm-lower-min-h: 10rem;
+  --cm-lower-min-h: 3.75rem;
 }
 
 html.cm-v20.cm-ui-desktop .cm-board-row,
@@ -3287,6 +3297,10 @@ html.cm-v20.cm-ui-side-teams .cm-side-clue button[type="submit"],
 html.cm-v20.cm-ui-desktop .cm-side-clue button[type="submit"] {
   min-height: 2.7rem;
   height: 2.7rem;
+  width: 2.7rem !important;
+  min-width: 2.7rem !important;
+  max-width: 2.7rem !important;
+  padding: 0 !important;
   font-size: 1rem;
 }
 
@@ -4033,4 +4047,678 @@ html.mot .cm-theme-badge-inline,
 
 [role="radiogroup"] button[role="radio"] {
   min-height: 56px !important;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-clue-live,
+html.cm-v20.cm-ui-desktop .cm-clue-live {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: 0.75rem !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-bottom: 0 !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-label,
+html.cm-v20.cm-ui-desktop .cm-clue-live-label {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  text-align: start !important;
+  font-size: 0.72rem !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-row,
+html.cm-v20.cm-ui-desktop .cm-clue-live-row {
+  flex: 1 1 auto !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  min-width: 0 !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-word,
+html.cm-v20.cm-ui-desktop .cm-clue-live-word {
+  font-size: clamp(1.25rem, 2.2vw, 1.65rem) !important;
+  line-height: 1.15 !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-num,
+html.cm-v20.cm-ui-desktop .cm-clue-live-num {
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  padding: 0.05rem 0.5rem !important;
+  font-size: 0.88rem !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-progress,
+html.cm-v20.cm-ui-desktop .cm-clue-live-progress {
+  flex: 0 0 auto !important;
+  gap: 0.35rem !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-dot,
+html.cm-v20.cm-ui-desktop .cm-clue-live-dot {
+  width: 0.68rem !important;
+  height: 0.68rem !important;
+}
+/* ---------------------------------------------------------------------------
+   Live Clue Responsive Layout:
+   - On Desktop/Tablet (>640px): Horizontal row (Label, Clue Word+Number, Dots side by side)
+   - On Phone (<=640px): Vertical stack (Label top, Clue Word+Number center, Dots bottom)
+   ------------------------------------------------------------------------- */
+@media (min-width: 641px) {
+  .cm-v20 .cm-clue-live {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
+    padding: 0.35rem 0.85rem !important;
+    margin-bottom: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-label {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    text-align: start !important;
+    font-size: 0.75rem !important;
+    margin: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-row {
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+    gap: 0.55rem !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-word {
+    font-size: clamp(1.2rem, 2.2vw, 1.6rem) !important;
+    line-height: 1.15 !important;
+  }
+  .cm-v20 .cm-clue-live-num {
+    min-width: 1.75rem !important;
+    min-height: 1.75rem !important;
+    padding: 0.05rem 0.5rem !important;
+    font-size: 0.88rem !important;
+  }
+  .cm-v20 .cm-clue-live-progress {
+    flex: 0 0 auto !important;
+    gap: 0.35rem !important;
+    margin: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-dot {
+    width: 0.68rem !important;
+    height: 0.68rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .cm-v20 .cm-clue-live {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    padding: 0.45rem 0.65rem !important;
+    margin-bottom: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-label {
+    font-size: 0.68rem !important;
+    text-align: center !important;
+  }
+  .cm-v20 .cm-clue-live-row {
+    justify-content: center !important;
+    gap: 0.45rem !important;
+  }
+  .cm-v20 .cm-clue-live-word {
+    font-size: clamp(1.25rem, 5vw, 1.6rem) !important;
+  }
+  .cm-v20 .cm-clue-live-num {
+    min-width: 1.7rem !important;
+    min-height: 1.7rem !important;
+    padding: 0.05rem 0.45rem !important;
+    font-size: 0.85rem !important;
+  }
+  .cm-v20 .cm-clue-live-progress {
+    gap: 0.35rem !important;
+  }
+  .cm-v20 .cm-clue-live-dot {
+    width: 0.72rem !important;
+    height: 0.72rem !important;
+  }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Unified Single Operative Clue Bar:
+   Combines icon, clue word, count badge, remaining guess dots, and end turn button
+   into a single compact row, giving maximum vertical space to the word board.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-operative-panel {
+  padding: 0.35rem 0.65rem !important;
+  margin: 0 !important;
+  border-radius: 0.85rem !important;
+  box-shadow: var(--cm-shadow-card) !important;
+}
+
+@media (max-width: 640px) {
+  .cm-v20 .cm-operative-panel {
+    padding: 0.3rem 0.5rem !important;
+  }
+}
+
+/* ---- Team Brand Icon Badges (theme-aware swords/shield/flame/sparkles) ---- */
+.cm-team-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(1.85rem, 2.2vw, 2.3rem);
+  height: clamp(1.85rem, 2.2vw, 2.3rem);
+  border-radius: var(--cm-lobby-chip-radius, 0.65rem);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%), 0 2px 5px rgb(0 0 0 / 15%);
+  transition: transform 0.15s ease;
+}
+.cm-team-icon-badge.cm-team-icon-badge-red {
+  background: var(--cm-card-red) !important;
+  border: 1px solid rgb(255 255 255 / 18%);
+}
+.cm-team-icon-badge.cm-team-icon-badge-blue {
+  background: var(--cm-card-blue) !important;
+  border: 1px solid rgb(255 255 255 / 18%);
+}
+
+.cm-teambar-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.38rem;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%);
+}
+.cm-teambar-icon-badge.cm-teambar-icon-badge-red {
+  background: var(--cm-card-red) !important;
+}
+.cm-teambar-icon-badge.cm-teambar-icon-badge-blue {
+  background: var(--cm-card-blue) !important;
+}
+
+
+
+/* ---- Floating Log Dock: Frame Handle Drag & Smooth Inner List Scrolling ---- */
+.cm-v20 .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock {
+  touch-action: auto !important;
+}
+
+/* Top Grab Handle Pill */
+.cm-v20 .cm-dock .cm-dock-android-handle,
+.cm-v20 .cm-dock-android-handle {
+  width: 52px !important;
+  height: 5px !important;
+  margin: 6px auto 3px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--cm-ink) 38%, transparent) !important;
+  flex: 0 0 auto !important;
+  pointer-events: auto !important;
+  touch-action: none !important;
+  cursor: grab !important;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle,
+.cm-v20 .cm-dock:hover .cm-dock-android-handle {
+  background: var(--cm-blue) !important;
+  width: 64px !important;
+}
+
+/* Window Header Bar (Grab Surface) */
+.cm-v20 .cm-dock .cm-dock-head,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+  padding: 0.35rem 0.65rem 0.45rem !important;
+  background: color-mix(in srgb, var(--cm-surface) 65%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent) !important;
+  touch-action: none !important;
+  cursor: grab !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-head:active,
+.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-head {
+  cursor: grabbing !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-title,
+.cm-v20 .cm-dock-head .cm-dock-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  touch-action: none !important;
+  cursor: grab !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: var(--cm-ink) !important;
+  font-weight: 800 !important;
+}
+
+.cm-v20 .cm-dock-title:active {
+  cursor: grabbing !important;
+}
+
+/* Interactive Controls (Clickable only, never drag) */
+.cm-v20 .cm-dock-controls {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  flex: 0 0 auto !important;
+  touch-action: manipulation !important;
+}
+
+.cm-v20 .cm-dock-head .cm-dock-close,
+.cm-v20 .cm-dock-size-toggle {
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+/* Inner Log Events List (Smooth independent scroll, no window drag) */
+.cm-v20 .cm-dock .cm-dock-list,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  cursor: default !important;
+  user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev {
+  touch-action: pan-y !important;
+  cursor: default !important;
+  user-select: text !important;
+}
+
+
+
+
+
+
+
+/* =============================================================================
+   THEME-HARMONIZED TEAMBAR & ROSTER SUITE (MATCHES LOBBY & THEMES)
+   ============================================================================= */
+
+/* Container */
+.cm-v20 .cm-teambar {
+  display: flex !important;
+  gap: clamp(0.35rem, 1.2vw, 0.65rem) !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Individual Team Card (Lobby-Styled) */
+.cm-v20 .cm-teambar-side {
+  flex: 1 1 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: clamp(0.28rem, 1dvh, 0.42rem) !important;
+  padding: clamp(0.42rem, 1.4dvh, 0.65rem) clamp(0.48rem, 1.6vw, 0.72rem) !important;
+  border-radius: var(--cm-lobby-radius, 1rem) !important;
+  border: 2px solid var(--cm-border) !important;
+  background: var(--cm-surface) !important;
+  color: var(--cm-ink) !important;
+  box-shadow: var(--cm-shadow-lift, 0 3px 10px rgba(0,0,0,0.08)) !important;
+  min-width: 0 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+/* -----------------------------------------------------------------------------
+   TEAM COLORS & THEME ADAPTATION
+   ----------------------------------------------------------------------------- */
+
+/* Default / General Theme Tokens (Inherits active theme dynamically) */
+.cm-v20 .cm-teambar-red {
+  border-color: var(--cm-red) !important;
+  background: color-mix(in srgb, var(--cm-red-pale) 50%, var(--cm-surface)) !important;
+  color: var(--cm-ink) !important;
+}
+
+.cm-v20 .cm-teambar-blue {
+  border-color: var(--cm-blue) !important;
+  background: color-mix(in srgb, var(--cm-blue-pale) 50%, var(--cm-surface)) !important;
+  color: var(--cm-ink) !important;
+}
+
+/* MOT Theme Custom Tuning (Tactical High-Tech Style) */
+html.mot .cm-v20 .cm-teambar-red,
+html.cm-v20.mot .cm-teambar-red,
+.mot .cm-teambar-red {
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.14) 0%, #121822 100%) !important;
+  border-color: #f43f5e !important;
+  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+html.mot .cm-v20 .cm-teambar-blue,
+html.cm-v20.mot .cm-teambar-blue,
+.mot .cm-teambar-blue {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.14) 0%, #121822 100%) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Classic Dark Theme Custom Tuning (Obsidian Slate Style) */
+html.dark .cm-v20 .cm-teambar-red,
+html.cm-v20.dark .cm-teambar-red {
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.12) 0%, var(--cm-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--cm-red) 80%, white 20%) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .cm-v20 .cm-teambar-blue,
+html.cm-v20.dark .cm-teambar-blue {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.12) 0%, var(--cm-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--cm-blue) 80%, white 20%) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Mani Light Theme (Floral Sakura Curves) */
+html.mani .cm-v20 .cm-teambar-red,
+html.cm-v20.mani .cm-teambar-red {
+  border-radius: 1.25rem !important;
+  border-color: #fb7185 !important;
+  background: linear-gradient(180deg, #fff1f4 0%, #ffffff 100%) !important;
+  box-shadow: 0 4px 16px rgba(251, 113, 133, 0.16) !important;
+}
+
+html.mani .cm-v20 .cm-teambar-blue,
+html.cm-v20.mani .cm-teambar-blue {
+  border-radius: 1.25rem !important;
+  border-color: #818cf8 !important;
+  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%) !important;
+  box-shadow: 0 4px 16px rgba(129, 140, 248, 0.16) !important;
+}
+
+/* Mani Dark / Twilight Theme (Cosmic Twilight Glow) */
+html.mani-dark .cm-v20 .cm-teambar-red,
+html.cm-v20.mani-dark .cm-teambar-red {
+  border-radius: 1.25rem !important;
+  border-color: #e879f9 !important;
+  background: linear-gradient(180deg, rgba(232, 121, 249, 0.16) 0%, #170f24 100%) !important;
+  box-shadow: 0 4px 20px rgba(232, 121, 249, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+html.mani-dark .cm-v20 .cm-teambar-blue,
+html.cm-v20.mani-dark .cm-teambar-blue {
+  border-radius: 1.25rem !important;
+  border-color: #a78bfa !important;
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.16) 0%, #120e24 100%) !important;
+  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   TEAM HEADER: CREST BADGE + TITLE + SCORE CAPSULE
+   ----------------------------------------------------------------------------- */
+.cm-v20 .cm-teambar-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.35rem !important;
+  font-size: clamp(0.8rem, 2.6vw, 0.88rem) !important;
+  font-weight: 800 !important;
+  color: var(--cm-ink) !important;
+  min-width: 0 !important;
+  padding-bottom: 0.05rem !important;
+}
+
+/* Theme Icon Badge (Lobby-Styled Square) */
+.cm-v20 .cm-teambar-icon-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: clamp(1.4rem, 3.4vw, 1.7rem) !important;
+  height: clamp(1.4rem, 3.4vw, 1.7rem) !important;
+  border-radius: var(--cm-lobby-chip-radius, 0.5rem) !important;
+  border: 1px solid var(--cm-lobby-icon-border, rgba(0, 0, 0, 0.15)) !important;
+  color: #ffffff !important;
+  flex-shrink: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+.cm-v20 .cm-teambar-icon-badge.cm-teambar-icon-badge-red {
+  background: var(--cm-card-red) !important;
+}
+
+.cm-v20 .cm-teambar-icon-badge.cm-teambar-icon-badge-blue {
+  background: var(--cm-card-blue) !important;
+}
+
+/* Remaining Words Count Pill */
+.cm-v20 .cm-teambar-count {
+  min-width: 1.85rem !important;
+  padding: 0.08rem 0.48rem !important;
+  border-radius: 999px !important;
+  border: 1.5px solid var(--cm-border-strong) !important;
+  font-size: clamp(0.74rem, 2.2vw, 0.82rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+  flex-shrink: 0 !important;
+  box-shadow: var(--cm-shadow-card, 0 1px 3px rgba(0,0,0,0.08)) !important;
+}
+
+.cm-v20 .cm-teambar-red .cm-teambar-count {
+  border-color: color-mix(in srgb, var(--cm-red) 55%, var(--cm-border-strong)) !important;
+  background: color-mix(in srgb, var(--cm-red-pale) 85%, var(--cm-surface)) !important;
+  color: var(--cm-red-strong) !important;
+}
+
+.cm-v20 .cm-teambar-blue .cm-teambar-count {
+  border-color: color-mix(in srgb, var(--cm-blue) 55%, var(--cm-border-strong)) !important;
+  background: color-mix(in srgb, var(--cm-blue-pale) 85%, var(--cm-surface)) !important;
+  color: var(--cm-blue-strong) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   ROSTER CHIPS & PLAYER ITEMS
+   ----------------------------------------------------------------------------- */
+.cm-v20 .cm-teambar-players {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 0.28rem !important;
+  min-width: 0 !important;
+}
+
+.cm-v20 .cm-teambar-player.cm-mobile-roster-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  min-height: 1.55rem !important;
+  padding: 0.12rem 0.46rem !important;
+  gap: 0.32rem !important;
+  border: 1.5px solid var(--cm-border) !important;
+  border-radius: var(--cm-lobby-chip-radius, 0.65rem) !important;
+  background: var(--cm-surface) !important;
+  color: var(--cm-ink) !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  box-shadow: var(--cm-shadow-card, 0 1px 3px rgba(0,0,0,0.06)) !important;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.cm-v20 .cm-teambar-player.cm-mobile-roster-chip:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--cm-shadow-lift, 0 3px 8px rgba(0,0,0,0.1)) !important;
+}
+
+/* Captains: Highlighted with Team Brand Border & Crown */
+.cm-v20 .cm-teambar-red .cm-mobile-roster-captain.cm-teambar-player {
+  border-color: var(--cm-red) !important;
+  background: color-mix(in srgb, var(--cm-red-pale) 35%, var(--cm-surface)) !important;
+}
+
+.cm-v20 .cm-teambar-blue .cm-mobile-roster-captain.cm-teambar-player {
+  border-color: var(--cm-blue) !important;
+  background: color-mix(in srgb, var(--cm-blue-pale) 35%, var(--cm-surface)) !important;
+}
+
+/* Avatar Box */
+.cm-v20 .cm-teambar-player .h-5.w-5 {
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  border: 1px solid var(--cm-lobby-icon-border, rgba(0,0,0,0.15)) !important;
+  border-radius: 0.4rem !important;
+  font-size: 0.54rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  flex-shrink: 0 !important;
+}
+
+/* Captain Role Badge */
+.cm-v20 .cm-mobile-roster-captain .cm-teambar-role {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.15rem !important;
+  background: rgb(233 190 84 / 90%) !important;
+  border: 1px solid rgb(255 244 196 / 95%) !important;
+  color: #3a2a08 !important;
+  border-radius: 0.35rem !important;
+  padding: 0.06rem 0.24rem !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+}
+
+/* Current User ("Me") */
+.cm-v20 .cm-teambar-player.cm-mobile-roster-me {
+  border-color: var(--cm-ink-soft) !important;
+}
+
+/* Empty State / More Count */
+.cm-v20 .cm-teambar-empty,
+.cm-v20 .cm-teambar-more {
+  color: var(--cm-ink-faint) !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+
+/* -----------------------------------------------------------------------------
+   MOBILE / PHONE FLOATING DOCK COMPACT SIZING (SCALED FOR SCREEN HARMONY)
+   ----------------------------------------------------------------------------- */
+@media (max-width: 640px), (max-height: 700px) {
+  .cm-v20 .cm-dock,
+  .cm-v20 .cm-side-row > .cm-dock {
+    width: clamp(11.5rem, 68vw, 13.5rem) !important;
+    height: min(40dvh, 16.5rem) !important;
+    border-radius: 1.05rem !important;
+    border-width: 1.5px !important;
+  }
+
+  .cm-v20 .cm-dock.cm-dock-tall,
+  .cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
+    height: min(58dvh, 22rem) !important;
+  }
+
+  .cm-v20 .cm-dock-android-handle,
+  .cm-v20 .cm-dock .cm-dock-android-handle {
+    width: 38px !important;
+    height: 3.5px !important;
+    margin: 5px auto 2px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-head,
+  .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
+    padding: 0.2rem 0.45rem 0.32rem !important;
+    gap: 0.35rem !important;
+  }
+
+  .cm-v20 .cm-dock-title,
+  .cm-v20 .cm-dock-head .cm-dock-title {
+    font-size: 0.75rem !important;
+    gap: 0.3rem !important;
+  }
+
+  .cm-v20 .cm-dock-title svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .cm-v20 .cm-dock-count {
+    font-size: 0.64rem !important;
+    padding: 0.04rem 0.32rem !important;
+    min-width: 1.25rem !important;
+  }
+
+  .cm-v20 .cm-dock-controls {
+    gap: 0.25rem !important;
+  }
+
+  .cm-v20 .cm-dock-head .cm-dock-close,
+  .cm-v20 .cm-dock-size-toggle {
+    width: 1.45rem !important;
+    height: 1.45rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .cm-v20 .cm-dock-size-toggle svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list,
+  .cm-v20 .cm-side-row > .cm-dock .cm-dock-list {
+    padding: 0.24rem 0.32rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev,
+  .cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev {
+    padding: 0.24rem 0.38rem !important;
+    margin-bottom: 0.18rem !important;
+    border-radius: 8px !important;
+    gap: 0.32rem !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-icon {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+    border-radius: 6px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-icon svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body {
+    font-size: 0.7rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-time {
+    font-size: 0.6rem !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list .cm-dock-empty {
+    font-size: 0.72rem !important;
+    padding: 0.6rem !important;
+  }
 }
