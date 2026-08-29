@@ -18,6 +18,21 @@
     "db:generate": "echo \"[clue-me] database client is bundled — nothing to generate\"",
     "db:migrate": "node scripts/check-config.mjs --database-only",
     "config:check": "node scripts/check-config.mjs",
-    "test": "node --test tests/game-engine.test.mjs"
+    "test": "node --test tests/game-engine.test.mjs",
+    "cap:sync": "cap sync",
+    "cap:android": "cap add android && cap sync android",
+    "cap:ios": "cap add ios && cap sync ios",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/screen-orientation": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.3"
   }
 }

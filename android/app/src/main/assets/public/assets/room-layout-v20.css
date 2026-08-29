@@ -1,0 +1,4724 @@
+/* ============================================================================
+   Clue Me — room layout v20.2 (responsive room overhaul)
+   Loaded AFTER responsive-layout-v19.css. It restructures the game room:
+
+   • Team cards are EXACT replicas of the lobby team-picker cards (same
+     tokens: 2px brand border, team-pale surface, rounded-2xl, lift shadow,
+     card-colour icon square) — scaled adaptively with clamp() per device.
+
+   • Every player chip hugs its content (avatar + name, fit-content).
+
+   • Desktop (≥1024px): the cards hug their content vertically (no more
+     stretching down the rail), the event log floats (collapsed by default),
+     and the clue/role panel takes the whole bottom row at board width.
+
+   • Mobile / tablet (<1024px): nothing changes position; the freed space is
+     re-balanced between the team cards and the board so word cards stay
+     near-square.
+
+   • Clicking a player opens a profile sheet with actions (cheer, own seat,
+     host: move/kick) — see game-room-v20.js.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   0. Tokens
+   ------------------------------------------------------------------------- */
+html.cm-v20 {
+  --cm-fab-size: 3rem;
+  --cm-fab-gap: 0.7rem;
+  /* lobby picker measurements (from the compiled stylesheet) */
+  --cm-lobby-radius: var(--radius-2xl, 1rem);
+  --cm-lobby-chip-radius: var(--radius-xl, 0.75rem);
+  --cm-lobby-icon-border: #00000026;
+}
+
+.cm-v20 .cm-game-shell {
+  --cm-lower-min-h: 3.75rem;
+}
+
+/* Site-wide: the hero's rotated decoration cards can bleed a few pixels past
+   the viewport on narrow screens, creating a phantom horizontal scrollbar.
+   Clipping (not "hidden" — it creates no scroll container, so sticky headers
+   keep working) removes it everywhere, game view included. */
+html.cm-v20,
+html.cm-v20 body {
+  overflow-x: clip;
+  max-width: 100vw;
+}
+
+html.cm-v20.cm-float-dragging,
+html.cm-v20.cm-float-dragging body,
+html.cm-v20.cm-float-dragging body * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+html.cm-v20.cm-float-dragging,
+html.cm-v20.cm-float-dragging body {
+  cursor: grabbing !important;
+}
+
+/* ---------------------------------------------------------------------------
+   1. Lower panel — single column: the clue/role panel owns the whole row.
+   ------------------------------------------------------------------------- */
+
+/* The floating log is dragged around the whole screen — the board row must
+   not clip it (verified: nothing else ever overflows this row). */
+.cm-v20 .cm-board-row {
+  overflow: visible;
+}
+
+/* Dragging affordance on the floating log window — whole surface is draggable like an Android floating window. */
+.cm-v20 .cm-dock,
+.cm-v20 .cm-dock *,
+.cm-v20 .cm-side-row > .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock * {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cm-v20 .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
+  cursor: grab;
+}
+
+/* While dragging: lifted look, zero transition. */
+.cm-v20 .cm-dock.cm-dock-dragging {
+  transition: none !important;
+  box-shadow:
+    0 16px 44px rgb(0 0 0 / 40%),
+    0 4px 16px rgb(0 0 0 / 26%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  cursor: grabbing !important;
+  opacity: 1;
+}
+
+.cm-v20 .cm-dock.cm-dock-dragging,
+.cm-v20 .cm-dock.cm-dock-dragging * {
+  cursor: grabbing !important;
+}
+
+/* Diagnosed room errors (game-room-v20.js replaces the generic message). */
+.cm-v20 .cm-error-diag {
+  display: block;
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid color-mix(in srgb, var(--cm-red) 55%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--cm-red-pale) 45%, transparent);
+  color: var(--cm-ink);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* Lobby return-to-game button (injected into the "game running" card). */
+.cm-v20 .cm-lobby-return-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  min-height: 3rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--cm-red);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: var(--cm-shadow-lift);
+  transition: transform 0.14s var(--cm-ease), filter 0.14s var(--cm-ease);
+}
+
+.cm-v20 .cm-lobby-return-btn:hover {
+  filter: brightness(1.07);
+}
+
+.cm-v20 .cm-lobby-return-btn:active {
+  transform: scale(0.98);
+}
+
+/* Smooth comet ribbon overlay (created by game-room-v20.js). */
+.cm-log-ribbon {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 0.14s ease-out;
+}
+
+.cm-log-ribbon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+html.cm-v20 {
+  --cm-log-flame-core: color-mix(in srgb, var(--cm-blue) 74%, white 26%);
+  --cm-log-flame-hot: #d7e6ff;
+  --cm-log-flame-tail: color-mix(in srgb, #7f92ff 45%, transparent 55%);
+  --cm-log-flame-shadow: rgb(99 137 175 / 14%);
+}
+
+html.cm-v20.dark {
+  --cm-log-flame-core: color-mix(in srgb, var(--cm-blue) 68%, white 32%);
+  --cm-log-flame-hot: #d3dbff;
+  --cm-log-flame-tail: color-mix(in srgb, #8d79ff 48%, transparent 52%);
+  --cm-log-flame-shadow: rgb(104 124 214 / 14%);
+}
+
+html.cm-v20.mani,
+html.cm-v20.mani-dark {
+  --cm-log-flame-core: #b38cff;
+  --cm-log-flame-hot: #ecddff;
+  --cm-log-flame-tail: color-mix(in srgb, #8aa6ff 44%, transparent 56%);
+  --cm-log-flame-shadow: rgb(176 140 255 / 14%);
+}
+
+/* FAB while dragging. Keep the button itself lightweight; the ribbon overlay
+   carries most of the visual effect so pointer tracking stays stable. */
+.cm-v20 .cm-log-fab.cm-fab-dragging {
+  transition: none !important;
+  transform-origin: center;
+  box-shadow:
+    0 6px 14px rgb(0 0 0 / 20%),
+    0 10px 20px rgb(0 0 0 / 18%);
+  filter: none;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-dragging::before {
+  opacity: 0.18;
+  transform: scale(1.01);
+}
+
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-head:active {
+  cursor: grabbing;
+}
+.cm-v20 .cm-side-row,
+.cm-v20 .cm-side-row:has(> .cm-dock.cm-dock-tall) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.cm-v20 .cm-play-center > .cm-side {
+  height: auto;
+  min-height: var(--cm-lower-min-h);
+  max-height: none;
+}
+
+.cm-v20 .cm-side .cm-side-seat {
+  justify-content: center;
+}
+
+.cm-v20 .cm-side-clue {
+  overflow: visible;
+}
+
+.cm-v20 .cm-side-clue form {
+  gap: 0.6rem;
+}
+
+.cm-v20 .cm-side-clue > * {
+  border-radius: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Desktop team rails — exact lobby-picker replicas (≥1024px).
+   Same recipe as the lobby's selected team card:
+     border-2 border-{red|blue}-brand · bg-{red|blue}-pale/50 · rounded-2xl
+     · shadow-lift · card-colour icon square · bold ink title.
+   Every measurement scales with clamp() so the card fits the device.
+   ------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .cm-v20 .cm-board-row {
+    --cm-roster-width: clamp(11rem, 12vw, 14rem);
+  }
+
+  /* The card itself — the lobby recipe, verbatim tokens. */
+  .cm-v20 .cm-board-row > .cm-roster-col {
+    align-self: start;
+    height: auto;
+    max-height: 100%;
+    gap: clamp(0.3rem, 0.9dvh, 0.5rem);
+    padding: clamp(0.55rem, min(1vw, 1.7dvh), 0.95rem);
+    border: 2px solid var(--cm-red);
+    border-radius: var(--cm-lobby-radius);
+    background: color-mix(in srgb, var(--cm-red-pale) 50%, transparent);
+    box-shadow: var(--cm-shadow-lift);
+  }
+
+  .cm-v20 .cm-board-row > .cm-roster-col:last-of-type {
+    border-color: var(--cm-blue);
+    background: color-mix(in srgb, var(--cm-blue-pale) 50%, transparent);
+  }
+
+  /* Card header — the lobby row: icon square + bold ink title. */
+  .cm-v20 .cm-roster-head {
+    width: 100%;
+    min-height: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: clamp(0.4rem, 0.7vw, 0.6rem);
+    padding: 0.15rem 0.15rem 0.3rem;
+    border: 0;
+    background: transparent;
+    color: var(--cm-ink);
+    box-shadow: none;
+    font-size: clamp(0.92rem, min(1.05vw, 1.9dvh), 1.04rem);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* The dot becomes the lobby's coloured icon square (never squeezed). */
+  .cm-v20 .cm-roster-head > span:first-child {
+    flex: 0 0 auto;
+    width: clamp(1.9rem, 2.45vw, 2.5rem);
+    height: clamp(1.9rem, 2.45vw, 2.5rem);
+    border-radius: var(--cm-lobby-chip-radius);
+    border: 1px solid var(--cm-lobby-icon-border);
+    background: var(--cm-card-red) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
+  }
+
+  .cm-v20 .cm-roster-col:last-of-type .cm-roster-head > span:first-child {
+    background: var(--cm-card-blue) !important;
+  }
+
+  .cm-v20 .cm-roster-head > .opacity-70 {
+    color: var(--cm-ink-soft);
+    font-size: 0.8em;
+    font-weight: 800;
+  }
+
+  /* Remaining-words pill (injected by game-room-v20.js) — quiet, lobby-like. */
+  .cm-v20 .cm-roster-head::after {
+    content: attr(data-remaining);
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    padding: 0.14rem 0.5rem;
+    border: 1px solid var(--cm-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cm-surface) 82%, transparent);
+    color: var(--cm-ink-soft);
+    font-size: clamp(0.62rem, min(0.8vw, 1.4dvh), 0.72rem);
+    font-weight: 800;
+    line-height: 1.45;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cm-v20 .cm-roster-head:not([data-remaining])::after,
+  .cm-v20 .cm-roster-head[data-remaining=""]::after {
+    display: none;
+  }
+
+  .cm-v20 .cm-roster-col > div {
+    align-items: center;
+    gap: clamp(0.28rem, 0.8dvh, 0.42rem);
+  }
+
+  /* Player chips — the lobby's role-button recipe, hugging avatar + name.
+     Operatives: neutral border. Captains: the team's brand border (the
+     lobby's "selected" accent). */
+  .cm-v20 .cm-roster-chip {
+    width: fit-content;
+    min-width: 5.5rem;
+    max-width: 100%;
+    gap: clamp(0.35rem, 0.6vw, 0.5rem);
+    padding: clamp(0.24rem, 0.7dvh, 0.4rem) clamp(0.4rem, 0.7vw, 0.6rem);
+    border: 2px solid var(--cm-border);
+    border-radius: var(--cm-lobby-chip-radius);
+    background: var(--cm-surface);
+    color: var(--cm-ink);
+    font-weight: 700;
+    box-shadow: var(--cm-shadow-card);
+    transition:
+      transform 0.14s var(--cm-ease),
+      border-color 0.14s var(--cm-ease),
+      box-shadow 0.14s var(--cm-ease);
+  }
+
+  .cm-v20 .cm-roster-chip.cm-roster-chip-red {
+    background: var(--cm-surface);
+    border-color: var(--cm-border);
+    color: var(--cm-ink);
+  }
+
+  .cm-v20 .cm-roster-chip.cm-roster-chip-blue {
+    background: var(--cm-surface);
+    border-color: var(--cm-border);
+    color: var(--cm-ink);
+  }
+
+  /* Captains carry the team accent — like the lobby's selected card.
+     The captains' section is the block right after the hairline divider. */
+  .cm-v20 .cm-board-row > .cm-roster-col:first-of-type .h-px + div .cm-roster-chip {
+    border-color: var(--cm-red);
+  }
+
+  .cm-v20 .cm-board-row > .cm-roster-col:last-of-type .h-px + div .cm-roster-chip {
+    border-color: var(--cm-blue);
+  }
+
+  /* Avatar — the lobby icon square. */
+  .cm-v20 .cm-roster-chip > .h-8.w-8 {
+    width: clamp(1.55rem, 3.9dvh, 2rem);
+    height: clamp(1.55rem, 3.9dvh, 2rem);
+    border: 1px solid var(--cm-lobby-icon-border);
+    border-radius: var(--radius-lg, 0.5rem);
+    color: #fff;
+    font-size: clamp(0.58rem, 1.5dvh, 0.74rem);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
+  }
+
+  .cm-v20 .cm-roster-chip > span {
+    font-size: clamp(0.8rem, min(1vw, 1.8dvh), 0.94rem) !important;
+    letter-spacing: 0.005em;
+    color: var(--cm-ink);
+  }
+
+  .cm-v20 .cm-roster-chip.cm-roster-chip-me {
+    border-color: var(--cm-ink-soft);
+  }
+
+  .cm-v20 .cm-roster-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--cm-shadow-lift);
+  }
+
+  /* Empty slot + captain divider — quiet neutrals on the pale card. */
+  .cm-v20 .cm-roster-col > div > p[class*="border-dashed"],
+  .cm-v20 .cm-roster-col > p[class*="border-dashed"] {
+    width: fit-content;
+    min-width: 5.5rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--cm-lobby-chip-radius);
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--cm-ink) 22%, transparent);
+    background: color-mix(in srgb, var(--cm-surface) 55%, transparent);
+    color: var(--cm-ink-soft);
+  }
+
+  .cm-v20 .cm-roster-col .h-px.bg-border {
+    width: 88%;
+    margin-inline: auto;
+    background: color-mix(in srgb, var(--cm-ink) 16%, transparent) !important;
+  }
+
+  /* Slightly larger stage: the freed dock column returns to the board. */
+  .cm-v20 .cm-board-row > .cm-play-center {
+    --cm-stage-width: min(
+      calc((100cqh - var(--cm-lower-min-h) - var(--cm-fluid-gap)) / 0.75),
+      calc(
+        100cqw - var(--cm-roster-width) - var(--cm-roster-width) -
+          var(--cm-fluid-gap) - var(--cm-fluid-gap)
+      )
+    );
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   3. Mobile / tablet (<1024px) — same element order, re-balanced sizes.
+   Team cards use the same exact lobby recipe, scaled for small screens.
+   ------------------------------------------------------------------------- */
+@media (max-width: 1023.98px) {
+  .cm-v20 .cm-game-shell > main {
+    padding-block-end: 0 !important;
+  }
+
+  .cm-v20 .cm-teambar {
+    flex: 7 1 auto;
+    max-height: 9.5rem;
+  }
+
+  .cm-v20 .cm-board-row {
+    flex-grow: 3;
+  }
+
+  .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    max-height: min(100%, calc(100cqw * 1.04));
+  }
+
+  .cm-v20 .cm-play-center > .cm-side {
+    flex: 0 0 auto;
+  }
+
+  /* Team cards — exact lobby recipe, phone-scaled. */
+  .cm-v20 .cm-teambar-side {
+    justify-content: center;
+    gap: clamp(0.3rem, 1dvh, 0.45rem);
+    padding: clamp(0.45rem, 1.6dvh, 0.7rem) clamp(0.5rem, 2vw, 0.7rem);
+    border: 2px solid var(--cm-red);
+    border-radius: var(--cm-lobby-radius);
+    background: color-mix(in srgb, var(--cm-red-pale) 50%, transparent);
+    color: var(--cm-ink);
+    box-shadow: var(--cm-shadow-lift);
+  }
+
+  .cm-v20 .cm-teambar-blue {
+    border-color: var(--cm-blue);
+    background: color-mix(in srgb, var(--cm-blue-pale) 50%, transparent);
+  }
+
+  .cm-v20 .cm-teambar-head {
+    gap: 0.4rem;
+    font-size: clamp(0.78rem, 2.6vw, 0.86rem);
+    font-weight: 700;
+    color: var(--cm-ink);
+  }
+
+  /* The dot becomes the lobby's mini icon square. */
+  .cm-v20 .cm-teambar-dot {
+    flex: 0 0 auto;
+    width: clamp(1.15rem, 4.5vw, 1.45rem);
+    height: clamp(1.15rem, 4.5vw, 1.45rem);
+    border: 1px solid var(--cm-lobby-icon-border);
+    border-radius: var(--radius-lg, 0.5rem);
+    background: var(--cm-card-red);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
+  }
+
+  .cm-v20 .cm-teambar-blue .cm-teambar-dot {
+    background: var(--cm-card-blue);
+  }
+
+  .cm-v20 .cm-teambar-count {
+    min-width: 1.9rem;
+    padding: 0.08rem 0.42rem;
+    border: 1.5px solid var(--cm-border-strong);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--cm-surface-soft) 82%, var(--cm-surface));
+    color: var(--cm-ink);
+    font-size: 0.74rem;
+    font-weight: 900;
+    line-height: 1.15;
+    text-align: center;
+    box-shadow: var(--cm-shadow-card);
+  }
+
+  .cm-v20 .cm-teambar-red .cm-teambar-count {
+    border-color: color-mix(in srgb, var(--cm-red) 44%, var(--cm-border-strong));
+    background: color-mix(in srgb, var(--cm-red-pale) 82%, var(--cm-surface));
+    color: var(--cm-red-strong);
+  }
+
+  .cm-v20 .cm-teambar-blue .cm-teambar-count {
+    border-color: color-mix(in srgb, var(--cm-blue) 44%, var(--cm-border-strong));
+    background: color-mix(in srgb, var(--cm-blue-pale) 82%, var(--cm-surface));
+    color: var(--cm-blue-strong);
+  }
+
+  .cm-v20 .cm-teambar-players {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    gap: 0.26rem;
+  }
+
+  /* Roster chips — mini lobby cards hugging avatar + name.
+     Tap opens the profile sheet. */
+  .cm-v20 .cm-teambar-player.cm-mobile-roster-chip {
+    width: fit-content;
+    max-width: 100%;
+    min-height: 1.6rem;
+    padding: 0.18rem 0.48rem;
+    gap: 0.3rem;
+    border: 2px solid var(--cm-border);
+    border-radius: 0.65rem;
+    background: var(--cm-surface);
+    color: var(--cm-ink);
+    font-size: 0.73rem;
+    font-weight: 700;
+    box-shadow: var(--cm-shadow-card);
+  }
+
+  /* Captains carry the team accent. */
+  .cm-v20 .cm-teambar-red .cm-mobile-roster-captain.cm-teambar-player {
+    border-color: var(--cm-red);
+  }
+
+  .cm-v20 .cm-teambar-blue .cm-mobile-roster-captain.cm-teambar-player {
+    border-color: var(--cm-blue);
+  }
+
+  .cm-v20 .cm-teambar-player .h-5.w-5 {
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 1px solid var(--cm-lobby-icon-border);
+    border-radius: 0.4rem;
+    font-size: 0.54rem;
+  }
+
+  .cm-v20 .cm-mobile-roster-captain .cm-teambar-role {
+    background: rgb(233 190 84 / 85%);
+    border-color: rgb(255 244 196 / 92%);
+    color: #3a2a08;
+  }
+
+  /* Cheer is now behind the profile sheet — no hold-progress bar. */
+  .cm-v20 .cm-teambar-player.cm-mobile-roster-chip::after {
+    animation: none !important;
+  }
+
+  .cm-v20 .cm-teambar-player.cm-mobile-roster-me {
+    border-color: var(--cm-ink-soft);
+  }
+
+  .cm-v20 .cm-teambar-empty,
+  .cm-v20 .cm-teambar-more {
+    color: var(--cm-ink-faint);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   3b. Landscape phones / very short screens — the clue panel ALWAYS sits
+   UNDER the board (never beside it). The board keeps a healthy height, the
+   team strip is one line, the clue panel is full usable width with no inner
+   scrollbar, and the shell scrolls just a few pixels if the screen is very
+   short.
+   ------------------------------------------------------------------------- */
+@media (max-height: 520px) and (orientation: landscape) {
+  .cm-v20 .cm-game-shell {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    --cm-lower-min-h: 3.5rem;
+  }
+
+  .cm-v20 .cm-game-shell > main {
+    flex: 0 0 auto;
+    min-height: 0;
+    gap: 0.3rem;
+    padding-block: 0.3rem;
+  }
+
+  .cm-v20 .cm-board-row {
+    min-height: 0;
+  }
+
+  /* Natural (content-driven) sizing in landscape — no container math. */
+  .cm-v20 .cm-play-center {
+    min-height: 0;
+    container-type: normal;
+  }
+
+  /* Board on top: wide, with an explicit healthy height. */
+  .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
+    flex: 0 0 auto;
+    width: 100%;
+    height: clamp(10.5rem, 46dvh, 17rem);
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  /* Clue panel UNDER the board — full usable width, no inner scroll. */
+  .cm-v20 .cm-play-center > .cm-side {
+    flex: 0 0 auto;
+    width: min(100%, 36rem);
+    min-height: var(--cm-lower-min-h);
+    margin-inline: auto;
+    padding: 0.3rem;
+    gap: 0.2rem;
+  }
+
+  .cm-v20 .cm-play-center > .cm-side .cm-side-seat {
+    display: none;
+  }
+
+  .cm-v20 .cm-side-clue {
+    overflow: visible;
+  }
+
+  .cm-v20 .cm-side-clue > * {
+    padding: 0.25rem 0.45rem !important;
+  }
+
+  .cm-v20 .cm-side-clue form {
+    gap: 0.3rem;
+  }
+
+  .cm-v20 .cm-side-clue input,
+  .cm-v20 .cm-side-clue button[type="submit"] {
+    height: 2rem;
+  }
+
+  /* One-line team strip: names + counts + tight chips. */
+  .cm-v20 .cm-teambar {
+    flex: 0 0 auto;
+    max-height: none;
+    gap: 0.3rem;
+  }
+
+  .cm-v20 .cm-teambar-side {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .cm-v20 .cm-teambar-players {
+    flex: 1;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow: hidden;
+    min-width: 0;
+    gap: 0.2rem;
+  }
+
+  .cm-v20 .cm-teambar-player.cm-mobile-roster-chip {
+    min-height: 1.3rem;
+    padding: 0.08rem 0.32rem;
+    font-size: 0.62rem;
+    white-space: nowrap;
+  }
+
+  /* Compact status rows. */
+  .cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+    align-self: center;
+    margin-inline: auto;
+    justify-content: center;
+    text-align: center;
+    width: fit-content;
+    max-width: min(100%, var(--cm-stage-fit-width, 100%));
+    padding-block: 0.12rem;
+    font-size: 0.66rem;
+  }
+
+  .cm-v20 .cm-turn-hint {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   4. Floating event log (all sizes) + floating toggle button (from JS).
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock {
+  position: fixed;
+  inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
+  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
+  z-index: 46;
+  display: flex !important; /* re-enable on ≤360px where base hid it */
+  flex-direction: column;
+  width: min(80vw, 15.25rem);
+  max-width: calc(100vw - 16px);
+  height: min(48dvh, 23rem);
+  max-height: calc(100dvh - 12px);
+  min-height: 8rem;
+  box-sizing: border-box;
+  flex: none;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--cm-surface) 52%, transparent) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 45%, rgba(255, 255, 255, 0.22));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.97);
+  transform-origin: 0 100%;
+  transition:
+    opacity 0.18s ease,
+    transform 0.2s var(--cm-ease),
+    visibility 0.2s;
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  will-change: transform, opacity;
+}
+
+[dir="ltr"] .cm-v20 .cm-dock,
+[dir="ltr"] .cm-v20 .cm-side-row > .cm-dock {
+  transform-origin: 100% 100%;
+}
+
+.cm-v20 .cm-dock-android-handle {
+  width: 36px;
+  height: 4px;
+  margin: 7px auto 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-ink) 26%, transparent);
+  flex: 0 0 auto;
+  pointer-events: none;
+  transition: background-color 0.15s ease, width 0.15s ease;
+}
+
+.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle {
+  background: var(--cm-blue);
+  width: 44px;
+}
+
+.cm-v20 .cm-dock.cm-dock-tall,
+.cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
+  height: min(74dvh, 33rem);
+}
+
+.cm-v20 .cm-dock.cm-dock-collapsed,
+.cm-v20 .cm-side-row > .cm-dock.cm-dock-collapsed {
+  height: auto;
+  min-height: 0;
+}
+
+.cm-v20.cm-log-open .cm-dock,
+.cm-v20.cm-log-open .cm-side-row > .cm-dock {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.cm-v20 .cm-dock .cm-dock-head,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0.65rem 0.45rem;
+  background: color-mix(in srgb, var(--cm-surface) 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--cm-border) 45%, transparent);
+}
+
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list,
+.cm-v20 .cm-dock .cm-dock-list {
+  background: transparent !important;
+}
+
+.cm-v20 .cm-dock-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.cm-v20 .cm-dock-size-toggle {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--cm-border) 70%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cm-surface-soft) 85%, transparent);
+  color: var(--cm-ink-soft);
+  cursor: pointer;
+  touch-action: manipulation !important;
+  transition: all 0.15s ease;
+}
+
+.cm-v20 .cm-dock-size-toggle:hover {
+  color: var(--cm-ink);
+  background: color-mix(in srgb, var(--cm-blue) 15%, var(--cm-surface));
+  border-color: var(--cm-blue);
+}
+
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev,
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev {
+  max-width: none;
+  background: color-mix(in srgb, var(--cm-surface) 86%, transparent) !important;
+  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 75%, transparent) !important;
+  border-radius: 12px;
+  padding: 0.42rem 0.55rem;
+  margin-bottom: 0.28rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  color: var(--cm-ink) !important;
+  font-weight: 600;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-red {
+  background: color-mix(in srgb, var(--cm-red-brand) 14%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-red-brand) 65%, transparent) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--cm-red-brand) 20%, transparent);
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-blue {
+  background: color-mix(in srgb, var(--cm-blue-brand) 14%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-blue-brand) 65%, transparent) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--cm-blue-brand) 20%, transparent);
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-positive {
+  background: color-mix(in srgb, var(--cm-success) 16%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-success) 70%, transparent) !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-danger {
+  background: color-mix(in srgb, var(--cm-card-assassin) 18%, var(--cm-surface)) !important;
+  border-color: color-mix(in srgb, var(--cm-card-assassin) 70%, transparent) !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body {
+  color: var(--cm-ink) !important;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink {
+  color: var(--cm-ink) !important;
+  font-weight: 800 !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft {
+  color: var(--cm-ink) !important;
+  opacity: 0.9 !important;
+  font-weight: 600 !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-time {
+  color: var(--cm-ink) !important;
+  opacity: 0.8 !important;
+  font-weight: 700 !important;
+  font-size: 0.68rem !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 8px;
+  background: var(--cm-surface-soft) !important;
+  color: var(--cm-ink) !important;
+  border: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-red .cm-ev-icon {
+  background: var(--cm-red-brand) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-blue .cm-ev-icon {
+  background: var(--cm-blue-brand) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list .cm-dock-empty {
+  color: var(--cm-ink) !important;
+  font-weight: 700 !important;
+  opacity: 0.9;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* The floating toggle button (created by game-room-v20.js on <body>). */
+.cm-v20 .cm-log-fab {
+  position: fixed;
+  inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
+  inset-block-end: 0.55rem;
+  z-index: 47;
+  display: inline-flex;
+  width: var(--cm-fab-size);
+  height: var(--cm-fab-size);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid var(--cm-border-strong);
+  border-radius: 999px;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 18%),
+    0 10px 26px rgb(0 0 0 / 26%);
+  cursor: pointer;
+  transition:
+    transform 0.18s var(--cm-ease),
+    box-shadow 0.18s var(--cm-ease),
+    border-color 0.18s var(--cm-ease);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  isolation: isolate;
+  overflow: visible;
+  will-change: transform;
+}
+
+.cm-v20 .cm-log-fab[hidden] {
+  display: none;
+}
+
+.cm-v20 .cm-log-fab:hover {
+  border-color: var(--cm-ink-soft);
+  box-shadow:
+    0 3px 10px rgb(0 0 0 / 22%),
+    0 14px 32px rgb(0 0 0 / 30%);
+}
+
+.cm-v20 .cm-log-fab:active {
+  transform: scale(0.93);
+}
+
+.cm-v20 .cm-log-fab:focus-visible {
+  outline: 2px solid var(--cm-blue);
+  outline-offset: 2px;
+}
+
+.cm-v20 .cm-log-fab svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: transform 0.3s var(--cm-ease);
+}
+
+.cm-v20 .cm-log-fab .cm-log-fab-x {
+  position: absolute;
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+
+.cm-v20.cm-log-open .cm-log-fab .cm-log-fab-hist {
+  position: absolute;
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+
+.cm-v20.cm-log-open .cm-log-fab .cm-log-fab-x {
+  position: static;
+  opacity: 1;
+  transform: none;
+}
+
+/* Event-count badge on the FAB. */
+.cm-v20 .cm-log-fab .cm-log-fab-badge {
+  position: absolute;
+  inset-block-start: -0.3rem;
+  inset-inline-start: -0.3rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.28rem;
+  border: 2px solid var(--cm-surface);
+  border-radius: 999px;
+  background: var(--cm-red);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.cm-v20 .cm-log-fab .cm-log-fab-badge:empty {
+  display: none;
+}
+
+.cm-v20 .cm-log-fab::before,
+.cm-v20 .cm-log-fab::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.cm-v20 .cm-log-fab::before {
+  inset: -0.45rem;
+  border-radius: inherit;
+  background: radial-gradient(70% 70% at 50% 50%, color-mix(in srgb, var(--cm-log-flame-hot) 88%, transparent) 0%, color-mix(in srgb, var(--cm-log-flame-core) 48%, transparent) 48%, transparent 76%);
+  transform: scale(0.92);
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+.cm-v20 .cm-log-fab::after {
+  display: none;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-pulse {
+  animation: cm-fab-pulse-body 0.9s ease-out 2;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-pulse::before {
+  animation: cm-fab-pulse-shadow 0.9s ease-out 2;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-pulse::after {
+  animation: cm-fab-pulse-tail 0.9s ease-out 2;
+}
+
+@keyframes cm-fab-pulse-body {
+  0%, 100% {
+    border-color: var(--cm-border-strong);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 18%), 0 10px 26px rgb(0 0 0 / 26%);
+  }
+  55% {
+    border-color: color-mix(in srgb, var(--cm-log-flame-core) 55%, var(--cm-border-strong));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--cm-log-flame-core) 10%, transparent), 0 6px 16px var(--cm-log-flame-shadow), 0 12px 24px rgb(0 0 0 / 22%);
+  }
+}
+
+@keyframes cm-fab-pulse-shadow {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  55% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+}
+
+@keyframes cm-fab-pulse-tail {
+  0%, 100% {
+    opacity: 0;
+    transform: translateX(0.02rem) scaleX(0.45);
+  }
+  55% {
+    opacity: 0.24;
+    transform: translateX(0) scaleX(0.62);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   4b. Point (hand) button — swapped behaviour:
+   • CARD tap/click = point/highlight
+   • HAND tap/click = choose the word
+   The hand sits slightly outside the top-right corner and uses a warm gold
+   treatment so it reads as a separate action affordance.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-flip .cm-point-btn {
+  display: inline-flex !important;
+  position: absolute;
+  inset-block-start: -0.38rem;
+  inset-inline-end: -0.38rem;
+  inset-inline-start: auto;
+  inset-block-end: auto;
+  top: -0.38rem;
+  right: -0.38rem;
+  left: auto;
+  bottom: auto;
+  width: 1.9rem;
+  height: 1.9rem;
+  min-width: 0;
+  min-height: 0;
+  border: 1.5px solid rgb(255 239 192 / 92%);
+  border-radius: 0.78rem;
+  background: linear-gradient(180deg, #f4d889 0%, #e4b84e 100%);
+  color: #3a2a08;
+  box-shadow: 0 6px 14px rgb(0 0 0 / 22%), 0 0 0 2px rgb(36 28 24 / 75%);
+  opacity: 0.98;
+  z-index: 14;
+}
+
+.cm-v20 .cm-flip {
+  overflow: visible;
+}
+
+.cm-v20 .cm-cell {
+  overflow: visible;
+}
+
+.cm-v20 .cm-flip .cm-point-btn svg {
+  width: 0.94rem;
+  height: 0.94rem;
+}
+
+.cm-v20 .cm-flip .cm-point-btn:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.cm-v20 .cm-flip .cm-point-btn:active {
+  transform: scale(0.96);
+}
+
+html.dark.cm-v20 .cm-flip .cm-point-btn,
+html.mani-dark.cm-v20 .cm-flip .cm-point-btn {
+  background: linear-gradient(180deg, #f2cf76 0%, #cc9b31 100%);
+  color: #241608;
+}
+
+/* The old tap/hold gesture hint line is no longer true — hide it. */
+.cm-v20 .cm-game-shell > main > p:has(> svg.text-red-brand) {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   4c. Pointed cards are obvious to EVERYONE — a red ring + glow around any
+   card someone pointed at (the pointer's name tags are already rendered by
+   the app for the whole room).
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-flip:has(.cm-point-tags .cm-point-tag) > button,
+.cm-v20 .cm-cell:has(> .cm-point-tags .cm-point-tag) .cm-flip > button {
+  box-shadow:
+    0 0 0 2.5px var(--cm-red),
+    0 0 16px color-mix(in srgb, var(--cm-red) 55%, transparent) !important;
+}
+
+.cm-v20 .cm-flip:has(.cm-point-tags .cm-point-tag),
+.cm-v20 .cm-cell:has(> .cm-point-tags .cm-point-tag) {
+  z-index: 5;
+}
+
+/* ---------------------------------------------------------------------------
+   4c1. Captain's own unrevealed cards — use the role and team already
+   exposed by the live UI, then make only those cards easy to scan.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-cell.cm-captain-own-card,
+.cm-v20 .cm-flip.cm-captain-own-card {
+  position: relative;
+  z-index: 7;
+}
+
+.cm-v20 .cm-flip.cm-captain-own-card::after {
+  content: "";
+  position: absolute;
+  z-index: 8;
+  inset: -2px;
+  border: 2px solid rgba(228, 184, 78, 0.96);
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 239, 192, 0.22),
+    0 0 16px rgba(228, 184, 78, 0.18);
+}
+
+.cm-v20 .cm-flip.cm-captain-own-card .cm-face-front,
+.cm-v20 .cm-flip.cm-captain-own-card .cm-face-back {
+  border-color: rgba(228, 184, 78, 0.92) !important;
+}
+
+html.cm-v20.dark .cm-flip.cm-captain-own-card::after,
+.dark .cm-v20 .cm-flip.cm-captain-own-card::after,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card::after {
+  border-color: rgba(237, 190, 84, 0.98);
+  box-shadow:
+    0 0 0 1px rgba(255, 242, 192, 0.2),
+    0 0 16px rgba(237, 190, 84, 0.22);
+}
+
+html.cm-v20.dark .cm-flip.cm-captain-own-card .cm-face-front,
+html.cm-v20.dark .cm-flip.cm-captain-own-card .cm-face-back,
+.dark .cm-v20 .cm-flip.cm-captain-own-card .cm-face-front,
+.dark .cm-v20 .cm-flip.cm-captain-own-card .cm-face-back,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-front,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-back {
+  border-color: rgba(237, 190, 84, 0.96) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   4c2. Covered chosen cards / peek state cleanup.
+   Keep the theme-specific cover mark, but remove the extra mouse/zoom hint.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-clue-cover-hint {
+  display: none !important;
+}
+
+.cm-v20 .cm-clue-cover-stamp {
+  display: inline-flex !important;
+}
+
+.cm-v20 .cm-peek-btn,
+.cm-v20 .cm-flip[data-covered=false] .cm-peek-btn {
+  cursor: pointer;
+}
+
+.cm-v20 .cm-clue-cover-art {
+  opacity: 0.42;
+}
+
+.cm-v20.dark .cm-clue-cover-art,
+.dark .cm-v20 .cm-clue-cover-art {
+  opacity: 0.34;
+}
+
+.cm-v20.mani .cm-clue-cover-art,
+.cm-v20.mani-dark .cm-clue-cover-art {
+  opacity: 0.48;
+}
+
+.cm-v20 .cm-cover-emphasis .cm-clue-cover {
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 35%),
+    inset 0 0 0 2px color-mix(in srgb, var(--cm-plate, #7a7a7a) 65%, transparent),
+    0 0 0 1.5px color-mix(in srgb, var(--cm-plate, #7a7a7a) 38%, transparent),
+    0 10px 18px rgb(0 0 0 / 16%);
+}
+
+/* ---------------------------------------------------------------------------
+   4d. Live clue panel (injected by game-room-v20.js for everyone who is not
+   the on-turn operative — they already get the interactive panel).
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-clue-live {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0 !important;
+  padding: 0.7rem 0.85rem;
+  border: 2px solid var(--cm-red);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--cm-red-pale) 50%, transparent);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-clue-live-blue {
+  border-color: var(--cm-blue);
+  background: color-mix(in srgb, var(--cm-blue-pale) 50%, transparent);
+}
+
+.cm-v20 .cm-clue-live-label {
+  color: var(--cm-ink-soft);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.cm-v20 .cm-clue-live-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.cm-v20 .cm-clue-live-word {
+  color: var(--cm-ink);
+  font-size: clamp(1.45rem, 4.8vw, 2rem);
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.cm-v20 .cm-clue-live-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0.1rem 0.72rem;
+  border-radius: 999px;
+  background: var(--cm-red);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-clue-live-blue .cm-clue-live-num {
+  background: var(--cm-blue);
+}
+
+.cm-v20 .cm-clue-live-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 1.1rem;
+}
+
+.cm-v20 .cm-clue-live-dot {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--cm-red) 45%, var(--cm-border));
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
+}
+
+.cm-v20 .cm-clue-live-blue .cm-clue-live-dot,
+.cm-v20 .cm-clue-live-progress-blue .cm-clue-live-dot {
+  border-color: color-mix(in srgb, var(--cm-blue) 45%, var(--cm-border));
+}
+
+.cm-v20 .cm-clue-live-dot-on {
+  background: var(--cm-red);
+  border-color: var(--cm-red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cm-red) 12%, transparent);
+}
+
+.cm-v20 .cm-clue-live-blue .cm-clue-live-dot-on,
+.cm-v20 .cm-clue-live-progress-blue .cm-clue-live-dot-on {
+  background: var(--cm-blue);
+  border-color: var(--cm-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cm-blue) 12%, transparent);
+}
+
+.cm-v20 .cm-clue-live-dot-bonus {
+  transform: scale(0.92);
+  opacity: 0.82;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Player profile sheet (created by game-room-v20.js on <body>).
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 42%);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  animation: cm-profile-fade 0.18s ease both;
+}
+
+.cm-v20 .cm-profile-sheet {
+  position: relative;
+  width: min(92vw, 23rem);
+  max-height: min(86dvh, 34rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 1.25rem;
+  background: var(--cm-surface);
+  box-shadow: var(--cm-shadow-lift);
+  animation: cm-profile-pop 0.22s var(--cm-ease) both;
+}
+
+.cm-v20 .cm-profile-sheet-room {
+  width: min(94vw, 24rem);
+  max-height: min(82dvh, 32rem);
+}
+
+.cm-v20 .cm-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--cm-border);
+}
+
+.cm-v20 .cm-profile-head-red { background: color-mix(in srgb, var(--cm-red-pale) 50%, transparent); }
+.cm-v20 .cm-profile-head-blue { background: color-mix(in srgb, var(--cm-blue-pale) 50%, transparent); }
+.cm-v20 .cm-profile-head-none { background: var(--cm-surface-soft); }
+
+.cm-v20 .cm-profile-avatar {
+  display: inline-flex;
+  width: 3.2rem;
+  height: 3.2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--cm-lobby-icon-border);
+  border-radius: var(--cm-lobby-chip-radius);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 900;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
+}
+
+.cm-v20 .cm-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cm-v20 .cm-profile-avatar-red { background: var(--cm-card-red); }
+.cm-v20 .cm-profile-avatar-blue { background: var(--cm-card-blue); }
+.cm-v20 .cm-profile-avatar-none { background: var(--cm-surface-soft); color: var(--cm-ink-soft); }
+
+.cm-v20 .cm-profile-kicker {
+  color: var(--cm-ink-faint);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.12rem;
+}
+
+.cm-v20 .cm-profile-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cm-ink);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.cm-v20 .cm-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  padding: 0.1rem 0.5rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-surface) 82%, transparent);
+  color: var(--cm-ink-soft);
+  font-size: 0.66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cm-v20 .cm-profile-badge-team-red {
+  border-color: var(--cm-red);
+  background: color-mix(in srgb, var(--cm-red-pale) 50%, transparent);
+  color: var(--cm-ink);
+}
+
+.cm-v20 .cm-profile-badge-team-blue {
+  border-color: var(--cm-blue);
+  background: color-mix(in srgb, var(--cm-blue-pale) 50%, transparent);
+  color: var(--cm-ink);
+}
+
+.cm-v20 .cm-profile-badge-captain {
+  border-color: rgb(233 190 84 / 90%);
+  background: color-mix(in srgb, #edbe54 22%, var(--cm-surface));
+  color: #7a5a10;
+}
+
+.cm-v20.dark .cm-profile-badge-captain,
+.dark .cm-v20 .cm-profile-badge-captain { color: #edbe54; }
+
+.cm-v20 .cm-profile-badge-me {
+  border-color: var(--cm-border-strong);
+  color: var(--cm-ink);
+}
+
+.cm-v20 .cm-profile-badge-off {
+  border-color: var(--cm-border-strong);
+  color: var(--cm-ink-faint);
+}
+
+.cm-v20 .cm-profile-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.cm-v20 .cm-profile-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cm-v20 .cm-profile-intro {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--cm-border);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--cm-surface-soft) 65%, transparent);
+}
+
+.cm-v20 .cm-profile-intro-title {
+  margin: 0;
+  color: var(--cm-ink);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-profile-intro-sub {
+  margin: 0.22rem 0 0;
+  color: var(--cm-ink-soft);
+  font-size: 0.74rem;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.cm-v20 .cm-profile-close {
+  position: absolute;
+  inset-block-start: 0.7rem;
+  inset-inline-end: 0.7rem;
+  z-index: 2;
+  display: inline-flex;
+  width: 2.4rem;
+  height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--cm-surface) 88%, transparent);
+  color: var(--cm-ink-soft);
+  cursor: pointer;
+  transition: color 0.15s var(--cm-ease), border-color 0.15s var(--cm-ease), transform 0.15s var(--cm-ease);
+}
+
+.cm-v20 .cm-profile-close:hover {
+  color: var(--cm-ink);
+  border-color: var(--cm-border-strong);
+  transform: scale(1.03);
+}
+
+.cm-v20 .cm-profile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.cm-v20 .cm-profile-act {
+  display: inline-flex;
+  width: 100%;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 0.9rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: start;
+  cursor: pointer;
+  transition: transform 0.14s var(--cm-ease), border-color 0.14s var(--cm-ease),
+    background-color 0.14s var(--cm-ease), box-shadow 0.14s var(--cm-ease);
+}
+
+.cm-v20 .cm-profile-act:hover {
+  border-color: var(--cm-border-strong);
+  background: var(--cm-surface-soft);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-profile-act:active {
+  transform: scale(0.98);
+}
+
+.cm-v20 .cm-profile-act svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.cm-v20 .cm-profile-act-cheer {
+  border-color: var(--cm-red);
+  background: color-mix(in srgb, var(--cm-red-pale) 50%, transparent);
+  color: var(--cm-ink);
+}
+
+.cm-v20 .cm-profile-act-danger {
+  border-color: var(--cm-red);
+  color: var(--cm-red);
+}
+
+.cm-v20 .cm-profile-act:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+
+/* Host-only "move player" controls. */
+.cm-v20 .cm-profile-move {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.65rem 0.7rem;
+  border: 1.5px dashed var(--cm-border-strong);
+  border-radius: 0.8rem;
+}
+
+.cm-v20 .cm-profile-move-label {
+  color: var(--cm-ink-soft);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.cm-v20 .cm-profile-move-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.cm-v20 .cm-profile-move-row > button {
+  flex: 1;
+  padding: 0.45rem 0.3rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 0.65rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.14s var(--cm-ease), background-color 0.14s var(--cm-ease);
+}
+
+.cm-v20 .cm-profile-move-row > button:hover {
+  border-color: var(--cm-border-strong);
+  background: var(--cm-surface-soft);
+}
+
+.cm-v20 .cm-profile-move-red { border-color: var(--cm-red) !important; }
+.cm-v20 .cm-profile-move-blue { border-color: var(--cm-blue) !important; }
+
+.cm-v20 .cm-profile-note {
+  color: var(--cm-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  min-height: 1em;
+}
+
+.cm-v20 .cm-profile-note-err { color: var(--cm-red); font-weight: 800; }
+
+@keyframes cm-profile-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cm-profile-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .cm-v20 .cm-side-row > .cm-dock,
+  .cm-v20 .cm-dock {
+    transform: translateY(8px);
+    transition: opacity 0.16s ease, transform 0.16s var(--cm-ease), visibility 0.16s;
+  }
+
+  .cm-v20.cm-log-open .cm-side-row > .cm-dock,
+  .cm-v20.cm-log-open .cm-dock {
+    transform: translateY(0);
+  }
+
+  .cm-v20 .cm-side-clue-compose-top {
+    grid-template-columns: 1fr;
+    gap: 0.48rem;
+  }
+
+  .cm-v20 .cm-side-clue-compose-meta {
+    grid-auto-flow: row;
+    justify-content: stretch;
+    gap: 0.45rem;
+  }
+
+  .cm-v20 .cm-side-clue-compose-meta > * {
+    width: 100%;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-layout {
+    align-items: flex-start;
+    gap: 0.6rem 0.75rem;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-layout > span:first-child {
+    align-self: flex-start;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-main {
+    min-width: 0;
+    flex: 1 1 calc(100% - 3.25rem);
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-wordrow {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.32rem 0.45rem;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-wordrow > span:first-child {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    overflow-wrap: anywhere;
+    font-size: clamp(1.12rem, 6.4vw, 1.42rem);
+    line-height: 1.16;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-actions {
+    display: flex !important;
+    flex: 1 0 100%;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.42rem;
+    margin-top: 0.08rem;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-actions > button {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-progress {
+    order: 2;
+    width: 100%;
+    justify-content: center;
+    gap: 0.38rem !important;
+  }
+
+  .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-progress > span {
+    width: 0.72rem !important;
+    height: 0.72rem !important;
+  }
+
+  .cm-v20 .cm-flip .cm-point-btn {
+    top: -0.18rem;
+    right: -0.18rem;
+    width: 1.28rem;
+    height: 1.28rem;
+    border-radius: 0.56rem;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 18%), 0 0 0 1.5px rgb(36 28 24 / 68%);
+  }
+
+  .cm-v20 .cm-flip .cm-point-btn svg {
+    width: 0.62rem;
+    height: 0.62rem;
+  }
+}
+
+@media (max-width: 540px) {
+  .cm-v20 .cm-profile-backdrop {
+    align-items: end;
+    padding: 0.75rem;
+  }
+
+  .cm-v20 .cm-profile-sheet,
+  .cm-v20 .cm-profile-sheet-room {
+    width: min(100%, 28rem);
+    max-height: min(82dvh, 34rem);
+    border-radius: 1.15rem;
+  }
+
+  .cm-v20 .cm-profile-head {
+    gap: 0.7rem;
+    padding: 0.95rem 0.95rem 0.8rem;
+  }
+
+  .cm-v20 .cm-profile-avatar {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .cm-v20 .cm-profile-name {
+    font-size: 1.06rem;
+  }
+
+  .cm-v20 .cm-profile-body {
+    padding: 0.85rem 0.9rem 0.95rem;
+    gap: 0.75rem;
+  }
+
+  .cm-v20 .cm-profile-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .cm-v20 .cm-profile-act {
+    min-height: 3.1rem;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-v20 .cm-profile-backdrop,
+  .cm-v20 .cm-profile-sheet,
+  .cm-v20 .cm-log-fab,
+  .cm-v20 .cm-log-fab::before,
+  .cm-v20 .cm-log-fab::after,
+  .cm-v20 .cm-log-fab svg,
+  .cm-v20 .cm-side-row > .cm-dock {
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   6. Theme variants.
+   Light/Dark refresh:
+   - softer near-white / dark-gray surfaces reduce glare
+   - accents are less saturated to avoid eye strain
+   - text and UI colors stay contrast-first
+   ------------------------------------------------------------------------- */
+html.cm-v20:not(.dark):not(.mani):not(.mani-dark):not(.mot) {
+  --cm-paper: #f7f4ee;
+  --cm-surface: #fffaf5;
+  --cm-surface-soft: #f0ebe4;
+  --cm-border: #cbd5e1;
+  --cm-border-strong: #94a3b8;
+  --cm-ink: #000000;
+  --cm-ink-soft: #111827;
+  --cm-ink-faint: #1f2937;
+  --cm-red: #98515a;
+  --cm-red-strong: #83444c;
+  --cm-red-soft: #bf7982;
+  --cm-red-pale: #f4e3e6;
+  --cm-blue: #486987;
+  --cm-blue-strong: #3b5873;
+  --cm-blue-soft: #7891a8;
+  --cm-blue-pale: #e6eef6;
+  --cm-success: #4f7760;
+  --cm-success-pale: #e1ebe3;
+  --cm-card-red: #a35b64;
+  --cm-card-red-ink: #fff8f8;
+  --cm-card-blue: #4d6f8c;
+  --cm-card-blue-ink: #f6f9fc;
+  --cm-card-neutral: #d8cfbd;
+  --cm-card-neutral-ink: #26221a;
+  --cm-card-assassin: #2a2e34;
+  --cm-card-assassin-ink: #f3efe9;
+  --cm-shadow-card: 0 1px 2px rgb(39 44 51 / 0.07), 0 3px 10px rgb(39 44 51 / 0.08);
+  --cm-shadow-lift: 0 3px 10px rgb(39 44 51 / 0.08), 0 16px 32px rgb(39 44 51 / 0.10);
+  --cm-cover-line: #c2b7a780;
+  --cm-cover-mark: #272c331c;
+}
+
+html.cm-v20.dark:not(.mani):not(.mani-dark):not(.mot) {
+  --cm-paper: #181b1f;
+  --cm-surface: #23262c;
+  --cm-surface-soft: #2b2f36;
+  --cm-border: #475569;
+  --cm-border-strong: #64748b;
+  --cm-ink: #ffffff;
+  --cm-ink-soft: #f1f5f9;
+  --cm-ink-faint: #cbd5e1;
+  --cm-red: #a05f68;
+  --cm-red-strong: #b4737c;
+  --cm-red-soft: #7b4750;
+  --cm-red-pale: #35262b;
+  --cm-blue: #5c7694;
+  --cm-blue-strong: #7390b1;
+  --cm-blue-soft: #415569;
+  --cm-blue-pale: #283544;
+  --cm-success: #739a83;
+  --cm-success-pale: #26342c;
+  --cm-card-red: #a05f68;
+  --cm-card-red-ink: #fff8f8;
+  --cm-card-blue: #5c7694;
+  --cm-card-blue-ink: #f8fbff;
+  --cm-card-neutral: #4a463c;
+  --cm-card-neutral-ink: #f5f5f4;
+  --cm-card-assassin: #14171b;
+  --cm-card-assassin-ink: #fecdd3;
+  --cm-shadow-card: 0 1px 2px rgb(0 0 0 / 0.34), 0 4px 12px rgb(0 0 0 / 0.26);
+  --cm-shadow-lift: 0 4px 12px rgb(0 0 0 / 0.34), 0 18px 36px rgb(0 0 0 / 0.28);
+  --cm-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  --cm-cover-line: #4b536088;
+  --cm-cover-mark: #e8e2d814;
+}
+
+.mani.cm-v20 .cm-log-fab {
+  border-radius: 1rem;
+}
+
+.mani.cm-v20 .cm-side-row > .cm-dock {
+  border-radius: 1.35rem;
+}
+
+
+/* ---------------------------------------------------------------------------
+   5b. Game-over overlay controls.
+   ------------------------------------------------------------------------- */
+.cm-v20 [role="dialog"] .cm-gameover-close {
+  position: absolute;
+  inset-block-start: 0.8rem;
+  inset-inline-end: 0.8rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--cm-border);
+  border-radius: 0.75rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink-soft);
+  font-size: 1rem;
+  font-weight: 900;
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 [role="dialog"] .cm-gameover-random {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--cm-border);
+  border-radius: 999px;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+  box-shadow: var(--cm-shadow-card);
+}
+
+/* ---------------------------------------------------------------------------
+   4a2. Generic floating log support outside the exact game layout selector.
+   Lets the icon appear as soon as a room/lobby log exists, not only in one
+   exact subtree shape.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-dock {
+  position: fixed;
+  inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
+  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
+  z-index: 46;
+}
+
+.cm-v20.cm-log-open .cm-dock {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.cm-v20 .cm-dock .cm-dock-head,
+.cm-v20 .cm-dock .cm-dock-head * {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.cm-v20 .cm-dock .cm-dock-head {
+  cursor: grab;
+}
+
+/* ---------------------------------------------------------------------------
+   6b. Mobile home header menu + settings augmentation.
+   ------------------------------------------------------------------------- */
+.cm-home-menu-btn {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cm-border);
+  border-radius: 0.8rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink-soft);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-home-menu-btn svg { width: 1.15rem; height: 1.15rem; }
+
+.cm-home-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 79;
+  border: 0;
+  background: rgb(0 0 0 / 24%);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.cm-home-mobile-menu {
+  position: fixed;
+  z-index: 80;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--cm-border);
+  border-radius: 1rem;
+  background: var(--cm-surface);
+  box-shadow: var(--cm-shadow-lift);
+}
+
+.cm-home-mobile-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cm-home-mobile-menu-head strong {
+  color: var(--cm-ink);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.cm-home-mobile-close {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cm-border);
+  border-radius: 0.8rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink-soft);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.cm-home-mobile-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cm-home-mobile-group-label {
+  color: var(--cm-ink-faint);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.cm-home-mobile-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--cm-border);
+  border-radius: 0.8rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  font-size: 1rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-home-mobile-item.is-active {
+  border-color: var(--cm-red);
+  background: color-mix(in srgb, var(--cm-red-pale) 40%, var(--cm-surface));
+}
+
+.cm-home-mobile-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.cm-v20 textarea[name="clue-input"],
+.cm-v20 textarea[name="room-chat"] {
+  resize: none;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.cm-v20 .cm-side-clue > *,
+.cm-v20 .cm-side-clue form > div,
+.cm-v20 .cm-side-clue button[type="submit"],
+.cm-v20 .cm-side-clue input[name="clue-input"],
+.cm-v20 .cm-side-clue textarea[name="clue-input"] {
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+
+.cm-v20 textarea[name="clue-input"],
+.cm-v20 input[name="clue-input"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+  text-align: start;
+  unicode-bidi: plaintext;
+}
+
+.cm-v20 textarea[name="room-chat"] {
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.cm-v20 .cm-side-clue-compose-form {
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.cm-v20 .cm-side-clue-compose-top {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.55rem;
+  width: 100%;
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+
+.cm-v20 .cm-side-clue-compose-field {
+  min-width: 0;
+  width: 100%;
+  max-width: none !important;
+}
+
+.cm-v20 .cm-side-clue-compose-field label {
+  text-align: start;
+}
+
+.cm-v20 .cm-side-clue-compose-meta {
+  min-width: 0;
+  display: grid !important;
+  grid-auto-flow: column;
+  align-items: end;
+  justify-content: start;
+  gap: 0.5rem;
+}
+
+.cm-v20 .cm-side-clue-compose-meta > * {
+  min-width: 0;
+}
+
+.cm-v20 .cm-side-clue-compose-submit,
+.cm-v20 .cm-side-clue button[type="submit"] {
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  max-width: 2.75rem !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cm-sb-settings {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--cm-border);
+}
+
+.cm-sb-settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.cm-sb-settings-title {
+  color: var(--cm-ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.cm-sb-settings-val,
+.cm-sb-settings-note {
+  color: var(--cm-ink-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.cm-sb-settings-range {
+  width: 100%;
+}
+
+.cm-sb-settings-note { margin: 0.45rem 0 0; }
+
+.cm-fx-settings {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.95rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--cm-border);
+}
+
+.cm-fx-settings-check {
+  margin-top: 0.18rem;
+  flex: 0 0 auto;
+}
+
+.cm-fx-settings-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.16rem;
+}
+
+.cm-fx-settings-title {
+  color: var(--cm-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.cm-fx-settings-note {
+  color: var(--cm-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+html.cm-v20.cm-min-effects .cm-game-page *,
+html.cm-v20.cm-min-effects .cm-log-fab,
+html.cm-v20.cm-min-effects .cm-dock {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.cm-v20.cm-min-effects .cm-log-ribbon,
+html.cm-v20.cm-min-effects .cm-cheer-layer,
+html.cm-v20.cm-min-effects .cm-burst,
+html.cm-v20.cm-min-effects .cm-beam,
+html.cm-v20.cm-min-effects .cm-shockwave,
+html.cm-v20.cm-min-effects .cm-star,
+html.cm-v20.cm-min-effects .cm-clue-announce,
+html.cm-v20.cm-min-effects .cm-assassin-dim,
+html.cm-v20.cm-min-effects .cm-confetti,
+html.cm-v20.cm-min-effects .cm-float,
+html.cm-v20.cm-min-effects .cm-petals,
+html.cm-v20.cm-min-effects .cm-petals i {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   7. Admin players panel (game-room-v20.js — replaces the app's list).
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 1.1rem;
+  background: var(--cm-surface);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-admin-users-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(18rem, 0.95fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.cm-v20 .cm-admin-user-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 1.1rem;
+  background: var(--cm-surface);
+  box-shadow: var(--cm-shadow-card);
+  position: sticky;
+  top: 5.5rem;
+}
+
+.cm-v20 .cm-admin-user-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.cm-v20 .cm-admin-user-head-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.cm-v20 .cm-admin-hide-app {
+  display: none !important;
+}
+
+.cm-v20 .cm-admin-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  border: 1.5px solid var(--cm-border-strong);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--cm-surface-soft) 60%, transparent);
+}
+
+.cm-v20 .cm-admin-search svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
+  color: var(--cm-ink-soft);
+}
+
+.cm-v20 .cm-admin-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 0.6rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink-soft);
+  cursor: pointer;
+}
+
+.cm-v20 .cm-admin-refresh:hover { color: var(--cm-ink); border-color: var(--cm-border-strong); }
+.cm-v20 .cm-admin-refresh svg { width: 1rem; height: 1rem; }
+
+.cm-v20 .cm-admin-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--cm-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.cm-v20 .cm-admin-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: min(60dvh, 30rem);
+  overflow-y: auto;
+}
+
+.cm-v20 .cm-admin-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.7rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--cm-surface) 82%, transparent);
+  cursor: pointer;
+  text-align: start;
+  transition: transform 0.14s var(--cm-ease), border-color 0.14s var(--cm-ease), box-shadow 0.14s var(--cm-ease);
+}
+
+.cm-v20 .cm-admin-row-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cm-v20 .cm-admin-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.cm-v20 .cm-admin-row-sub {
+  color: var(--cm-ink-faint);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.cm-v20 .cm-admin-row-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+}
+
+.cm-v20 .cm-admin-row:hover,
+.cm-v20 .cm-admin-row:focus-visible {
+  border-color: var(--cm-border-strong);
+  box-shadow: var(--cm-shadow-lift);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.cm-v20 .cm-admin-row-active {
+  border-color: var(--cm-red);
+  background: color-mix(in srgb, var(--cm-red-pale) 28%, var(--cm-surface));
+  box-shadow: var(--cm-shadow-lift);
+}
+
+.cm-v20 .cm-admin-row-me {
+  border-color: var(--cm-ink-soft);
+}
+
+.cm-v20 .cm-admin-avatar {
+  display: inline-flex;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--cm-lobby-icon-border);
+  border-radius: 0.65rem;
+  background: var(--cm-blue);
+  color: #fff;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-admin-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cm-v20 .cm-admin-row:first-child .cm-admin-avatar {
+  background: var(--cm-red);
+}
+
+.cm-v20 .cm-admin-dot {
+  width: 0.62rem;
+  height: 0.62rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #9aa0a6;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cm-surface) 80%, transparent);
+}
+
+.cm-v20 .cm-admin-dot.cm-on {
+  background: #35c26b;
+  box-shadow: 0 0 8px #35c26b;
+}
+
+.cm-v20 .cm-admin-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--cm-ink);
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: start;
+  cursor: pointer;
+}
+
+.cm-v20 .cm-admin-name:hover {
+  text-decoration: underline;
+}
+
+.cm-v20 .cm-admin-tags {
+  display: inline-flex;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.cm-v20 .cm-tag {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  border: 1px solid transparent;
+}
+
+.cm-v20 .cm-tag-root {
+  background: color-mix(in srgb, #edbe54 24%, var(--cm-surface));
+  border-color: rgb(233 190 84 / 85%);
+  color: #7a5a10;
+}
+
+.cm-v20.dark .cm-tag-root,
+.dark .cm-v20 .cm-tag-root { color: #edbe54; }
+
+.cm-v20 .cm-tag-admin {
+  background: color-mix(in srgb, var(--cm-card-blue) 18%, var(--cm-surface));
+  border-color: color-mix(in srgb, var(--cm-card-blue) 55%, transparent);
+  color: var(--cm-blue);
+}
+
+.cm-v20 .cm-tag-bad {
+  background: color-mix(in srgb, var(--cm-card-red) 16%, var(--cm-surface));
+  border-color: color-mix(in srgb, var(--cm-card-red) 55%, transparent);
+  color: var(--cm-red);
+}
+
+.cm-v20 .cm-tag-warn {
+  background: color-mix(in srgb, #edbe54 16%, var(--cm-surface));
+  color: #8a6410;
+}
+
+.cm-v20 .cm-admin-seen {
+  flex: 0 0 auto;
+  color: var(--cm-ink-faint);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.cm-v20 .cm-admin-open {
+  flex: 0 0 auto;
+  color: var(--cm-ink-faint);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-admin-empty {
+  padding: 1.2rem;
+  text-align: center;
+  color: var(--cm-ink-soft);
+  font-weight: 700;
+}
+
+/* admin profile extras */
+.cm-v20 .cm-admin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cm-v20 .cm-admin-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px dashed var(--cm-border-strong);
+  border-radius: 0.65rem;
+}
+
+.cm-v20 .cm-admin-info-k {
+  flex: 0 0 auto;
+  color: var(--cm-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-admin-info-v {
+  min-width: 0;
+  color: var(--cm-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: end;
+  word-break: break-word;
+}
+
+.cm-v20 .cm-admin-info-v a {
+  color: var(--cm-blue);
+  text-decoration: underline;
+}
+
+.cm-v20 .cm-profile-badge-warn2 {
+  border-color: rgb(233 190 84 / 90%);
+  background: color-mix(in srgb, #edbe54 22%, var(--cm-surface));
+  color: #7a5a10;
+}
+
+.cm-v20 .cm-admin-note-soft {
+  color: var(--cm-ink-faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* full rebuilt admin shell */
+.cm-v20 .cm-admin-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
+}
+
+.cm-v20 .cm-admin-shell-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cm-v20 .cm-admin-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.35rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--cm-surface-soft) 58%, transparent);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-admin-tab,
+.cm-v20 .cm-admin-btn {
+  border: 1.5px solid var(--cm-border);
+  border-radius: 0.8rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  font-size: 0.84rem;
+  font-weight: 800;
+  padding: 0.6rem 0.95rem;
+  cursor: pointer;
+  transition: transform 0.14s var(--cm-ease), border-color 0.14s var(--cm-ease),
+    background-color 0.14s var(--cm-ease), box-shadow 0.14s var(--cm-ease);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-admin-tab:hover,
+.cm-v20 .cm-admin-btn:hover {
+  border-color: var(--cm-border-strong);
+  background: var(--cm-surface-soft);
+}
+
+.cm-v20 .cm-admin-tab:active,
+.cm-v20 .cm-admin-btn:active {
+  transform: scale(0.98);
+}
+
+.cm-v20 .cm-admin-tab.is-active {
+  border-color: var(--cm-red);
+  background: color-mix(in srgb, var(--cm-red-pale) 42%, var(--cm-surface));
+  color: var(--cm-ink);
+  box-shadow: var(--cm-shadow-lift);
+}
+
+.cm-v20 .cm-admin-btn-primary {
+  border-color: var(--cm-red);
+  background: var(--cm-red);
+  color: #fff;
+}
+
+.cm-v20 .cm-admin-shell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.cm-v20 .cm-admin-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cm-v20 .cm-admin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1.5px solid var(--cm-border);
+  border-radius: 1rem;
+  background: var(--cm-surface);
+  box-shadow: var(--cm-shadow-card);
+}
+
+.cm-v20 .cm-admin-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cm-v20 .cm-admin-card-title {
+  margin: 0;
+  color: var(--cm-ink);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-admin-card-sub {
+  margin: 0.2rem 0 0;
+  color: var(--cm-ink-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cm-v20 .cm-admin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--cm-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-surface-soft) 60%, transparent);
+  color: var(--cm-ink-soft);
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-admin-pill-open {
+  border-color: var(--cm-red);
+  color: var(--cm-red);
+  background: color-mix(in srgb, var(--cm-red-pale) 42%, var(--cm-surface));
+}
+
+.cm-v20 .cm-admin-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  color: var(--cm-ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.cm-v20 .cm-admin-detail {
+  margin: 0;
+  color: var(--cm-ink);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.cm-v20 .cm-admin-time {
+  color: var(--cm-ink-faint);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cm-v20 .cm-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.cm-v20 .cm-admin-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.cm-v20 .cm-admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 10rem;
+}
+
+.cm-v20 .cm-admin-field-grow {
+  flex: 1 1 18rem;
+}
+
+.cm-v20 .cm-admin-field label {
+  color: var(--cm-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.cm-v20 .cm-admin-input,
+.cm-v20 .cm-admin-select {
+  height: 2.7rem;
+  min-width: 0;
+  border: 1.5px solid var(--cm-border-strong);
+  border-radius: 0.8rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 0 0.9rem;
+  outline: none;
+}
+
+.cm-v20 .cm-admin-input:focus,
+.cm-v20 .cm-admin-select:focus {
+  border-color: var(--cm-blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cm-blue) 18%, transparent);
+}
+
+.cm-v20 .cm-admin-word-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cm-v20 .cm-admin-word-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.cm-v20 .cm-admin-word-main strong {
+  font-size: 0.96rem;
+  color: var(--cm-ink);
+}
+
+.cm-v20 .cm-admin-word-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.cm-v20 .cm-admin-shell-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--cm-ink-soft);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+@media (max-width: 980px) {
+  .cm-v20 .cm-admin-users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cm-v20 .cm-admin-user-detail {
+    position: static;
+    top: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .cm-v20 .cm-admin-shell-head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+  }
+
+  .cm-v20 .cm-admin-shell-refresh {
+    position: static;
+    transform: none;
+    align-self: flex-start;
+  }
+
+  .cm-v20 .cm-admin-tabs {
+    justify-content: center;
+  }
+
+  .cm-v20 .cm-admin-tab,
+  .cm-v20 .cm-admin-btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .cm-v20 .cm-admin-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cm-v20 .cm-admin-field {
+    min-width: 0;
+  }
+
+  .cm-v20 .cm-admin-word-row,
+  .cm-v20 .cm-admin-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   8. Adaptive stage hardening.
+   Modern approach:
+   - page layout adapts automatically from measured viewport size
+   - no user prompt, no device-specific hardcoding
+   - JS sets mode classes + exact viewport vars
+   - CSS uses dedicated phone / tablet / desktop / phone-landscape modes
+   - content compresses to fit instead of falling back to scrolling first
+   ------------------------------------------------------------------------- */
+.cm-v20 {
+  --cm-vp-w: 100vw;
+  --cm-vp-h: 100dvh;
+  --cm-header-h: 56px;
+  --cm-board-fit-width: min(100%, 40rem);
+  --cm-stage-fit-width: min(100%, 40rem);
+  --cm-side-fit-height: 8.5rem;
+  --cm-roster-width-fit: 11rem;
+}
+
+.cm-v20 .cm-game-page {
+  height: var(--cm-vp-h);
+  max-height: var(--cm-vp-h);
+  overflow: hidden;
+}
+
+.cm-v20 .cm-game-shell {
+  height: calc(var(--cm-vp-h) - var(--cm-header-h));
+  max-height: calc(var(--cm-vp-h) - var(--cm-header-h));
+  overflow: hidden;
+}
+
+.cm-v20 .cm-game-shell > main {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin-inline: auto;
+  padding-block-end: max(0.2rem, env(safe-area-inset-bottom, 0px)) !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+}
+
+.cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+  align-self: center !important;
+  margin-inline: auto !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: fit-content !important;
+  max-width: min(100%, var(--cm-stage-fit-width, 100%));
+}
+
+.cm-v20 .cm-game-shell > main > .cm-turn-hint,
+.cm-v20 .cm-turn-hint,
+.cm-v20 .cm-game-shell > main > p {
+  align-self: center !important;
+  text-align: center !important;
+  margin-inline: auto !important;
+}
+
+.cm-v20 .cm-board-row,
+.cm-v20 .cm-play-center {
+  container-type: normal !important;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+}
+
+.cm-v20 .cm-teambar {
+  width: min(100%, var(--cm-stage-fit-width));
+  max-width: var(--cm-stage-fit-width);
+}
+
+.cm-v20 .cm-play-center {
+  width: 100% !important;
+  max-width: var(--cm-stage-fit-width);
+  margin-inline: auto;
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.cm-v20 .cm-play-center > .cm-board-frame.cm-game-width,
+.cm-v20 .cm-play-center > .cm-side {
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+}
+
+.cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
+  flex: 0 0 auto;
+  width: min(100%, var(--cm-board-fit-width));
+  margin-inline: auto;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 4 / 3;
+}
+
+.cm-v20 .cm-play-center > .cm-side {
+  flex: 0 0 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.cm-v20 .cm-side-row,
+.cm-v20 .cm-side-clue,
+.cm-v20 .cm-side-clue > * {
+  min-height: 0;
+}
+
+.cm-v20 .cm-side-clue {
+  overflow: visible;
+}
+
+.cm-v20 .cm-side-clue > * {
+  height: auto !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-game-shell {
+  --cm-lower-min-h: 3.75rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-game-shell > main {
+  gap: clamp(0.26rem, 0.9vw, 0.45rem);
+  padding-inline: 0.42rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-board-frame {
+  padding: 4px;
+}
+
+html.cm-v20.cm-ui-phone .cm-board-frame > .grid {
+  gap: 0.22rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-side {
+  padding: 0.4rem;
+  gap: 0.28rem;
+  border-radius: 1rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-side-row,
+html.cm-v20.cm-ui-phone .cm-side-row:has(> .cm-dock.cm-dock-tall) {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.45fr) !important;
+  gap: 0.42rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-teambar {
+  gap: 0.35rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-teambar-side {
+  padding: 0.42rem 0.52rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-teambar-player.cm-mobile-roster-chip {
+  min-height: 1.5rem;
+  padding: 0.14rem 0.42rem;
+  font-size: 0.7rem;
+}
+
+html.cm-v20.cm-ui-phone .cm-word {
+  font-size: clamp(0.6rem, 3.25vw, 0.96rem);
+  line-height: 1.08;
+}
+
+html.cm-v20.cm-ui-phone .cm-word-plate {
+  max-width: 90%;
+  padding: 0.14em 0.46em;
+}
+
+html.cm-v20.cm-ui-phone.cm-ui-short .cm-side {
+  padding: 0.35rem;
+  gap: 0.22rem;
+}
+
+html.cm-v20.cm-ui-phone.cm-ui-short .cm-teambar-side {
+  padding: 0.38rem 0.46rem;
+}
+
+html.cm-v20.cm-ui-phone.cm-ui-short .cm-word {
+  font-size: clamp(0.56rem, 3vw, 0.88rem);
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-game-shell {
+  --cm-lower-min-h: 3.25rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-game-shell > main {
+  gap: 0.28rem;
+  padding-block: 0.3rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-teambar {
+  gap: 0.28rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-teambar-side {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.24rem 0.48rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-teambar-players {
+  flex: 1;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow: hidden;
+  gap: 0.2rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-teambar-player.cm-mobile-roster-chip {
+  min-height: 1.25rem;
+  padding: 0.08rem 0.32rem;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-side {
+  padding: 0.32rem;
+  gap: 0.18rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-side-row,
+html.cm-v20.cm-ui-phone-landscape .cm-side-row:has(> .cm-dock.cm-dock-tall) {
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.52fr) !important;
+  gap: 0.35rem;
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-word {
+  font-size: clamp(0.58rem, 2.15vw, 0.82rem);
+}
+
+html.cm-v20.cm-ui-phone-landscape .cm-turn-hint {
+  display: none;
+}
+
+html.cm-v20.cm-ui-tablet {
+  --cm-lower-min-h: 3.75rem;
+}
+
+html.cm-v20.cm-ui-tablet .cm-game-shell > main {
+  padding-inline: clamp(0.6rem, 1.6vw, 0.95rem);
+}
+
+html.cm-v20.cm-ui-tablet .cm-side {
+  padding: 0.48rem;
+}
+
+html.cm-v20.cm-ui-tablet .cm-word {
+  font-size: clamp(0.72rem, 2.1vw, 1.12rem);
+}
+
+html.cm-v20.cm-ui-desktop {
+  --cm-lower-min-h: 3.75rem;
+}
+
+html.cm-v20.cm-ui-desktop .cm-board-row,
+html.cm-v20.cm-ui-side-teams .cm-board-row {
+  display: grid;
+  grid-template-columns: minmax(var(--cm-roster-width-fit), 1fr) minmax(0, var(--cm-stage-fit-width)) minmax(var(--cm-roster-width-fit), 1fr);
+  align-items: start;
+  gap: var(--cm-fluid-gap);
+}
+
+html.cm-v20.cm-ui-desktop .cm-board-row > .cm-play-center,
+html.cm-v20.cm-ui-side-teams .cm-board-row > .cm-play-center {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100% !important;
+  max-width: var(--cm-stage-fit-width);
+  justify-self: stretch;
+}
+
+html.cm-v20.cm-ui-desktop .cm-roster-col,
+html.cm-v20.cm-ui-side-teams .cm-roster-col {
+  display: flex !important;
+  width: var(--cm-roster-width-fit) !important;
+  min-width: 0;
+  align-self: start;
+  max-height: calc(var(--cm-vp-h) - 12rem);
+  overflow-x: hidden;
+}
+
+html.cm-v20.cm-ui-desktop .cm-roster-col > div,
+html.cm-v20.cm-ui-side-teams .cm-roster-col > div {
+  width: 100%;
+  min-width: 0;
+  align-items: stretch;
+}
+
+html.cm-v20.cm-ui-desktop .cm-roster-head,
+html.cm-v20.cm-ui-side-teams .cm-roster-head {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  white-space: nowrap;
+  gap: 0.32rem;
+  font-size: clamp(0.76rem, 0.95vw, 0.9rem);
+}
+
+html.cm-v20.cm-ui-desktop .cm-roster-head::after,
+html.cm-v20.cm-ui-side-teams .cm-roster-head::after {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.9rem;
+  text-align: center;
+  font-size: clamp(0.62rem, 0.78vw, 0.72rem);
+  font-weight: 900;
+  line-height: 1.2;
+  padding: 0.14rem 0.44rem;
+  border-width: 1.5px;
+  box-shadow: var(--cm-shadow-card);
+}
+
+html.cm-v20.cm-ui-desktop .cm-roster-head-blue::after,
+html.cm-v20.cm-ui-side-teams .cm-roster-head-blue::after {
+  background: color-mix(in srgb, var(--cm-blue-pale) 86%, var(--cm-surface));
+  border-color: color-mix(in srgb, var(--cm-blue) 48%, var(--cm-border));
+  color: var(--cm-blue-strong);
+}
+
+html.cm-v20.cm-ui-desktop .cm-roster-head-red::after,
+html.cm-v20.cm-ui-side-teams .cm-roster-head-red::after {
+  background: color-mix(in srgb, var(--cm-red-pale) 86%, var(--cm-surface));
+  border-color: color-mix(in srgb, var(--cm-red) 48%, var(--cm-border));
+  color: var(--cm-red-strong);
+}
+
+html.cm-v20.cm-ui-side-teams .cm-roster-chip,
+html.cm-v20.cm-ui-desktop .cm-roster-chip {
+  width: 100%;
+  min-width: 0;
+  gap: 0.32rem;
+  padding: 0.22rem 0.34rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-roster-chip > span,
+html.cm-v20.cm-ui-desktop .cm-roster-chip > span {
+  min-width: 0;
+  font-size: clamp(0.66rem, 0.82vw, 0.78rem) !important;
+  line-height: 1.18;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-roster-chip > .h-8.w-8,
+html.cm-v20.cm-ui-desktop .cm-roster-chip > .h-8.w-8 {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.62rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-roster-you,
+html.cm-v20.cm-ui-desktop .cm-roster-you,
+html.cm-v20.cm-ui-side-teams .cm-player-offline-label,
+html.cm-v20.cm-ui-desktop .cm-player-offline-label {
+  font-size: 0.5rem;
+  padding: 0.04rem 0.22rem;
+}
+
+html.cm-v20.cm-ui-desktop .cm-teambar,
+html.cm-v20.cm-ui-side-teams .cm-teambar {
+  display: none !important;
+  width: min(100%, 46rem);
+  max-width: 46rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-play-center > .cm-side,
+html.cm-v20.cm-ui-desktop .cm-play-center > .cm-side {
+  width: min(100%, var(--cm-board-fit-width));
+  max-width: var(--cm-board-fit-width);
+  margin-inline: auto;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue > *,
+html.cm-v20.cm-ui-desktop .cm-side-clue > * {
+  padding: 0.42rem 0.58rem !important;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue .cm-side-clue-compose-form,
+html.cm-v20.cm-ui-desktop .cm-side-clue .cm-side-clue-compose-form {
+  gap: 0.42rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue .cm-side-clue-compose-submit,
+html.cm-v20.cm-ui-desktop .cm-side-clue .cm-side-clue-compose-submit,
+html.cm-v20.cm-ui-side-teams .cm-side-clue button[type="submit"],
+html.cm-v20.cm-ui-desktop .cm-side-clue button[type="submit"] {
+  min-height: 2.7rem;
+  height: 2.7rem;
+  width: 2.7rem !important;
+  min-width: 2.7rem !important;
+  max-width: 2.7rem !important;
+  padding: 0 !important;
+  font-size: 1rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue input[name="clue-input"],
+html.cm-v20.cm-ui-side-teams .cm-side-clue textarea[name="clue-input"],
+html.cm-v20.cm-ui-desktop .cm-side-clue input[name="clue-input"],
+html.cm-v20.cm-ui-desktop .cm-side-clue textarea[name="clue-input"] {
+  min-height: 2.7rem;
+  font-size: 1rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue .cm-stepper-compact,
+html.cm-v20.cm-ui-desktop .cm-side-clue .cm-stepper-compact {
+  height: 2.4rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue .cm-stepper-compact > button,
+html.cm-v20.cm-ui-desktop .cm-side-clue .cm-stepper-compact > button {
+  width: 1.55rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-side-clue .cm-stepper-compact > span,
+html.cm-v20.cm-ui-desktop .cm-side-clue .cm-stepper-compact > span {
+  min-width: 1.25rem;
+  font-size: 0.88rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-clue-live,
+html.cm-v20.cm-ui-desktop .cm-clue-live {
+  gap: 0.32rem;
+  padding: 0.55rem 0.72rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-clue-live-word,
+html.cm-v20.cm-ui-desktop .cm-clue-live-word {
+  font-size: clamp(1.65rem, 3vw, 2.2rem);
+}
+
+html.cm-v20.cm-ui-side-teams .cm-clue-live-num,
+html.cm-v20.cm-ui-desktop .cm-clue-live-num {
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  padding: 0.05rem 0.56rem;
+  font-size: 0.92rem;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-clue-live-dot,
+html.cm-v20.cm-ui-desktop .cm-clue-live-dot {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+@supports not (width: 1cqw) {
+  .cm-v20 .cm-word {
+    font-size: clamp(0.72rem, 2.8vw, 1.18rem);
+    line-height: 1.12;
+  }
+
+  .cm-v20 .cm-word-plate {
+    max-width: 90%;
+    padding: 0.15em 0.46em;
+  }
+
+  html.cm-v20.cm-ui-phone .cm-word,
+  html.cm-v20.cm-ui-phone-landscape .cm-word {
+    font-size: clamp(0.62rem, 3.4vw, 0.92rem);
+  }
+}
+
+/* Final hard override for the clue area: the log is floated, so the clue panel
+   must own the full lower row instead of inheriting any old split-column track. */
+.cm-v20 .cm-side-row,
+.cm-v20 .cm-side-row:has(> .cm-dock.cm-dock-tall),
+html.cm-v20.cm-ui-phone .cm-side-row,
+html.cm-v20.cm-ui-phone .cm-side-row:has(> .cm-dock.cm-dock-tall),
+html.cm-v20.cm-ui-phone-landscape .cm-side-row,
+html.cm-v20.cm-ui-phone-landscape .cm-side-row:has(> .cm-dock.cm-dock-tall),
+html.cm-v20.cm-ui-tablet .cm-side-row,
+html.cm-v20.cm-ui-tablet .cm-side-row:has(> .cm-dock.cm-dock-tall),
+html.cm-v20.cm-ui-desktop .cm-side-row,
+html.cm-v20.cm-ui-desktop .cm-side-row:has(> .cm-dock.cm-dock-tall) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.cm-v20 .cm-side-row > .cm-side-clue,
+[dir="ltr"] .cm-v20 .cm-side-row > .cm-side-clue {
+  order: 1 !important;
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  justify-self: stretch !important;
+}
+
+.cm-v20 .cm-side-clue,
+.cm-v20 .cm-side-clue > * {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Short embedded / narrow landscape rooms: the field label costs a full row
+   and can push the submit control below the visible viewport. Hide only that
+   redundant label for an active captain composer, so the field and submit
+   button lift together without moving any other room UI. */
+@media (max-height: 480px) {
+  html.cm-v20.cm-ui-phone-landscape.cm-ui-short
+    .cm-side-clue.cm-side-clue-compose-active
+    .cm-side-clue-compose-field > label {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   9. Performance motion budget.
+   The clue notice is a full-screen fixed layer. Keep its polish, but remove
+   the backdrop blur and all paint-heavy animated effects so it remains smooth
+   while the board and the floating event-log button are updating.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-clue-announce {
+  background:
+    linear-gradient(135deg, rgb(31 23 43 / 14%), transparent 54%),
+    rgb(7 8 11 / 48%) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  animation: cm-clue-announce-perf 4.6s linear both !important;
+  will-change: opacity;
+}
+
+.cm-v20 .cm-clue-card {
+  animation: cm-clue-card-perf 4.6s cubic-bezier(0.2, 0.76, 0.22, 1) both !important;
+  will-change: transform, opacity;
+}
+
+.cm-v20 .cm-clue-ring {
+  animation: cm-clue-ring-perf 4.6s cubic-bezier(0.2, 0.76, 0.22, 1) both !important;
+  will-change: transform, opacity;
+}
+
+/* A static soft sheen keeps the card polished without repainting its gradient
+   every frame (the compiled version animated background-position for 1.9s). */
+.cm-v20 .cm-clue-shine::after {
+  animation: none !important;
+  background: linear-gradient(135deg, rgb(255 255 255 / 10%), transparent 46%) !important;
+}
+
+@keyframes cm-clue-announce-perf {
+  0% { opacity: 0; }
+  7%, 92% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes cm-clue-card-perf {
+  0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.97); }
+  9%, 91% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, -2px, 0) scale(0.99); }
+}
+
+@keyframes cm-clue-ring-perf {
+  0% { opacity: 0; transform: scale(0.94); }
+  9%, 90% { opacity: 0.48; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.025); }
+}
+
+/* The old opening effect animated filter brightness and large box shadows.
+   The replacement stays on transform/opacity and keeps the reveal readable. */
+.cm-v20 .cm-opening {
+  animation: cm-card-open-perf 0.52s cubic-bezier(0.2, 0.76, 0.22, 1) both !important;
+  will-change: transform, opacity;
+}
+
+.cm-v20 .cm-opening .cm-face-front {
+  animation: cm-card-open-face-perf 0.52s ease-out both !important;
+  will-change: opacity;
+  filter: none !important;
+}
+
+.cm-v20 .cm-card-flash {
+  animation: cm-card-flash-perf 0.38s ease-out both !important;
+  will-change: opacity;
+}
+
+@keyframes cm-card-open-perf {
+  0% { opacity: 0.82; transform: translate3d(0, 0, 0) scale(0.975); }
+  62% { opacity: 1; transform: translate3d(0, -1px, 0) scale(1.015); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes cm-card-open-face-perf {
+  0% { opacity: 0.76; }
+  100% { opacity: 1; }
+}
+
+@keyframes cm-card-flash-perf {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* New event feedback used to animate the FAB's box-shadow and border, forcing
+   repaints. Pulse only its tiny icon and halo with compositor-friendly values. */
+.cm-v20 .cm-log-fab.cm-fab-pulse {
+  animation: none !important;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-pulse .cm-log-fab-hist {
+  animation: cm-fab-icon-pulse-perf 0.72s cubic-bezier(0.2, 0.76, 0.22, 1) 2;
+  will-change: transform, opacity;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-pulse::before {
+  animation: cm-fab-halo-pulse-perf 0.72s ease-out 2 !important;
+  will-change: transform, opacity;
+}
+
+.cm-v20 .cm-log-fab.cm-fab-pulse::after {
+  animation: none !important;
+}
+
+@keyframes cm-fab-icon-pulse-perf {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.92; transform: scale(1.1); }
+}
+
+@keyframes cm-fab-halo-pulse-perf {
+  0%, 100% { opacity: 0; transform: scale(0.94); }
+  50% { opacity: 0.36; transform: scale(1.08); }
+}
+
+/* Respect the OS preference with a readable fade, not a moving/scaling card. */
+@media (prefers-reduced-motion: reduce) {
+  .cm-v20 .cm-clue-announce {
+    animation: cm-clue-announce-reduced 4.6s linear both !important;
+    will-change: opacity;
+  }
+
+  .cm-v20 .cm-clue-card {
+    animation: cm-clue-card-reduced 4.6s linear both !important;
+    will-change: opacity;
+  }
+
+  .cm-v20 .cm-clue-ring,
+  .cm-v20 .cm-clue-shine {
+    display: none !important;
+  }
+
+  .cm-v20 .cm-opening,
+  .cm-v20 .cm-opening .cm-face-front,
+  .cm-v20 .cm-card-flash,
+  .cm-v20 .cm-log-fab.cm-fab-pulse,
+  .cm-v20 .cm-log-fab.cm-fab-pulse::before,
+  .cm-v20 .cm-log-fab.cm-fab-pulse .cm-log-fab-hist {
+    animation: none !important;
+    will-change: auto;
+  }
+}
+
+@keyframes cm-clue-announce-reduced {
+  0%, 2% { opacity: 0; }
+  3%, 92% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes cm-clue-card-reduced {
+  0%, 2% { opacity: 0; }
+  3%, 92% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------------------------------------------------------------------------
+   10. Compact Activity clue composer.
+   On height-constrained desktop/Discord stages, use real smaller controls
+   (not transform: scale) so layout measurements and hit areas stay accurate.
+   This is scoped to the captain composer only; the board, roster and normal
+   tall-window layout keep their existing scale.
+   ------------------------------------------------------------------------- */
+@media (max-height: 820px) {
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active > * {
+    padding: 0.34rem 0.48rem !important;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-side-clue-compose-form {
+    gap: 0.32rem;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-side-clue-compose-top {
+    gap: 0.38rem;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-side-clue-compose-field > label {
+    font-size: 0.78rem;
+    line-height: 1.15;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active input[name="clue-input"],
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active textarea[name="clue-input"],
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-side-clue-compose-submit {
+    min-height: 2.3rem;
+    height: 2.3rem;
+    padding-block: 0.3rem !important;
+    font-size: 0.92rem;
+    line-height: 1.2;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-stepper-compact {
+    height: 2.15rem;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-stepper-compact > button {
+    width: 1.45rem;
+  }
+
+  html.cm-v20.cm-ui-height-fit .cm-side-clue.cm-side-clue-compose-active .cm-stepper-compact > span {
+    min-width: 1.2rem;
+    font-size: 0.84rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   11. Hybrid event-log control.
+   The floating icon is the drag/tap control while closed. Once the drawer is
+   open, its own header is the drag surface and this explicit close button
+   restores the icon without relying on a competing floating control.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-dock-head .cm-dock-close {
+  display: inline-flex;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--cm-border);
+  border-radius: 0.5rem;
+  background: var(--cm-surface);
+  color: var(--cm-ink-soft);
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.14s var(--cm-ease), border-color 0.14s var(--cm-ease), background-color 0.14s var(--cm-ease), transform 0.14s var(--cm-ease);
+}
+
+.cm-v20 .cm-dock-head .cm-dock-close:hover {
+  border-color: var(--cm-red);
+  background: var(--cm-surface-soft);
+  color: var(--cm-red);
+}
+
+.cm-v20 .cm-dock-head .cm-dock-close:active {
+  transform: scale(0.94);
+}
+
+.cm-v20 .cm-dock-head .cm-dock-close:focus-visible {
+  outline: 2px solid var(--cm-blue);
+  outline-offset: 2px;
+}
+
+/* The history drawer no longer has a folded/minimized state. Its title is a
+   drag label only; the explicit × remains the single close control. */
+.cm-v20 .cm-dock-head .cm-dock-title {
+  pointer-events: none;
+  cursor: grab;
+}
+
+.cm-v20 .cm-dock-head .cm-dock-size {
+  display: none !important;
+}
+
+/* =============================================================================
+   MOT THEME — Ergonomically & Medically Calibrated High-Contrast Eye-Care Theme
+   =============================================================================
+   Designed according to ophthalmological recommendations and ISO 9241-303
+   human-factors standards for visual displays:
+   1. Midnight slate base (#090d14 / #121822) eliminates veiling glare and haloing.
+   2. Crisp high-contrast typography (#f8fafc) provides a 15.2:1 contrast ratio
+      exceeding WCAG AAA standards without photopic eye fatigue.
+   3. Balanced spectral wavelengths (cyan #38bdf8 and ruby #e05260) prevent
+      chromostereopsis and ocular accommodation strain.
+   4. High-clarity word plates with bold letter shapes for effortless scanning.
+   ============================================================================= */
+
+html.cm-v20.mot, html.mot, .mot {
+  color-scheme: dark;
+  --cm-paper: #090d14;
+  --cm-surface: #121822;
+  --cm-surface-soft: #1b2432;
+  --cm-border: #334155;
+  --cm-border-strong: #475569;
+  --cm-ink: #ffffff;
+  --cm-ink-soft: #f1f5f9;
+  --cm-ink-faint: #cbd5e1;
+
+  /* Calibrated team hues: vibrant yet gentle on the optic nerve */
+  --cm-red: #e05260;
+  --cm-red-strong: #f87171;
+  --cm-red-soft: #b93b48;
+  --cm-red-pale: #2a141b;
+
+  --cm-blue: #38bdf8;
+  --cm-blue-strong: #7dd3fc;
+  --cm-blue-soft: #0284c7;
+  --cm-blue-pale: #0e253b;
+
+  --cm-success: #34d399;
+  --cm-success-pale: #0f2c21;
+
+  /* Card colors engineered for instant board scanning */
+  --cm-card-red: #c93b4c;
+  --cm-card-red-ink: #ffffff;
+  --cm-card-blue: #1d5cb8;
+  --cm-card-blue-ink: #ffffff;
+  --cm-card-neutral: #d8c8a8;
+  --cm-card-neutral-ink: #1c1914;
+  --cm-card-assassin: #07090e;
+  --cm-card-assassin-ink: #fee2e2;
+
+  --cm-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --cm-shadow-lift: 0 4px 14px rgba(0, 0, 0, 0.45), 0 18px 36px rgba(0, 0, 0, 0.38);
+  --cm-cover-line: rgba(56, 189, 248, 0.28);
+  --cm-cover-mark: rgba(248, 250, 252, 0.12);
+
+  /* Drag trail styling */
+  --cm-log-flame-core: #38bdf8;
+  --cm-log-flame-hot: #e0f2fe;
+  --cm-log-flame-tail: rgba(56, 189, 248, 0.38);
+  --cm-log-flame-shadow: rgba(56, 189, 248, 0.18);
+
+  /* High-visibility precision cursors */
+  --cm-cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='22'%20height='22'%20viewBox='0%200%2022%2022'%3E%3Cpath%20d='M3%202%20L3%2016%20L7.5%2012.5%20L10.5%2019%20L13%2018%20L10%2011.5%20L16%2011.5%20Z'%20fill='%230EA5E9'%20stroke='%23FFFFFF'%20stroke-width='1.5'/%3E%3C/svg%3E") 2 1, auto;
+  --cm-cursor-pointer: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='22'%20height='22'%20viewBox='0%200%2022%2022'%3E%3Cpath%20d='M5%202%20V13%20L7.6%2012.2%20L9.4%2016.6%20L11.6%2015.7%20L9.8%2011.3%20L12.5%2011.9%20Z'%20fill='%230EA5E9'%20stroke='%23FFFFFF'%20stroke-width='1.5'/%3E%3C/svg%3E") 2 1, pointer;
+}
+
+/* Mot structural panels */
+html.cm-v20.mot .cm-side,
+html.cm-v20.mot .cm-dock,
+html.cm-v20.mot .cm-menu-choice,
+html.cm-v20.mot .cm-role-tile,
+html.cm-v20.mot .cm-team-panel,
+html.mot .cm-side,
+html.mot .cm-dock,
+html.mot .cm-menu-choice,
+html.mot .cm-role-tile,
+html.mot .cm-team-panel,
+.mot .cm-side,
+.mot .cm-dock,
+.mot .cm-menu-choice,
+.mot .cm-role-tile,
+.mot .cm-team-panel {
+  background-color: var(--cm-surface);
+  border-color: var(--cm-border);
+}
+
+/* Mot word plates on board cards */
+html.cm-v20.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+html.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  background: var(--cm-surface-soft) !important;
+  color: var(--cm-ink) !important;
+  border-color: var(--cm-border-strong) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45) !important;
+  font-weight: 900 !important;
+}
+
+/* Mot captain highlight outline */
+html.cm-v20.mot .cm-flip.cm-captain-own-card::after,
+html.mot .cm-flip.cm-captain-own-card::after,
+.mot .cm-flip.cm-captain-own-card::after {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 0 16px rgba(56, 189, 248, 0.28) !important;
+}
+
+/* Mot teambars */
+html.cm-v20.mot .cm-teambar-red,
+.mot .cm-teambar-red {
+  background: var(--cm-card-red);
+  color: var(--cm-card-red-ink);
+  border-color: var(--cm-red-strong);
+}
+
+html.cm-v20.mot .cm-teambar-blue,
+.mot .cm-teambar-blue {
+  background: var(--cm-card-blue);
+  color: var(--cm-card-blue-ink);
+  border-color: var(--cm-blue-strong);
+}
+
+/* =============================================================================
+   UNIVERSAL TEXT CONTRAST IMPROVEMENTS ACROSS ALL THEMES
+   ============================================================================= */
+html body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ensure all text classes have crisp, unambiguous contrast */
+.text-ink {
+  color: var(--cm-ink) !important;
+}
+.text-ink-soft {
+  color: var(--cm-ink-soft) !important;
+}
+.text-ink-faint {
+  color: var(--cm-ink-faint) !important;
+}
+
+/* Board card word legibility boost */
+.cm-word {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  font-weight: 900 !important;
+}
+
+/* High contrast inputs and control labels */
+input, select, textarea {
+  color: var(--cm-ink);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--cm-ink-faint);
+  opacity: 0.85;
+}
+
+/* Mobile home drawer theme grid */
+.cm-home-mobile-theme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+.cm-home-mobile-theme-grid .cm-home-mobile-theme {
+  min-height: 2.6rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  text-align: start;
+}
+.cm-home-mobile-theme-grid .cm-home-mobile-theme.is-active {
+  border-color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  color: var(--cm-ink) !important;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+  font-weight: 800;
+}
+
+/* Headings and key interactive elements high-contrast enforcement */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--cm-ink);
+  font-weight: 800;
+}
+.cm-clue-word,
+.cm-team-score-num,
+.cm-status-badge {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+
+/* =============================================================================
+   MAXIMUM CONTRAST & TYPOGRAPHY ENHANCEMENTS ACROSS THE ENTIRE GAME
+   ============================================================================= */
+
+/* 1. Global Font Smoothing & Anti-Aliasing */
+html, body, #root {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+body {
+  font-weight: 500;
+}
+
+/* 2. Text Legibility & Contrast Enforcement */
+.text-ink {
+  color: var(--cm-ink) !important;
+}
+.text-ink-soft {
+  color: var(--cm-ink-soft) !important;
+  font-weight: 600 !important;
+}
+.text-ink-faint {
+  color: var(--cm-ink-faint) !important;
+  font-weight: 600 !important;
+}
+
+/* Prevent washed-out secondary texts */
+p, label, span:not(.opacity-25) {
+  text-rendering: optimizeLegibility;
+}
+
+/* 3. Interactive Controls: Buttons, Badges, Tabs, Inputs */
+button, [role="button"], .cm-btn, input[type="button"], input[type="submit"] {
+  font-weight: 700 !important;
+}
+
+/* High contrast inputs and control labels */
+input, select, textarea {
+  color: var(--cm-ink) !important;
+  font-weight: 600 !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--cm-ink-soft) !important;
+  opacity: 0.9 !important;
+  font-weight: 500 !important;
+}
+
+/* 4. Headings & Titles */
+h1, h2, h3, h4, h5, h6, .cm-title {
+  color: var(--cm-ink) !important;
+  font-weight: 800 !important;
+}
+
+/* 5. Board Cards & Words (The Core Game Experience) */
+.cm-word {
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+:lang(ar) .cm-word, [dir="rtl"] .cm-word {
+  letter-spacing: normal !important;
+  font-weight: 900 !important;
+}
+
+/* Unrevealed card word plate - strong border, solid surface, ultra-contrast text */
+.cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 900 !important;
+  padding: 0.22em 0.6em !important;
+  border-radius: 9px !important;
+  border-width: 2px !important;
+  max-width: 90% !important;
+}
+
+/* In Dark & Mot themes */
+html.dark .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+html.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+.dark .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
+.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  background: #111827 !important;
+  color: #ffffff !important;
+  border-color: #475569 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* In Light theme */
+html:not(.dark):not(.mot):not(.mani-dark) .cm-flip[data-revealed="false"] .cm-face-front .cm-word {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #334155 !important;
+  text-shadow: 0 1px 0 #ffffff !important;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.18), inset 0 1px 0 #ffffff !important;
+}
+
+/* Revealed cards word plate */
+.cm-word-plate {
+  font-weight: 900 !important;
+  border-width: 1.5px !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+.cm-word-plate .cm-word {
+  font-weight: 900 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 1px rgba(0, 0, 0, 0.85) !important;
+  color: #ffffff !important;
+}
+
+/* Revealed neutral card */
+.cm-face-pattern-neutral .cm-word-plate .cm-word,
+[data-state="neutral"] .cm-word-plate .cm-word {
+  color: var(--cm-card-neutral-ink) !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+/* Mobile & desktop card word sizing for effortless scanning */
+html.cm-v20.cm-ui-phone .cm-word,
+html.cm-v20.cm-ui-short .cm-word,
+html.cm-v20.cm-ui-phone-landscape .cm-word {
+  font-size: clamp(0.72rem, 3.4vw, 1.05rem) !important;
+  font-weight: 900 !important;
+}
+.cm-v20 .cm-word {
+  font-size: clamp(0.78rem, 2.9vw, 1.25rem) !important;
+  font-weight: 900 !important;
+}
+
+/* 6. Clues & Turn Indicators */
+.cm-clue-word {
+  font-weight: 900 !important;
+  font-size: clamp(1.15rem, 4vw, 1.65rem) !important;
+  letter-spacing: 0.02em;
+  color: var(--cm-ink) !important;
+}
+.cm-clue-num {
+  font-weight: 900 !important;
+  font-size: 1.25em !important;
+}
+.cm-turn-hint {
+  font-weight: 800 !important;
+  color: var(--cm-ink) !important;
+}
+.cm-team-score-num {
+  font-weight: 900 !important;
+  font-size: 1.25em !important;
+}
+.cm-status-badge, .cm-role-tile, .cm-roster-chip {
+  font-weight: 700 !important;
+  color: var(--cm-ink) !important;
+}
+
+/* 7. Game Log & Chat */
+.cm-log-item, .cm-log-text {
+  font-weight: 600 !important;
+  color: var(--cm-ink) !important;
+}
+.cm-chat-msg, .cm-chat-bubble {
+  font-weight: 600 !important;
+  color: var(--cm-ink) !important;
+}
+
+/* 8. Boost faded opacities throughout the app */
+.opacity-45, .opacity-50, .opacity-60, .opacity-70 {
+  opacity: 0.9 !important;
+}
+
+/* =============================================================================
+   SETTINGS DIALOG & THEME SELECTOR FIXES (CLEAN NAMES & NO OVERLAPS)
+   ============================================================================= */
+.cm-theme-badge-inline { display: none !important; }
+
+html.dark .cm-theme-badge-inline,
+html.mot .cm-theme-badge-inline,
+.dark .cm-theme-badge-inline,
+.mot .cm-theme-badge-inline { display: none !important; }
+
+[role="radiogroup"] button[role="radio"] {
+  min-height: 56px !important;
+}
+
+html.cm-v20.cm-ui-side-teams .cm-clue-live,
+html.cm-v20.cm-ui-desktop .cm-clue-live {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: 0.75rem !important;
+  padding: 0.35rem 0.75rem !important;
+  margin-bottom: 0 !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-label,
+html.cm-v20.cm-ui-desktop .cm-clue-live-label {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  text-align: start !important;
+  font-size: 0.72rem !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-row,
+html.cm-v20.cm-ui-desktop .cm-clue-live-row {
+  flex: 1 1 auto !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  min-width: 0 !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-word,
+html.cm-v20.cm-ui-desktop .cm-clue-live-word {
+  font-size: clamp(1.25rem, 2.2vw, 1.65rem) !important;
+  line-height: 1.15 !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-num,
+html.cm-v20.cm-ui-desktop .cm-clue-live-num {
+  min-width: 1.75rem !important;
+  min-height: 1.75rem !important;
+  padding: 0.05rem 0.5rem !important;
+  font-size: 0.88rem !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-progress,
+html.cm-v20.cm-ui-desktop .cm-clue-live-progress {
+  flex: 0 0 auto !important;
+  gap: 0.35rem !important;
+}
+html.cm-v20.cm-ui-side-teams .cm-clue-live-dot,
+html.cm-v20.cm-ui-desktop .cm-clue-live-dot {
+  width: 0.68rem !important;
+  height: 0.68rem !important;
+}
+/* ---------------------------------------------------------------------------
+   Live Clue Responsive Layout:
+   - On Desktop/Tablet (>640px): Horizontal row (Label, Clue Word+Number, Dots side by side)
+   - On Phone (<=640px): Vertical stack (Label top, Clue Word+Number center, Dots bottom)
+   ------------------------------------------------------------------------- */
+@media (min-width: 641px) {
+  .cm-v20 .cm-clue-live {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
+    padding: 0.35rem 0.85rem !important;
+    margin-bottom: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-label {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    text-align: start !important;
+    font-size: 0.75rem !important;
+    margin: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-row {
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+    gap: 0.55rem !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-word {
+    font-size: clamp(1.2rem, 2.2vw, 1.6rem) !important;
+    line-height: 1.15 !important;
+  }
+  .cm-v20 .cm-clue-live-num {
+    min-width: 1.75rem !important;
+    min-height: 1.75rem !important;
+    padding: 0.05rem 0.5rem !important;
+    font-size: 0.88rem !important;
+  }
+  .cm-v20 .cm-clue-live-progress {
+    flex: 0 0 auto !important;
+    gap: 0.35rem !important;
+    margin: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-dot {
+    width: 0.68rem !important;
+    height: 0.68rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .cm-v20 .cm-clue-live {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    padding: 0.45rem 0.65rem !important;
+    margin-bottom: 0 !important;
+  }
+  .cm-v20 .cm-clue-live-label {
+    font-size: 0.68rem !important;
+    text-align: center !important;
+  }
+  .cm-v20 .cm-clue-live-row {
+    justify-content: center !important;
+    gap: 0.45rem !important;
+  }
+  .cm-v20 .cm-clue-live-word {
+    font-size: clamp(1.25rem, 5vw, 1.6rem) !important;
+  }
+  .cm-v20 .cm-clue-live-num {
+    min-width: 1.7rem !important;
+    min-height: 1.7rem !important;
+    padding: 0.05rem 0.45rem !important;
+    font-size: 0.85rem !important;
+  }
+  .cm-v20 .cm-clue-live-progress {
+    gap: 0.35rem !important;
+  }
+  .cm-v20 .cm-clue-live-dot {
+    width: 0.72rem !important;
+    height: 0.72rem !important;
+  }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Unified Single Operative Clue Bar:
+   Combines icon, clue word, count badge, remaining guess dots, and end turn button
+   into a single compact row, giving maximum vertical space to the word board.
+   ------------------------------------------------------------------------- */
+.cm-v20 .cm-operative-panel {
+  padding: 0.35rem 0.65rem !important;
+  margin: 0 !important;
+  border-radius: 0.85rem !important;
+  box-shadow: var(--cm-shadow-card) !important;
+}
+
+@media (max-width: 640px) {
+  .cm-v20 .cm-operative-panel {
+    padding: 0.3rem 0.5rem !important;
+  }
+}
+
+/* ---- Team Brand Icon Badges (theme-aware swords/shield/flame/sparkles) ---- */
+.cm-team-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(1.85rem, 2.2vw, 2.3rem);
+  height: clamp(1.85rem, 2.2vw, 2.3rem);
+  border-radius: var(--cm-lobby-chip-radius, 0.65rem);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%), 0 2px 5px rgb(0 0 0 / 15%);
+  transition: transform 0.15s ease;
+}
+.cm-team-icon-badge.cm-team-icon-badge-red {
+  background: var(--cm-card-red) !important;
+  border: 1px solid rgb(255 255 255 / 18%);
+}
+.cm-team-icon-badge.cm-team-icon-badge-blue {
+  background: var(--cm-card-blue) !important;
+  border: 1px solid rgb(255 255 255 / 18%);
+}
+
+.cm-teambar-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.38rem;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%);
+}
+.cm-teambar-icon-badge.cm-teambar-icon-badge-red {
+  background: var(--cm-card-red) !important;
+}
+.cm-teambar-icon-badge.cm-teambar-icon-badge-blue {
+  background: var(--cm-card-blue) !important;
+}
+
+
+
+/* ---- Floating Log Dock: Frame Handle Drag & Smooth Inner List Scrolling ---- */
+.cm-v20 .cm-dock,
+.cm-v20 .cm-side-row > .cm-dock {
+  touch-action: auto !important;
+}
+
+/* Top Grab Handle Pill */
+.cm-v20 .cm-dock .cm-dock-android-handle,
+.cm-v20 .cm-dock-android-handle {
+  width: 52px !important;
+  height: 5px !important;
+  margin: 6px auto 3px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--cm-ink) 38%, transparent) !important;
+  flex: 0 0 auto !important;
+  pointer-events: auto !important;
+  touch-action: none !important;
+  cursor: grab !important;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle,
+.cm-v20 .cm-dock:hover .cm-dock-android-handle {
+  background: var(--cm-blue) !important;
+  width: 64px !important;
+}
+
+/* Window Header Bar (Grab Surface) */
+.cm-v20 .cm-dock .cm-dock-head,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+  padding: 0.35rem 0.65rem 0.45rem !important;
+  background: color-mix(in srgb, var(--cm-surface) 65%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent) !important;
+  touch-action: none !important;
+  cursor: grab !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-head:active,
+.cm-v20 .cm-dock.cm-dock-dragging .cm-dock-head {
+  cursor: grabbing !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-title,
+.cm-v20 .cm-dock-head .cm-dock-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  touch-action: none !important;
+  cursor: grab !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: var(--cm-ink) !important;
+  font-weight: 800 !important;
+}
+
+.cm-v20 .cm-dock-title:active {
+  cursor: grabbing !important;
+}
+
+/* Interactive Controls (Clickable only, never drag) */
+.cm-v20 .cm-dock-controls {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  flex: 0 0 auto !important;
+  touch-action: manipulation !important;
+}
+
+.cm-v20 .cm-dock-head .cm-dock-close,
+.cm-v20 .cm-dock-size-toggle {
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+/* Inner Log Events List (Smooth independent scroll, no window drag) */
+.cm-v20 .cm-dock .cm-dock-list,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list {
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  cursor: default !important;
+  user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev {
+  touch-action: pan-y !important;
+  cursor: default !important;
+  user-select: text !important;
+}
+
+
+
+
+
+
+
+/* =============================================================================
+   THEME-HARMONIZED TEAMBAR & ROSTER SUITE (MATCHES LOBBY & THEMES)
+   ============================================================================= */
+
+/* Container */
+.cm-v20 .cm-teambar {
+  display: flex !important;
+  gap: clamp(0.35rem, 1.2vw, 0.65rem) !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Individual Team Card (Lobby-Styled) */
+.cm-v20 .cm-teambar-side {
+  flex: 1 1 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: clamp(0.28rem, 1dvh, 0.42rem) !important;
+  padding: clamp(0.42rem, 1.4dvh, 0.65rem) clamp(0.48rem, 1.6vw, 0.72rem) !important;
+  border-radius: var(--cm-lobby-radius, 1rem) !important;
+  border: 2px solid var(--cm-border) !important;
+  background: var(--cm-surface) !important;
+  color: var(--cm-ink) !important;
+  box-shadow: var(--cm-shadow-lift, 0 3px 10px rgba(0,0,0,0.08)) !important;
+  min-width: 0 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+/* -----------------------------------------------------------------------------
+   TEAM COLORS & THEME ADAPTATION
+   ----------------------------------------------------------------------------- */
+
+/* Default / General Theme Tokens (Inherits active theme dynamically) */
+.cm-v20 .cm-teambar-red {
+  border-color: var(--cm-red) !important;
+  background: color-mix(in srgb, var(--cm-red-pale) 50%, var(--cm-surface)) !important;
+  color: var(--cm-ink) !important;
+}
+
+.cm-v20 .cm-teambar-blue {
+  border-color: var(--cm-blue) !important;
+  background: color-mix(in srgb, var(--cm-blue-pale) 50%, var(--cm-surface)) !important;
+  color: var(--cm-ink) !important;
+}
+
+/* MOT Theme Custom Tuning (Tactical High-Tech Style) */
+html.mot .cm-v20 .cm-teambar-red,
+html.cm-v20.mot .cm-teambar-red,
+.mot .cm-teambar-red {
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.14) 0%, #121822 100%) !important;
+  border-color: #f43f5e !important;
+  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+html.mot .cm-v20 .cm-teambar-blue,
+html.cm-v20.mot .cm-teambar-blue,
+.mot .cm-teambar-blue {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.14) 0%, #121822 100%) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Classic Dark Theme Custom Tuning (Obsidian Slate Style) */
+html.dark .cm-v20 .cm-teambar-red,
+html.cm-v20.dark .cm-teambar-red {
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.12) 0%, var(--cm-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--cm-red) 80%, white 20%) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .cm-v20 .cm-teambar-blue,
+html.cm-v20.dark .cm-teambar-blue {
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.12) 0%, var(--cm-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--cm-blue) 80%, white 20%) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Mani Light Theme (Floral Sakura Curves) */
+html.mani .cm-v20 .cm-teambar-red,
+html.cm-v20.mani .cm-teambar-red {
+  border-radius: 1.25rem !important;
+  border-color: #fb7185 !important;
+  background: linear-gradient(180deg, #fff1f4 0%, #ffffff 100%) !important;
+  box-shadow: 0 4px 16px rgba(251, 113, 133, 0.16) !important;
+}
+
+html.mani .cm-v20 .cm-teambar-blue,
+html.cm-v20.mani .cm-teambar-blue {
+  border-radius: 1.25rem !important;
+  border-color: #818cf8 !important;
+  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%) !important;
+  box-shadow: 0 4px 16px rgba(129, 140, 248, 0.16) !important;
+}
+
+/* Mani Dark / Twilight Theme (Cosmic Twilight Glow) */
+html.mani-dark .cm-v20 .cm-teambar-red,
+html.cm-v20.mani-dark .cm-teambar-red {
+  border-radius: 1.25rem !important;
+  border-color: #e879f9 !important;
+  background: linear-gradient(180deg, rgba(232, 121, 249, 0.16) 0%, #170f24 100%) !important;
+  box-shadow: 0 4px 20px rgba(232, 121, 249, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+html.mani-dark .cm-v20 .cm-teambar-blue,
+html.cm-v20.mani-dark .cm-teambar-blue {
+  border-radius: 1.25rem !important;
+  border-color: #a78bfa !important;
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.16) 0%, #120e24 100%) !important;
+  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   TEAM HEADER: CREST BADGE + TITLE + SCORE CAPSULE
+   ----------------------------------------------------------------------------- */
+.cm-v20 .cm-teambar-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.35rem !important;
+  font-size: clamp(0.8rem, 2.6vw, 0.88rem) !important;
+  font-weight: 800 !important;
+  color: var(--cm-ink) !important;
+  min-width: 0 !important;
+  padding-bottom: 0.05rem !important;
+}
+
+/* Theme Icon Badge (Lobby-Styled Square) */
+.cm-v20 .cm-teambar-icon-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: clamp(1.4rem, 3.4vw, 1.7rem) !important;
+  height: clamp(1.4rem, 3.4vw, 1.7rem) !important;
+  border-radius: var(--cm-lobby-chip-radius, 0.5rem) !important;
+  border: 1px solid var(--cm-lobby-icon-border, rgba(0, 0, 0, 0.15)) !important;
+  color: #ffffff !important;
+  flex-shrink: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+.cm-v20 .cm-teambar-icon-badge.cm-teambar-icon-badge-red {
+  background: var(--cm-card-red) !important;
+}
+
+.cm-v20 .cm-teambar-icon-badge.cm-teambar-icon-badge-blue {
+  background: var(--cm-card-blue) !important;
+}
+
+/* Remaining Words Count Pill */
+.cm-v20 .cm-teambar-count {
+  min-width: 1.85rem !important;
+  padding: 0.08rem 0.48rem !important;
+  border-radius: 999px !important;
+  border: 1.5px solid var(--cm-border-strong) !important;
+  font-size: clamp(0.74rem, 2.2vw, 0.82rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+  flex-shrink: 0 !important;
+  box-shadow: var(--cm-shadow-card, 0 1px 3px rgba(0,0,0,0.08)) !important;
+}
+
+.cm-v20 .cm-teambar-red .cm-teambar-count {
+  border-color: color-mix(in srgb, var(--cm-red) 55%, var(--cm-border-strong)) !important;
+  background: color-mix(in srgb, var(--cm-red-pale) 85%, var(--cm-surface)) !important;
+  color: var(--cm-red-strong) !important;
+}
+
+.cm-v20 .cm-teambar-blue .cm-teambar-count {
+  border-color: color-mix(in srgb, var(--cm-blue) 55%, var(--cm-border-strong)) !important;
+  background: color-mix(in srgb, var(--cm-blue-pale) 85%, var(--cm-surface)) !important;
+  color: var(--cm-blue-strong) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   ROSTER CHIPS & PLAYER ITEMS
+   ----------------------------------------------------------------------------- */
+.cm-v20 .cm-teambar-players {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 0.28rem !important;
+  min-width: 0 !important;
+}
+
+.cm-v20 .cm-teambar-player.cm-mobile-roster-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  min-height: 1.55rem !important;
+  padding: 0.12rem 0.46rem !important;
+  gap: 0.32rem !important;
+  border: 1.5px solid var(--cm-border) !important;
+  border-radius: var(--cm-lobby-chip-radius, 0.65rem) !important;
+  background: var(--cm-surface) !important;
+  color: var(--cm-ink) !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  box-shadow: var(--cm-shadow-card, 0 1px 3px rgba(0,0,0,0.06)) !important;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+
+.cm-v20 .cm-teambar-player.cm-mobile-roster-chip:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--cm-shadow-lift, 0 3px 8px rgba(0,0,0,0.1)) !important;
+}
+
+/* Captains: Highlighted with Team Brand Border & Crown */
+.cm-v20 .cm-teambar-red .cm-mobile-roster-captain.cm-teambar-player {
+  border-color: var(--cm-red) !important;
+  background: color-mix(in srgb, var(--cm-red-pale) 35%, var(--cm-surface)) !important;
+}
+
+.cm-v20 .cm-teambar-blue .cm-mobile-roster-captain.cm-teambar-player {
+  border-color: var(--cm-blue) !important;
+  background: color-mix(in srgb, var(--cm-blue-pale) 35%, var(--cm-surface)) !important;
+}
+
+/* Avatar Box */
+.cm-v20 .cm-teambar-player .h-5.w-5 {
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  border: 1px solid var(--cm-lobby-icon-border, rgba(0,0,0,0.15)) !important;
+  border-radius: 0.4rem !important;
+  font-size: 0.54rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  flex-shrink: 0 !important;
+}
+
+/* Captain Role Badge */
+.cm-v20 .cm-mobile-roster-captain .cm-teambar-role {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.15rem !important;
+  background: rgb(233 190 84 / 90%) !important;
+  border: 1px solid rgb(255 244 196 / 95%) !important;
+  color: #3a2a08 !important;
+  border-radius: 0.35rem !important;
+  padding: 0.06rem 0.24rem !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+}
+
+/* Current User ("Me") */
+.cm-v20 .cm-teambar-player.cm-mobile-roster-me {
+  border-color: var(--cm-ink-soft) !important;
+}
+
+/* Empty State / More Count */
+.cm-v20 .cm-teambar-empty,
+.cm-v20 .cm-teambar-more {
+  color: var(--cm-ink-faint) !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+
+/* -----------------------------------------------------------------------------
+   MOBILE / PHONE FLOATING DOCK COMPACT SIZING (SCALED FOR SCREEN HARMONY)
+   ----------------------------------------------------------------------------- */
+@media (max-width: 640px), (max-height: 700px) {
+  .cm-v20 .cm-dock,
+  .cm-v20 .cm-side-row > .cm-dock {
+    width: clamp(11.5rem, 68vw, 13.5rem) !important;
+    height: min(40dvh, 16.5rem) !important;
+    border-radius: 1.05rem !important;
+    border-width: 1.5px !important;
+  }
+
+  .cm-v20 .cm-dock.cm-dock-tall,
+  .cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
+    height: min(58dvh, 22rem) !important;
+  }
+
+  .cm-v20 .cm-dock-android-handle,
+  .cm-v20 .cm-dock .cm-dock-android-handle {
+    width: 38px !important;
+    height: 3.5px !important;
+    margin: 5px auto 2px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-head,
+  .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
+    padding: 0.2rem 0.45rem 0.32rem !important;
+    gap: 0.35rem !important;
+  }
+
+  .cm-v20 .cm-dock-title,
+  .cm-v20 .cm-dock-head .cm-dock-title {
+    font-size: 0.75rem !important;
+    gap: 0.3rem !important;
+  }
+
+  .cm-v20 .cm-dock-title svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .cm-v20 .cm-dock-count {
+    font-size: 0.64rem !important;
+    padding: 0.04rem 0.32rem !important;
+    min-width: 1.25rem !important;
+  }
+
+  .cm-v20 .cm-dock-controls {
+    gap: 0.25rem !important;
+  }
+
+  .cm-v20 .cm-dock-head .cm-dock-close,
+  .cm-v20 .cm-dock-size-toggle {
+    width: 1.45rem !important;
+    height: 1.45rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .cm-v20 .cm-dock-size-toggle svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list,
+  .cm-v20 .cm-side-row > .cm-dock .cm-dock-list {
+    padding: 0.24rem 0.32rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev,
+  .cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev {
+    padding: 0.24rem 0.38rem !important;
+    margin-bottom: 0.18rem !important;
+    border-radius: 8px !important;
+    gap: 0.32rem !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-icon {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+    border-radius: 6px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-icon svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body {
+    font-size: 0.7rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-time {
+    font-size: 0.6rem !important;
+  }
+
+  .cm-v20 .cm-dock .cm-dock-list .cm-dock-empty {
+    font-size: 0.72rem !important;
+    padding: 0.6rem !important;
+  }
+}
