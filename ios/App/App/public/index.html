@@ -33,7 +33,27 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Clue Me — كلمة واحدة… تصنع الفوز</title>
     <style>
-      html, body, #root { min-height: 100%; }
+      :root {
+        --cm-safe-top: env(safe-area-inset-top, 0px);
+        --cm-safe-bottom: env(safe-area-inset-bottom, 0px);
+        --cm-safe-left: env(safe-area-inset-left, 0px);
+        --cm-safe-right: env(safe-area-inset-right, 0px);
+      }
+      html, body {
+        min-height: 100%;
+        overscroll-behavior-y: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+      }
+      #root {
+        min-height: 100%;
+      }
       html.cm-discord-activity, html.cm-discord-activity body, html.cm-discord-activity #root {
         height: 100%;
         min-height: 100%;
@@ -52,6 +72,10 @@
       html.cm-discord-activity .cm-game-shell {
         min-height: 100%;
         height: 100%;
+      }
+      /* Professional Game Touch Polish */
+      button, a, [role="button"], .cm-card {
+        touch-action: manipulation;
       }
     </style>
     <!-- Apply stored language/direction/theme before first paint to avoid a flash. -->
@@ -121,6 +145,42 @@
             return origFetch.call(this, input, init);
           };
         }
+
+        // Initialize Native Device Features (Status Bar & Haptics)
+        document.addEventListener("DOMContentLoaded", function() {
+          try {
+            if (window.Capacitor && window.Capacitor.Plugins) {
+              var StatusBar = window.Capacitor.Plugins.StatusBar;
+              if (StatusBar) {
+                StatusBar.setOverlaysWebView({ overlay: false }).catch(function(){});
+                StatusBar.setStyle({ style: "DARK" }).catch(function(){});
+                StatusBar.setBackgroundColor({ color: "#17131a" }).catch(function(){});
+              }
+            }
+          } catch(e) {}
+        });
+
+        // Global Tactile Haptic Feedback for Native App
+        window.cmTriggerHaptic = function(style) {
+          try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+              var Haptics = window.Capacitor.Plugins.Haptics;
+              if (style === "heavy") Haptics.impact({ style: "HEAVY" });
+              else if (style === "medium") Haptics.impact({ style: "MEDIUM" });
+              else if (style === "success") Haptics.notification({ type: "SUCCESS" });
+              else if (style === "warning") Haptics.notification({ type: "WARNING" });
+              else Haptics.impact({ style: "LIGHT" });
+            }
+          } catch(e) {}
+        };
+
+        // Attach subtle touch feedback to buttons and interactive elements
+        document.addEventListener("click", function(e) {
+          var target = e.target && e.target.closest ? e.target.closest("button, a, [role=\"button\"], .cm-card") : null;
+          if (target) {
+            window.cmTriggerHaptic("light");
+          }
+        }, { passive: true });
       })();
     </script>
 
@@ -129,6 +189,7 @@
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=153">
     <link rel="stylesheet" href="/assets/room-layout-v20.css?v=153">
     <script defer src="/assets/game-room-v20.js?v=153"></script>
+      <script defer src="/assets/tutorial.js?v=153"></script>
   </head>
   <body>
     <div id="root"></div>

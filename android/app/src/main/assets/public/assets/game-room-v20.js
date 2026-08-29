@@ -673,13 +673,25 @@
       var idx = list.indexOf(cur);
       var next = list[(idx + 1 + list.length) % list.length];
       localStorage.setItem('clue-me:theme', next);
+      var isDark = next === 'dark' || next === 'mani-dark' || next === 'mot' || (next === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      html.classList.toggle('dark', isDark);
+      html.classList.toggle('mani', next === 'mani' || next === 'mani-dark');
+      html.classList.toggle('mani-dark', next === 'mani-dark');
+      html.classList.toggle('mot', next === 'mot');
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('cm:theme-change', { detail: next }));
     } catch (e) {}
-    location.reload();
   }
 
   function setHomeLang(lang) {
-    try { localStorage.setItem('clue-me:lang', lang === 'ar' ? 'ar' : 'en'); } catch (e) {}
-    location.reload();
+    try {
+      var newLang = lang === 'ar' ? 'ar' : 'en';
+      localStorage.setItem('clue-me:lang', newLang);
+      html.lang = newLang;
+      html.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('cm:lang-change', { detail: newLang }));
+    } catch (e) {}
   }
 
   function setHomeMenuOpen(open) {
@@ -816,7 +828,8 @@
               html.classList.toggle('mani', chosen === 'mani' || chosen === 'mani-dark');
               html.classList.toggle('mani-dark', chosen === 'mani-dark');
               html.classList.toggle('mot', chosen === 'mot');
-              location.reload();
+              window.dispatchEvent(new Event('storage'));
+              window.dispatchEvent(new CustomEvent('cm:theme-change', { detail: chosen }));
             } catch (e) {}
           } else {
             cycleThemePref();

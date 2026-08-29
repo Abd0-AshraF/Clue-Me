@@ -9,7 +9,7 @@
 	},
 	"plugins": {
 		"SplashScreen": {
-			"launchShowDuration": 1500,
+			"launchShowDuration": 1200,
 			"launchAutoHide": true,
 			"backgroundColor": "#17131a",
 			"androidSplashResourceName": "splash",
@@ -18,7 +18,8 @@
 		},
 		"StatusBar": {
 			"style": "DARK",
-			"backgroundColor": "#17131a"
+			"backgroundColor": "#17131a",
+			"overlaysWebView": false
 		}
 	},
 	"packageClassList": [

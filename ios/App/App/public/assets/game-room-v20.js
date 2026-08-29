@@ -498,14 +498,17 @@
   }
 
   function findHeaderActionsHost() {
-    var radio = document.querySelector('header [role="radiogroup"]');
-    return radio ? radio.parentElement : null;
+    return document.querySelector("header .flex.items-center.gap-2") ||
+           document.querySelector("header [role=\"radiogroup\"]")?.parentElement ||
+           document.querySelector("header > div > div:last-child") ||
+           document.querySelector("header");
   }
 
   function renderDiscordHeaderButton(inviteUrl) {
     var existing = document.querySelector('.cm-home-discord');
     var host = findHeaderActionsHost();
-    if (!host || !inviteUrl) {
+    var finalUrl = inviteUrl || "https://discord.gg/clueme";
+    if (!host) {
       if (existing) existing.remove();
       return;
     }
@@ -538,8 +541,10 @@
 
   function syncDiscordHomeButton() {
     fetchDiscordPublicConfig(false).then(function (cfg) {
-      renderDiscordHeaderButton(cfg && cfg.serverInviteUrl ? cfg.serverInviteUrl : null);
+      var invite = (cfg && cfg.serverInviteUrl) ? cfg.serverInviteUrl : "https://discord.gg/clueme";
+      renderDiscordHeaderButton(invite);
       try { syncMobileHomeHeader(); } catch (e) {}
+      try { syncHomeFooterAndModals(); } catch (e) {}
     });
   }
 
@@ -552,8 +557,18 @@
 
   function isSettingsDialog(dialog) {
     if (!dialog) return false;
-    var txt = ((dialog.textContent || '') + '').trim();
-    return txt.indexOf('الإعدادات') !== -1 || txt.indexOf('Settings') !== -1;
+    if (dialog.classList && dialog.classList.contains("cm-legal-dialog")) return false;
+    if (dialog.closest && dialog.closest(".cm-legal-backdrop")) return false;
+    var heading = dialog.querySelector("h1, h2, h3, [aria-labelledby]");
+    var headTxt = heading ? ((heading.textContent || "") + "").trim() : "";
+    if (headTxt.indexOf("الإعدادات") !== -1 || headTxt.indexOf("Settings") !== -1) {
+      if (headTxt.indexOf("الخصوصية") !== -1 || headTxt.indexOf("Privacy") !== -1 || headTxt.indexOf("شروط") !== -1 || headTxt.indexOf("Terms") !== -1) return false;
+      return true;
+    }
+    var txt = ((dialog.textContent || "") + "").trim();
+    return (txt.indexOf("الإعدادات") !== -1 || txt.indexOf("Settings") !== -1) &&
+           txt.indexOf("الخصوصية") === -1 && txt.indexOf("Privacy") === -1 &&
+           txt.indexOf("شروط الاستخدام") === -1 && txt.indexOf("Terms of Service") === -1;
   }
 
   function syncSettingsPanel() {
@@ -658,13 +673,25 @@
       var idx = list.indexOf(cur);
       var next = list[(idx + 1 + list.length) % list.length];
       localStorage.setItem('clue-me:theme', next);
+      var isDark = next === 'dark' || next === 'mani-dark' || next === 'mot' || (next === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      html.classList.toggle('dark', isDark);
+      html.classList.toggle('mani', next === 'mani' || next === 'mani-dark');
+      html.classList.toggle('mani-dark', next === 'mani-dark');
+      html.classList.toggle('mot', next === 'mot');
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('cm:theme-change', { detail: next }));
     } catch (e) {}
-    location.reload();
   }
 
   function setHomeLang(lang) {
-    try { localStorage.setItem('clue-me:lang', lang === 'ar' ? 'ar' : 'en'); } catch (e) {}
-    location.reload();
+    try {
+      var newLang = lang === 'ar' ? 'ar' : 'en';
+      localStorage.setItem('clue-me:lang', newLang);
+      html.lang = newLang;
+      html.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('cm:lang-change', { detail: newLang }));
+    } catch (e) {}
   }
 
   function setHomeMenuOpen(open) {
@@ -801,7 +828,8 @@
               html.classList.toggle('mani', chosen === 'mani' || chosen === 'mani-dark');
               html.classList.toggle('mani-dark', chosen === 'mani-dark');
               html.classList.toggle('mot', chosen === 'mot');
-              location.reload();
+              window.dispatchEvent(new Event('storage'));
+              window.dispatchEvent(new CustomEvent('cm:theme-change', { detail: chosen }));
             } catch (e) {}
           } else {
             cycleThemePref();
@@ -4586,6 +4614,396 @@
     var active = document.activeElement;
     if (!isTextEditable(active)) return false;
     return !!(active && active.closest && (active.closest('.cm-game-page') || active.closest('[role="dialog"]')));
+  }
+
+  
+  /* ============================================================== Legal Modals & Footer */
+  function ensureLegalStyles() {
+    if (document.getElementById("cm-legal-styles")) return;
+    var style = document.createElement("style");
+    style.id = "cm-legal-styles";
+    style.textContent = "" +
+      ".cm-legal-backdrop {" +
+        "position: fixed;" +
+        "inset: 0;" +
+        "z-index: 100000;" +
+        "background: rgba(10, 8, 14, 0.85);" +
+        "backdrop-filter: blur(10px);" +
+        "-webkit-backdrop-filter: blur(10px);" +
+        "display: flex;" +
+        "align-items: center;" +
+        "justify-content: center;" +
+        "padding: 16px;" +
+        "box-sizing: border-box;" +
+        "animation: cmLegalFadeIn .18s ease-out;" +
+      "}" +
+      ".cm-legal-dialog {" +
+        "background: #1c1722;" +
+        "border: 1px solid #3d3448;" +
+        "border-radius: 18px;" +
+        "width: 100%;" +
+        "max-width: 640px;" +
+        "max-height: 88vh;" +
+        "display: flex;" +
+        "flex-direction: column;" +
+        "box-shadow: 0 24px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);" +
+        "color: #e6e0ec;" +
+        "animation: cmLegalScaleIn .2s cubic-bezier(0.16, 1, 0.3, 1);" +
+        "overflow: hidden;" +
+        "box-sizing: border-box;" +
+      "}" +
+      ".cm-legal-header {" +
+        "display: flex;" +
+        "align-items: center;" +
+        "justify-content: space-between;" +
+        "padding: 18px 22px;" +
+        "border-bottom: 1px solid #2e2638;" +
+        "background: #231d2c;" +
+        "flex: 0 0 auto;" +
+      "}" +
+      ".cm-legal-header h3 {" +
+        "margin: 0;" +
+        "font-size: 1.15rem;" +
+        "font-weight: 700;" +
+        "display: flex;" +
+        "align-items: center;" +
+        "gap: 10px;" +
+        "color: #ffffff;" +
+      "}" +
+      ".cm-legal-close {" +
+        "background: #2c2438;" +
+        "border: 1px solid #433754;" +
+        "color: #aba1b8;" +
+        "border-radius: 8px;" +
+        "width: 36px;" +
+        "height: 36px;" +
+        "display: flex;" +
+        "align-items: center;" +
+        "justify-content: center;" +
+        "cursor: pointer;" +
+        "transition: all .15s ease;" +
+      "}" +
+      ".cm-legal-close:hover {" +
+        "background: #e13c3c;" +
+        "color: #ffffff;" +
+        "border-color: #e13c3c;" +
+      "}" +
+      ".cm-legal-body {" +
+        "padding: 22px 24px;" +
+        "overflow-y: auto;" +
+        "-webkit-overflow-scrolling: touch;" +
+        "font-size: 0.95rem;" +
+        "line-height: 1.7;" +
+        "color: #cfc8d8;" +
+        "flex: 1 1 auto;" +
+      "}" +
+      ".cm-legal-body::-webkit-scrollbar { width: 6px; }" +
+      ".cm-legal-body::-webkit-scrollbar-track { background: transparent; }" +
+      ".cm-legal-body::-webkit-scrollbar-thumb { background: #3d3448; border-radius: 4px; }" +
+      ".cm-legal-body::-webkit-scrollbar-thumb:hover { background: #554865; }" +
+      ".cm-legal-section {" +
+        "margin-bottom: 22px;" +
+        "padding-bottom: 18px;" +
+        "border-bottom: 1px solid #292232;" +
+      "}" +
+      ".cm-legal-section:last-child {" +
+        "margin-bottom: 0;" +
+        "padding-bottom: 0;" +
+        "border-bottom: none;" +
+      "}" +
+      ".cm-legal-section-title {" +
+        "font-weight: 700;" +
+        "font-size: 1.02rem;" +
+        "color: #ffca58;" +
+        "margin-bottom: 8px;" +
+        "display: flex;" +
+        "align-items: center;" +
+        "gap: 8px;" +
+      "}" +
+      ".cm-legal-section ul {" +
+        "margin: 8px 0;" +
+        "padding-inline-start: 22px;" +
+      "}" +
+      ".cm-legal-section li {" +
+        "margin-bottom: 8px;" +
+      "}" +
+      ".cm-legal-footer-bar {" +
+        "padding: 14px 22px;" +
+        "background: #231d2c;" +
+        "border-top: 1px solid #2e2638;" +
+        "display: flex;" +
+        "align-items: center;" +
+        "justify-content: flex-end;" +
+        "gap: 12px;" +
+        "flex: 0 0 auto;" +
+      "}" +
+      ".cm-legal-btn-primary {" +
+        "background: #ff5252;" +
+        "color: #ffffff;" +
+        "border: none;" +
+        "font-size: 0.9rem;" +
+        "font-weight: 600;" +
+        "padding: 8px 18px;" +
+        "border-radius: 8px;" +
+        "cursor: pointer;" +
+        "transition: all .15s ease;" +
+      "}" +
+      ".cm-legal-btn-primary:hover {" +
+        "background: #ff6b6b;" +
+      "}" +
+      ".cm-legal-footer-btn {" +
+        "background: #231d2c;" +
+        "border: 1px solid #3b3147;" +
+        "color: #d1c7b7;" +
+        "font-size: 0.82rem;" +
+        "font-weight: 500;" +
+        "padding: 7px 14px;" +
+        "border-radius: 8px;" +
+        "cursor: pointer;" +
+        "transition: all .14s ease;" +
+        "display: inline-flex;" +
+        "align-items: center;" +
+        "gap: 6px;" +
+        "text-decoration: none;" +
+      "}" +
+      ".cm-legal-footer-btn:hover {" +
+        "background: #2f273b;" +
+        "color: #ffffff;" +
+        "border-color: #554865;" +
+      "}" +
+      ".cm-home-footer-custom {" +
+        "margin-top: 14px;" +
+        "padding-top: 14px;" +
+        "display: flex;" +
+        "flex-wrap: wrap;" +
+        "align-items: center;" +
+        "justify-content: center;" +
+        "gap: 10px;" +
+      "}" +
+      "@keyframes cmLegalFadeIn {" +
+        "from { opacity: 0; }" +
+        "to { opacity: 1; }" +
+      "}" +
+      "@keyframes cmLegalScaleIn {" +
+        "from { opacity: 0; transform: scale(0.95); }" +
+        "to { opacity: 1; transform: scale(1); }" +
+      "}";
+    document.head.appendChild(style);
+  }
+
+  function openLegalModal(type) {
+    ensureLegalStyles();
+    closeLegalModal();
+    var isAr = html.lang !== "en";
+    var isPrivacy = type === "privacy";
+
+    var title = isPrivacy 
+      ? (isAr ? "سياسة الخصوصية — Clue Me" : "Privacy Policy — Clue Me")
+      : (isAr ? "شروط الاستخدام — Clue Me" : "Terms of Service — Clue Me");
+
+    var icon = isPrivacy ? "🛡️" : "📜";
+    var closeLabel = isAr ? "إغلاق" : "Close";
+    var bodyHtml = "";
+
+    if (isPrivacy) {
+      if (isAr) {
+        bodyHtml = "" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🔒 1. التزامنا بحماية الخصوصية</div>" +
+            "<p>نحن في <strong>Clue Me</strong> نؤمن بأن الألعاب الجماعية الذكية يجب أن تكون ممتعة وآمنة للجميع. نحرص بشدة على حماية بيانات اللاعبين ولا نجمع أي معلومات شخصية غير ضرورية لتشغيل اللعبة.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">📊 2. البيانات التي نستخدمها</div>" +
+            "<ul>" +
+              "<li><strong>الأسماء المستعارة والصور الرمزية:</strong> تُستخدم للتعرف عليك داخل غرف اللعب فقط، وتُحذف فور مغادرتك للغرفة إن لم تسجل حساباً دائماً.</li>" +
+              "<li><strong>التفضيلات وإعدادات اللعبة:</strong> (مثل اللغة، الثيم، وتفضيلات الصوت) تُخزّن محلياً على جهازك لراحتك.</li>" +
+              "<li><strong>إحصائيات المباريات:</strong> عدد المباريات والفوز وتاريخ الانضمام فقط في حال قيامك بإنشاء حساب مسجل.</li>" +
+              "<li><strong>لا نجمع إطلاقاً:</strong> أي كلمات مرور بنصوص صريحة، أو بيانات دفع، أو عناوين شخصية.</li>" +
+            "</ul>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🎮 3. تسجيل الدخول عبر ديسكورد (Discord OAuth)</div>" +
+            "<p>عند تسجيل الدخول بحساب ديسكورد، نطلب فقط بيانات الهوية العامة (معرف المستخدم واسم العرض والصورة الرمزية) لمنحك شارة التوثيق. لا نصل إطلاقاً إلى خوادمك الخاصة أو رسائلك المباشرة.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🛡️ 4. الأمان وتشفير الاتصال المباشر</div>" +
+            "<p>كافة الاتصالات بين تطبيقك وخوادم اللعبة المباشرة (WebSockets و REST APIs) مشفرة ومؤمنة بأحدث بروتوكولات التشفير القياسية (HTTPS / WSS).</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🗑️ 5. التحكم وحذف البيانات</div>" +
+            "<p>يمكنك مسح بياناتك المؤقتة في أي وقت بمسح بيانات التطبيق أو الخروج من حسابك، أو مراسلتنا لحذف سجلك بالكامل.</p>" +
+          "</div>";
+      } else {
+        bodyHtml = "" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🔒 1. Our Privacy Commitment</div>" +
+            "<p>At <strong>Clue Me</strong>, we believe multiplayer word games should be delightful, fair, and private. We respect your data and never collect unnecessary personal details.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">📊 2. Information We Collect</div>" +
+            "<ul>" +
+              "<li><strong>Player Nicknames & Avatars:</strong> Used exclusively in active game rooms to identify you to your teammates and rivals.</li>" +
+              "<li><strong>Preferences & Settings:</strong> (Language, theme, sound effects) stored safely in your local device storage.</li>" +
+              "<li><strong>Account Statistics:</strong> Total games played, victories, and rank badges for registered accounts.</li>" +
+              "<li><strong>We Never Collect:</strong> Plaintext passwords, credit card info, or sensitive private data.</li>" +
+            "</ul>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🎮 3. Discord Login (OAuth)</div>" +
+            "<p>When signing in via Discord, we only request standard identity claims (User ID, username, avatar) to authenticate your account. We never access your servers or private direct messages.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🛡️ 4. Data Security & Encryption</div>" +
+            "<p>All network traffic and live real-time WebSocket communication are secured with modern HTTPS and WSS protocols.</p>" +
+          "</div>";
+      }
+    } else {
+      if (isAr) {
+        bodyHtml = "" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">⚖️ 1. قبول الشروط</div>" +
+            "<p>باستخدامك للعبة <strong>Clue Me</strong> سواء عبر الويب أو تطبيق الهاتف، فإنك توافق على الالتزام بشروط الاستخدام وقواعد اللعب النظيف الموضحة أدناه.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🎯 2. ميثاق اللعب النظيف والأخلاق</div>" +
+            "<ul>" +
+              "<li>احترام جميع اللاعبين وتجنب أي لغة غير لائقة أو ألفاظ مسيئة في أسماء اللاعبين أو التلميحات.</li>" +
+              "<li>الالتزام بقواعد اللعبة وتجنب التلميحات غير القانونية الممنوعة في أدوار القادة.</li>" +
+              "<li>يُحظر استخدام أي برامج آلية (Bots) أو ثغرات تقنية تهدف لتخريب الغرف أو إفساد متعة الآخرين.</li>" +
+            "</ul>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">👑 3. إدارة الغرف والصلاحيات</div>" +
+            "<p>يملك مضيف الغرفة (Room Host) صلاحيات إدارة المقاعد، طرد المخالفين، وتعديل إعدادات الغرفة لضمان تجربة عادلة للجميع.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">💎 4. الملكية الفكرية</div>" +
+            "<p>جميع التصاميم، الواجهات، الأصوات، الكود البرمجي، وهوية <strong>Clue Me</strong> هي ملكية حصرية ومحمية بحقوق النشر وقوانين الملكية الفكرية.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🔄 5. التحديثات والتعديل</div>" +
+            "<p>نعمل باستمرار على تحسين اللعبة وإطلاق ميزات جديدة، وقد نقوم بتحديث هذه الشروط دورياً لضمان أفضل تجربة لك ولأصدقائك.</p>" +
+          "</div>";
+      } else {
+        bodyHtml = "" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">⚖️ 1. Acceptance of Terms</div>" +
+            "<p>By playing <strong>Clue Me</strong> on web or mobile, you agree to comply with these terms of service and our fair play guidelines.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">🎯 2. Fair Play & Player Conduct</div>" +
+            "<ul>" +
+              "<li>Treat fellow teammates and opponents with kindness and respect.</li>" +
+              "<li>Adhere to clue-giving rules and avoid prohibited illegal communication.</li>" +
+              "<li>Do not use bots, exploits, or malicious tools to disrupt rooms or manipulate match outcomes.</li>" +
+            "</ul>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">👑 3. Room Host Authority</div>" +
+            "<p>Room hosts have the authority to manage seating, moderate participants, and customize round timers to keep gameplay smooth.</p>" +
+          "</div>" +
+          "<div class=\"cm-legal-section\">" +
+            "<div class=\"cm-legal-section-title\">💎 4. Intellectual Property</div>" +
+            "<p>All branding, game mechanics, visual themes, sound designs, and source code of Clue Me are protected by copyright laws.</p>" +
+          "</div>";
+      }
+    }
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "cm-legal-backdrop";
+    backdrop.id = "cm-legal-modal-backdrop";
+
+    backdrop.innerHTML = "" +
+      "<div class=\"cm-legal-dialog\" role=\"region\" aria-label=\"" + title + "\" dir=\"" + (isAr ? "rtl" : "ltr") + "\">" +
+        "<div class=\"cm-legal-header\">" +
+          "<h3 id=\"cm-legal-title\"><span>" + icon + "</span> <span>" + title + "</span></h3>" +
+          "<button type=\"button\" class=\"cm-legal-close\" aria-label=\"" + closeLabel + "\" onclick=\"window.__cmCloseLegalModal && window.__cmCloseLegalModal()\">" +
+            "<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M18 6L6 18M6 6l12 12\"/></svg>" +
+          "</button>" +
+        "</div>" +
+        "<div class=\"cm-legal-body\">" +
+          bodyHtml +
+        "</div>" +
+        "<div class=\"cm-legal-footer-bar\">" +
+          "<button type=\"button\" class=\"cm-legal-btn-primary\" onclick=\"window.__cmCloseLegalModal && window.__cmCloseLegalModal()\">" +
+            closeLabel +
+          "</button>" +
+        "</div>" +
+      "</div>";
+
+    backdrop.addEventListener("click", function(e) {
+      if (e.target === backdrop) closeLegalModal();
+    });
+
+    try { document.body.style.overflow = "hidden"; } catch(e){}
+    document.body.appendChild(backdrop);
+    try { window.cmTriggerHaptic && window.cmTriggerHaptic("light"); } catch(e){}
+  }
+
+  function closeLegalModal() {
+    try { document.body.style.overflow = ""; } catch(e){}
+    var existing = document.getElementById("cm-legal-modal-backdrop");
+    if (existing) existing.remove();
+  }
+  window.__cmCloseLegalModal = closeLegalModal;
+  window.__cmOpenLegalModal = openLegalModal;
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") closeLegalModal();
+  });
+
+  // Support direct hash navigation (#privacy, #terms)
+  function checkLegalHash() {
+    var hash = (location.hash || "").toLowerCase();
+    if (hash === "#privacy") openLegalModal("privacy");
+    else if (hash === "#terms") openLegalModal("terms");
+  }
+  window.addEventListener("hashchange", checkLegalHash);
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    checkLegalHash();
+  } else {
+    document.addEventListener("DOMContentLoaded", checkLegalHash, { once: true });
+  }
+
+  function syncHomeFooterAndModals() {
+    if (!isHomeView()) return;
+    var footer = document.querySelector("footer");
+    if (!footer) return;
+    var container = footer.querySelector("div");
+    if (!container) return;
+
+    var currentLang = html.lang || "ar";
+    var existingCustom = container.querySelector(".cm-home-footer-custom");
+    if (existingCustom && existingCustom.getAttribute("data-lang") === currentLang) {
+      return;
+    }
+
+    if (!existingCustom) {
+      existingCustom = document.createElement("div");
+      existingCustom.className = "cm-home-footer-custom";
+      container.appendChild(existingCustom);
+    }
+    existingCustom.setAttribute("data-lang", currentLang);
+
+    var isAr = currentLang !== "en";
+    var privacyText = isAr ? "سياسة الخصوصية" : "Privacy Policy";
+    var termsText = isAr ? "شروط الاستخدام" : "Terms of Service";
+    var discordText = isAr ? "سيرفر الديسكورد" : "Discord Server";
+
+    var cfg = discordConfigCache.data || {};
+    var discordUrl = cfg.serverInviteUrl || "https://discord.gg/clueme";
+
+    existingCustom.innerHTML = "" +
+      "<button type=\"button\" class=\"cm-legal-footer-btn\" onclick=\"window.__cmOpenLegalModal('privacy')\">" +
+        "🛡️ " + privacyText +
+      "</button>" +
+      "<button type=\"button\" class=\"cm-legal-footer-btn\" onclick=\"window.__cmOpenLegalModal('terms')\">" +
+        "📜 " + termsText +
+      "</button>" +
+      "<a href=\"" + discordUrl + "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"cm-legal-footer-btn inline-flex items-center gap-1.5\" style=\"border-color:#5865f2;color:#9ca7ff;\">" +
+        "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" style=\"width:14px;height:14px;color:#5865F2;\"><path d=\"M20.317 4.369A19.791 19.791 0 0 0 15.885 3c-.191.328-.403.769-.554 1.117a18.27 18.27 0 0 0-5.487 0A12.64 12.64 0 0 0 9.29 3a19.736 19.736 0 0 0-4.438 1.372C2.045 8.53 1.285 12.58 1.66 16.57a19.9 19.9 0 0 0 5.995 3.03 14.3 14.3 0 0 0 1.285-2.106 12.955 12.955 0 0 1-2.02-.977c.17-.124.336-.255.497-.39 3.898 1.82 8.13 1.82 11.982 0 .162.135.328.266.498.39-.647.378-1.323.705-2.02.977.37.728.799 1.432 1.284 2.106a19.86 19.86 0 0 0 6-3.03c.5-4.626-.838-8.64-3.844-12.201ZM8.02 14.803c-1.182 0-2.156-1.085-2.156-2.419 0-1.333.955-2.418 2.156-2.418 1.21 0 2.174 1.095 2.156 2.418 0 1.334-.955 2.419-2.156 2.419Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.209 0 2.173 1.095 2.155 2.418 0 1.334-.946 2.419-2.155 2.419Z\"></path></svg>" +
+        discordText + " ↗" +
+      "</a>";
   }
 
   function sync() {

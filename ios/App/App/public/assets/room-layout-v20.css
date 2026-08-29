@@ -2917,14 +2917,14 @@ html.cm-v20.cm-min-effects .cm-petals i {
 }
 
 .cm-v20 .cm-game-page {
-  height: var(--cm-vp-h);
-  max-height: var(--cm-vp-h);
+  height: calc(var(--cm-vp-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
+  max-height: calc(var(--cm-vp-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
   overflow: hidden;
 }
 
 .cm-v20 .cm-game-shell {
-  height: calc(var(--cm-vp-h) - var(--cm-header-h));
-  max-height: calc(var(--cm-vp-h) - var(--cm-header-h));
+  height: calc(var(--cm-vp-h) - var(--cm-header-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
+  max-height: calc(var(--cm-vp-h) - var(--cm-header-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
   overflow: hidden;
 }
 
