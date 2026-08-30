@@ -389,7 +389,7 @@ function SetupWizardModal({open:n,onClose:r}){
                       onClick:()=>{
                         const isCap=typeof window!=="undefined"&&window.Capacitor;
                         const ie=isCap?"clueme://auth/discord":encodeURIComponent(\`\${window.location.pathname}\${window.location.search}\`);
-                        const targetServer=window.__CLUE_ME_SERVER_URL__||"https://clue-me.ai.studio";
+                        const targetServer=window.__CLUE_ME_SERVER_URL__||(typeof window!=="undefined"?window.location.origin:"https://clue-me.ai.studio");
                         const authUrl=\`\${targetServer}/api/auth/discord?returnTo=\${ie}\`;
                         if(isCap){
                           window.open(authUrl,"_system");
@@ -518,9 +518,9 @@ if (!code.includes('onOpenSetup:st')) {
 }
 
 // 7. Patch Bw (Login Modal) to prevent variable shadowing and handle Capacitor safely
-const oldBwGe = 'const ge=()=>{const ie=encodeURIComponent(`${window.location.pathname}${window.location.search}`);const targetServer=window.__CLUE_ME_SERVER_URL__||"https://clue-me.ai.studio";const authUrl=`${targetServer}/api/auth/discord?returnTo=${ie}`;const popup=window.open(authUrl,"discord_auth","width=600,height=700,status=no,menubar=no,toolbar=no");if(popup&&!popup.closed){const timer=setInterval(async()=>{if(popup.closed){clearInterval(timer)}try{const res=await J_();if(res&&res.user){clearInterval(timer);try{popup.close()}catch(e){}s(res.user);l("authenticated");Cu(res.user.name);h(!1);v(res.linked?{kind:"linked"}:{kind:"login",name:res.user.name});r();}}catch(e){}},1200)}else{window.location.href=authUrl;}};';
+const oldBwGe = 'const ge=()=>{const ie=encodeURIComponent(`${window.location.pathname}${window.location.search}`);window.location.assign(`/api/auth/discord?returnTo=${ie}`)}';
 
-const newBwGe = 'const ge=()=>{const isCap=typeof window!=="undefined"&&window.Capacitor;const ie=isCap?"clueme://auth/discord":encodeURIComponent(`${window.location.pathname}${window.location.search}`);const targetServer=window.__CLUE_ME_SERVER_URL__||"https://clue-me.ai.studio";const authUrl=`${targetServer}/api/auth/discord?returnTo=${ie}`;if(isCap){window.open(authUrl,"_system");r();return;}const popup=window.open(authUrl,"discord_auth","width=600,height=700,status=no,menubar=no,toolbar=no");if(popup&&!popup.closed){const timer=setInterval(async()=>{if(popup.closed){clearInterval(timer)}try{const res=await J_();if(res&&res.user){clearInterval(timer);try{popup.close()}catch(ex){}const{refresh:refreshAuth}=xa();await refreshAuth();r();}}catch(ex){}},1200)}else{window.location.href=authUrl;}};';
+const newBwGe = 'const ge=()=>{const isCap=typeof window!=="undefined"&&window.Capacitor;const ie=isCap?"clueme://auth/discord":encodeURIComponent(`${window.location.pathname}${window.location.search}`);const targetServer=window.__CLUE_ME_SERVER_URL__||(typeof window!=="undefined"?window.location.origin:"https://clue-me.ai.studio");const authUrl=`${targetServer}/api/auth/discord?returnTo=${ie}`;if(isCap){window.open(authUrl,"_system");r();return;}const popup=window.open(authUrl,"discord_auth","width=600,height=700,status=no,menubar=no,toolbar=no");if(popup&&!popup.closed){const timer=setInterval(async()=>{if(popup.closed){clearInterval(timer)}try{const res=await J_();if(res&&res.user){clearInterval(timer);try{popup.close()}catch(ex){}const{refresh:refreshAuth}=xa();await refreshAuth();r();}}catch(ex){}},1200)}else{window.location.href=authUrl;}}';
 
 safeReplace('Bw login helper (prevent shadowing & crash)', oldBwGe, newBwGe);
 
