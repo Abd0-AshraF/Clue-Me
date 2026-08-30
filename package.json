@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "node index.js",
     "start": "node index.js",
-    "build": "echo \"[clue-me] already built — nothing to do\"",
+    "build": "node scripts/patch-bundle.cjs",
     "db:generate": "echo \"[clue-me] database client is bundled — nothing to generate\"",
     "db:migrate": "node scripts/check-config.mjs --database-only",
     "config:check": "node scripts/check-config.mjs",
