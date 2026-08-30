@@ -2,12 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-// 1. Icon SVG with rounded container (512x512 canvas, icon scaled to ~68% size for nice zoom-out padding)
+// 1. Icon SVG with rounded container (512x512 canvas, icon scaled with extra padding for nice zoom-out)
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="120" fill="#17131A"/>
   <!-- Outer glow/border -->
   <rect x="4" y="4" width="504" height="504" rx="116" fill="none" stroke="#322a38" stroke-width="8"/>
-  <g transform="translate(96, 96) scale(6.666)">
+  <g transform="translate(116, 116) scale(5.833)">
     <rect width="48" height="48" rx="10" fill="#F5F1E8"/>
     <rect x="7" y="9" width="26" height="22" rx="5.5" fill="#FFFDF8" stroke="#C2B69F" stroke-width="1.6"/>
     <rect x="11.5" y="15" width="16" height="3.4" rx="1.7" fill="#B83A3A"/>
@@ -17,9 +17,9 @@ const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512
   </g>
 </svg>`;
 
-// 2. Adaptive Foreground SVG (transparent background, icon scaled to 52% of 432x432 for Android safe zone)
+// 2. Adaptive Foreground SVG (transparent background, icon scaled for Android adaptive icon safe zone)
 const fgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 432 432">
-  <g transform="translate(104, 104) scale(4.666)">
+  <g transform="translate(132, 132) scale(3.5)">
     <rect width="48" height="48" rx="10" fill="#F5F1E8"/>
     <rect x="7" y="9" width="26" height="22" rx="5.5" fill="#FFFDF8" stroke="#C2B69F" stroke-width="1.6"/>
     <rect x="11.5" y="15" width="16" height="3.4" rx="1.7" fill="#B83A3A"/>

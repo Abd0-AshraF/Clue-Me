@@ -23,6 +23,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep Link Filter for Custom URL Schemes -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="clueme" />
+                <data android:scheme="com.clueme.game" />
+            </intent-filter>
+
+            <!-- App Links Filter for HTTP/HTTPS Room Links & Callbacks -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="clue-me.ai.studio" />
+                <data android:scheme="http" android:host="clue-me.ai.studio" />
+                <data android:scheme="https" android:host="*.ai.studio" />
+                <data android:scheme="https" android:host="*.run.app" />
+            </intent-filter>
+
         </activity>
 
         <provider
