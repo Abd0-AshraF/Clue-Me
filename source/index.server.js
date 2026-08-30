@@ -3332,14 +3332,23 @@ function mountDiscordRoutes(app2, authStore2, config) {
         maxAge: EXCHANGE_TTL_MS,
         path: COOKIE_PATH
       });
-      res.redirect(302, `${entry.origin}${entry.returnTo}?auth=discord`);
+      res.redirect(302, `${entry.origin}${entry.returnTo}?auth=discord&token=${exchangeToken}`);
     } catch (err) {
       console.error("[discord] callback failed:", err);
       redirectWithError(res, entry.origin, entry.returnTo, "failed");
     }
   });
   app2.post("/api/auth/discord/exchange", (req, res) => {
-    const exchangeToken = parseCookie(req.headers.cookie, COOKIE_NAME);
+    let exchangeToken = parseCookie(req.headers.cookie, COOKIE_NAME);
+    if (!exchangeToken && req.body && typeof req.body.code === "string") {
+      exchangeToken = req.body.code;
+    }
+    if (!exchangeToken && req.body && typeof req.body.token === "string") {
+      exchangeToken = req.body.token;
+    }
+    if (!exchangeToken && typeof req.query.token === "string") {
+      exchangeToken = req.query.token;
+    }
     const entry = exchangeToken ? exchanges.get(exchangeToken) : void 0;
     if (entry && exchangeToken) exchanges.delete(exchangeToken);
     res.clearCookie(COOKIE_NAME, { path: COOKIE_PATH });
