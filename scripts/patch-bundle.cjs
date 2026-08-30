@@ -537,6 +537,12 @@ const new_b = 'function _b({code:n}){T.useEffect(()=>{try{localStorage.removeIte
 
 safeReplace('_b Room Not Found last-session clear patch', old_b, new_b);
 
+// 11. Patch Header (tk) language selector to use a sleek consistent icon button with badge instead of bulky segmented control
+const oldLangSelector = 'u.jsx(Ms,{value:i,ariaLabel:f.a11y.languageSelect,onChange:l,options:[{value:"ar",label:f.settings.languageAr},{value:"en",label:f.settings.languageEn}]})';
+const newLangSelector = 'u.jsx(va,{label:f.a11y.languageSelect,onClick:()=>l(i==="ar"?"en":"ar"),className:"relative",children:u.jsxs("span",{className:"flex items-center justify-center",children:[u.jsxs("svg",{xmlns:"http://www.w3.org/2000/svg",width:"18",height:"18",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2.2",strokeLinecap:"round",strokeLinejoin:"round",children:[u.jsx("circle",{cx:"12",cy:"12",r:"10"}),u.jsx("path",{d:"M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"}),u.jsx("path",{d:"M2 12h20"})]}),u.jsx("span",{className:"absolute -bottom-1 -end-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-brand px-1 text-[9px] font-extrabold text-white shadow-sm ring-1 ring-paper",children:i==="ar"?"\\u0639":"EN"})]})})';
+
+safeReplace('Header (tk) language button consistent styling patch', oldLangSelector, newLangSelector);
+
 // 8. Wrap Admin Panel tabs with a fully mobile responsive container
 const unpatchedMain = 'u.jsxs("main",{className:"mx-auto w-full max-w-4xl flex-1 px-3 py-5",children:[u.jsx(Ms,{value:s,ariaLabel:r.admin.title,onChange:i,className:"mb-4 w-full justify-center",options:[{value:"reports",label:r.admin.tabReports},{value:"users",label:r.admin.tabUsers},{value:"words",label:r.admin.tabWords},{value:"audit",label:r.admin.tabAudit}]}),s==="reports"?u.jsx(nj,{}):null,s==="users"?u.jsx(aj,{}):null,s==="words"?u.jsx(ij,{}):null,s==="audit"?u.jsx(sj,{}):null]})';
 
