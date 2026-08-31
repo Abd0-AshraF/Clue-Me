@@ -4301,11 +4301,16 @@
       Number(window.innerHeight),
       viewportSensorBox && Number(viewportSensorBox.height)
     ].filter(function (value) { return Number.isFinite(value) && value > 0; });
+
+    var insets = window.useSafeArea ? window.useSafeArea.detect() : { top: 0, bottom: 0, left: 0, right: 0 };
+
     return {
       /* The smallest positive reading is the safe visible region when a host
          chrome/keyboard reports different layout and visual dimensions. */
       width: widths.length ? Math.round(Math.min.apply(Math, widths)) : 0,
-      height: heights.length ? Math.round(Math.min.apply(Math, heights)) : 0
+      height: heights.length ? Math.round(Math.min.apply(Math, heights)) : 0,
+      safeTop: insets.top,
+      safeBottom: insets.bottom
     };
   }
 
@@ -4347,8 +4352,16 @@
     if (!box) return;
     html.style.setProperty('--cm-vp-w', box.width + 'px');
     html.style.setProperty('--cm-vp-h', box.height + 'px');
+
+    var insets = window.useSafeArea ? window.useSafeArea.detect() : { top: 0, bottom: 0 };
+    var safeTop = Math.max(box.safeTop || 0, insets.top || 0);
+    var safeBottom = Math.max(box.safeBottom || 0, insets.bottom || 0);
+
+    html.style.setProperty('--cm-safe-top', safeTop + 'px');
+    html.style.setProperty('--cm-safe-bottom', safeBottom + 'px');
+
     var header = query('.cm-game-page > header');
-    var headerH = measureRectHeight(header) || 56;
+    var headerH = measureRectHeight(header) || 48;
     html.style.setProperty('--cm-header-h', headerH + 'px');
     var main = query('.cm-game-shell > main');
     if (!main) return;
@@ -4361,61 +4374,68 @@
     var banner = main.querySelector(':scope > [aria-live="polite"]');
     var teambarH = measureRectHeight(teambar);
     var bannerH = measureRectHeight(banner);
-    var mainHeight = Math.max(220, Math.round(mainRect.height || Math.max(0, box.height - headerH)));
-    var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 4 + 8;
 
-    /* Reserve a stable, fixed height for the bottom panel (clue composer, live clue,
-       operative guess controls) based purely on viewport geometry so the board NEVER
-       shrinks or grows when turns or roles switch. */
-    var sideTarget =
-      mode === 'desktop' ? clamp(mainHeight * 0.075, 46, 60) :
-      mode === 'tablet' ? clamp(mainHeight * 0.075, 44, 58) :
-      mode === 'phone-landscape' ? clamp(mainHeight * 0.09, 36, 48) :
-      clamp(mainHeight * 0.08, 40, 52);
-    var sideMin = mode === 'desktop' ? 44 : mode === 'tablet' ? 42 : mode === 'phone-landscape' ? 34 : 38;
+    /* Total available height inside viewport accounting for safe area insets & header */
+    var totalAvailableH = Math.max(220, box.height - headerH - safeTop - safeBottom);
+    var mainHeight = Math.max(200, Math.round(mainRect.height ? Math.min(mainRect.height, totalAvailableH) : totalAvailableH));
+    var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 3 + 4;
 
-    var usableHeight = Math.max(180, mainHeight - reserveWithinMain);
-    var boardHeight = Math.max(120, usableHeight - sideTarget);
+    /* Measure actual clue panel height if present, so we reserve exact needed space */
+    var sideEl = query('.cm-side-clue') || query('.cm-side');
+    var measuredSideH = sideEl ? measureRectHeight(sideEl) : 0;
+
+    /* Reserve height for the bottom panel (clue composer, live clue, operative guess controls) */
+    var sideTarget = Math.max(
+      measuredSideH,
+      mode === 'desktop' ? clamp(mainHeight * 0.16, 85, 120) :
+      mode === 'tablet' ? clamp(mainHeight * 0.16, 80, 110) :
+      mode === 'phone-landscape' ? clamp(mainHeight * 0.16, 50, 75) :
+      clamp(mainHeight * 0.18, 80, 120)
+    );
+    var sideMin = mode === 'desktop' ? 82 : mode === 'tablet' ? 76 : mode === 'phone-landscape' ? 48 : 76;
+
+    /* Calculate available usable height inside main for the stage (Board + attached Clue Panel) */
+    var usableHeight = Math.max(140, mainHeight - reserveWithinMain);
+
+    /* Priority Rule: The Word Board takes primary sizing based on available screen space (72-78% of usable height) */
+    var boardHeightRatio = mode === 'desktop' ? 0.76 : mode === 'tablet' ? 0.74 : mode === 'phone-landscape' ? 0.68 : 0.72;
+    var targetBoardHeight = Math.floor(usableHeight * boardHeightRatio);
+
+    /* Clue panel gets the remaining height below the board, adapting to it */
+    var sideTarget = Math.max(mode === 'phone-landscape' ? 44 : 64, usableHeight - targetBoardHeight);
+    var sideMin = mode === 'desktop' ? 70 : mode === 'tablet' ? 64 : mode === 'phone-landscape' ? 42 : 64;
+
+    var boardHeight = Math.max(100, usableHeight - sideTarget);
     var sideTeamsActive = html.classList.contains('cm-ui-side-teams');
-    var wideViewport = sideTeamsActive;
     var rosterWidth = mode === 'desktop' || sideTeamsActive ? clamp(box.width * 0.13, 176, 244) : 0;
     var availableWidth =
       mode === 'desktop' || sideTeamsActive
         ? Math.max(360, (mainRect.width || box.width) - rosterWidth * 2 - gap * 2)
-        : Math.max(220, Math.min(mainRect.width || box.width, box.width - 8));
+        : Math.max(200, Math.min(mainRect.width || box.width, box.width - 8));
     var stageMax =
       mode === 'desktop' ? Math.min(availableWidth, Math.max(720, box.width * 0.92)) :
       mode === 'tablet' ? Math.min(availableWidth, Math.max(500, box.width * 0.96)) :
       mode === 'phone-landscape' ? Math.min(availableWidth, Math.max(300, box.width * 0.95)) :
       availableWidth;
-    var boardFitMaxWidth = Math.floor(Math.min(stageMax, availableWidth));
-    var boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
-    var desiredMinBoard = mode === 'desktop' ? 620 : mode === 'tablet' ? 380 : mode === 'phone-landscape' ? 270 : 290;
-    if (boardWidth < desiredMinBoard) {
-      sideTarget = Math.max(sideMin, sideTarget - (desiredMinBoard - boardWidth) * 0.72);
-      boardHeight = Math.max(120, usableHeight - sideTarget);
-      boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
-    }
-    boardWidth = Math.max(210, Math.floor(boardWidth));
-    sideTarget = Math.max(sideMin, Math.floor(sideTarget));
 
-    /* Adaptive board width derived directly from viewport geometry */
+    var boardFitMaxWidth = Math.floor(Math.min(stageMax, availableWidth));
+    var boardWidthFromHeight = Math.floor(boardHeight * (4 / 3));
+
+    /* Board width primary calculation based on screen space - expanded to fill screen space */
+    var boardWidth = mode === 'desktop' || sideTeamsActive 
+      ? Math.min(Math.floor(availableWidth), 1000)
+      : Math.floor(availableWidth);
+    boardWidth = Math.max(280, boardWidth);
+    var stageWidth = boardWidth;
+
     clueComposerFit = null;
-  var useHeightDrivenStage = mode === 'desktop' || sideTeamsActive;
-    var stageWidth = useHeightDrivenStage ? boardWidth : Math.max(boardWidth, Math.floor(availableWidth));
-    html.classList.toggle('cm-ui-height-fit', useHeightDrivenStage);
-    html.classList.toggle('cm-ui-width-fit', !useHeightDrivenStage);
     html.style.setProperty('--cm-roster-width-fit', Math.round(rosterWidth) + 'px');
     html.style.setProperty('--cm-board-fit-width', boardWidth + 'px');
     html.style.setProperty('--cm-stage-fit-width', stageWidth + 'px');
-    html.style.setProperty('--cm-board-fit-max-width', boardFitMaxWidth + 'px');
+    html.style.setProperty('--cm-board-fit-max-width', stageWidth + 'px');
     html.style.setProperty('--cm-side-fit-height', sideTarget + 'px');
   }
 
-  /* A Discord Activity can expose a shorter visual viewport than the browser
-     window. Fit the stage from the rendered DOM only when lower clue controls
-     would otherwise be off screen, then hold that fitted size until the user
-     resizes the viewport. */
   function clueComposerViewportKey(box, mode) {
     return [
       Math.round(Number(box && box.width) || 0),
