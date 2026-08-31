@@ -3381,16 +3381,12 @@
   }
 
   function mirrorFloatTransform(sourceEl) {
-    var dock = linkedDock();
-    if (!sourceEl) return;
-    var tr = sourceEl.style.transform || '';
-    if (sourceEl !== fab) fab.style.transform = tr;
-    if (dock && sourceEl !== dock) dock.style.transform = tr;
+    /* Dock and FAB are separate elements and do not copy each other's position. */
   }
 
   function clearLinkedFloatTransform() {
-    var dock = linkedDock();
     fab.style.transform = '';
+    var dock = linkedDock();
     if (dock) dock.style.transform = '';
   }
 
@@ -3419,164 +3415,55 @@
 
   function applyLinkedSavedTransform(force) {
     if (isFloatDragging()) return;
-    if (!force && fab.dataset.cmDockCloseAnchor === '1') return;
 
     var raw = '';
-    var anchorRaw = '';
     try {
       raw = localStorage.getItem(FAB_POS_KEY) || '';
-      anchorRaw = localStorage.getItem(FAB_CLOSE_ANCHOR_KEY) || '';
     } catch (e) {}
     var dock = linkedDock();
-    var signature = [raw, anchorRaw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
+    var signature = [raw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
 
-    /* The FAB lives outside React. Re-applying an unchanged translate on every
-       DOM sync can make it drift or shake horizontally. Recalculate only after
-       a real resize, a new dock node, or a changed saved position. */
     if (!force && signature === lastLinkedFloatSignature && dock === lastLinkedFloatDock) return;
 
     var saved = null;
-    var closeAnchor = null;
     try {
       saved = raw ? JSON.parse(raw) : null;
-      closeAnchor = anchorRaw ? JSON.parse(anchorRaw) : null;
     } catch (e) {}
 
-    /* A closed drawer presents the icon exactly at the X button's last
-       position. This is intentionally independent from the drawer transform. */
-    if (!open && !fab.hidden && closeAnchor && closeAnchor.v === 2 &&
-        Number.isFinite(closeAnchor.tx) && Number.isFinite(closeAnchor.ty)) {
-      var anchorRect = fab.getBoundingClientRect();
-      var anchorCurrent = readTranslate(fab);
-      var anchorBase = {
-        left: anchorRect.left - anchorCurrent.x,
-        top: anchorRect.top - anchorCurrent.y,
-        width: anchorRect.width,
-        height: anchorRect.height
-      };
-      var anchored = clampToViewport(
-        anchorBase.left + closeAnchor.tx,
-        anchorBase.top + closeAnchor.ty,
-        anchorBase.width,
-        anchorBase.height
-      );
-      var anchorTx = anchored.left - anchorBase.left;
-      var anchorTy = anchored.top - anchorBase.top;
-      fab.style.transform = 'translate3d(' + anchorTx + 'px,' + anchorTy + 'px,0)';
-      fab.dataset.cmDockCloseAnchor = '1';
-      if (anchorTx !== closeAnchor.tx || anchorTy !== closeAnchor.ty) {
-        try {
-          anchorRaw = JSON.stringify({ v: 2, tx: anchorTx, ty: anchorTy });
-          localStorage.setItem(FAB_CLOSE_ANCHOR_KEY, anchorRaw);
-          signature = [raw, anchorRaw, 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
-        } catch (e) {}
-      }
-      lastLinkedFloatSignature = signature;
-      lastLinkedFloatDock = dock;
-      return;
-    }
-
     if (!saved || (typeof saved.tx !== 'number' && typeof saved.x !== 'number')) {
-      clearLinkedFloatTransform();
+      fab.style.transform = '';
       lastLinkedFloatSignature = signature;
       lastLinkedFloatDock = dock;
       return;
     }
 
-    /* When the floating dock is open, clamp the dock itself strictly to the screen */
-    if (open && dock) {
-      var dockRect = dock.getBoundingClientRect();
-      var dockCurrent = readTranslate(dock);
-      var dockBase = {
-        left: dockRect.left - dockCurrent.x,
-        top: dockRect.top - dockCurrent.y,
-        width: dockRect.width || 320,
-        height: dockRect.height || 260
-      };
-      var targetDock;
-      if (saved && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-        targetDock = clampToViewport(
-          dockBase.left + saved.tx,
-          dockBase.top + saved.ty,
-          dockBase.width,
-          dockBase.height
-        );
-      } else if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
-        targetDock = clampToViewport(
-          saved.x * window.innerWidth,
-          saved.y * window.innerHeight,
-          dockBase.width,
-          dockBase.height
-        );
-      } else {
-        targetDock = clampToViewport(
-          dockBase.left,
-          dockBase.top,
-          dockBase.width,
-          dockBase.height
-        );
-      }
-      var dTx = targetDock.left - dockBase.left;
-      var dTy = targetDock.top - dockBase.top;
-      dock.style.transform = 'translate3d(' + dTx + 'px,' + dTy + 'px,0)';
-      fab.style.transform = dock.style.transform;
-      lastLinkedFloatSignature = signature;
-      lastLinkedFloatDock = dock;
-      return;
-    }
-
-    /* While the hybrid drawer is open the FAB is intentionally hidden and its
-       rect is 0 × 0. Keep the stored v2 offset verbatim so a React redraw of
-       the dock cannot corrupt its position from a zero-sized measurement. */
-    if (fab.hidden && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-      fab.style.transform = 'translate3d(' + saved.tx + 'px,' + saved.ty + 'px,0)';
-      if (dock) dock.style.transform = fab.style.transform;
-      lastLinkedFloatSignature = signature;
-      lastLinkedFloatDock = dock;
-      return;
-    }
-
-    /* v2 stores the FAB's transform offset, not a normalized coordinate from
-       the drawer's different fixed base. It restores exactly at the same size
-       and clamps safely once when the viewport truly changes. */
     var fabRect = fab.getBoundingClientRect();
     var current = readTranslate(fab);
+    var fabW = fabRect.width || 48;
+    var fabH = fabRect.height || 48;
     var fabBase = {
       left: fabRect.left - current.x,
-      top: fabRect.top - current.y,
-      width: fabRect.width,
-      height: fabRect.height
+      top: fabRect.top - current.y
     };
-    var target;
-    if (saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-      target = clampToViewport(
-        fabBase.left + saved.tx,
-        fabBase.top + saved.ty,
-        fabBase.width,
-        fabBase.height
-      );
-    } else {
-      /* Read older normalized saved positions once, then migrate them to the
-         stable transform-offset format below. */
-      target = clampToViewport(
-        saved.x * window.innerWidth,
-        saved.y * window.innerHeight,
-        fabBase.width,
-        fabBase.height
-      );
-    }
-    var tx = target.left - fabBase.left;
-    var ty = target.top - fabBase.top;
-    fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
-    mirrorFloatTransform(fab);
 
-    if (saved.v !== 2 || !Number.isFinite(saved.tx) || !Number.isFinite(saved.ty)) {
-      try {
-        raw = JSON.stringify({ v: 2, tx: tx, ty: ty });
-        localStorage.setItem(FAB_POS_KEY, raw);
-        signature = [raw, anchorRaw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
-      } catch (e) {}
+    var winW = window.innerWidth || 360;
+    var winH = window.innerHeight || 600;
+
+    var targetLeft, targetTop;
+    if (saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
+      targetLeft = fabBase.left + saved.tx;
+      targetTop = fabBase.top + saved.ty;
+    } else {
+      targetLeft = saved.x * winW;
+      targetTop = saved.y * winH;
     }
+
+    var clamped = clampToViewport(targetLeft, targetTop, fabW, fabH);
+    var tx = clamped.left - fabBase.left;
+    var ty = clamped.top - fabBase.top;
+
+    fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
+
     lastLinkedFloatSignature = signature;
     lastLinkedFloatDock = dock;
   }
@@ -3614,36 +3501,8 @@
   }
 
   function anchorFabAtCloseButton(closeRect) {
-    if (!closeRect) return;
-    window.requestAnimationFrame(function () {
-      if (fab.hidden) return;
-      var fabRect = fab.getBoundingClientRect();
-      if (!fabRect.width || !fabRect.height) return;
-      var current = readTranslate(fab);
-      var base = {
-        left: fabRect.left - current.x,
-        top: fabRect.top - current.y,
-        width: fabRect.width,
-        height: fabRect.height
-      };
-      var target = clampToViewport(
-        closeRect.left + (closeRect.width - base.width) / 2,
-        closeRect.top + (closeRect.height - base.height) / 2,
-        base.width,
-        base.height
-      );
-      fab.style.transition = 'none';
-      var tx = target.left - base.left;
-      var ty = target.top - base.top;
-      fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
-      fab.dataset.cmDockCloseAnchor = '1';
-      try {
-        localStorage.setItem(FAB_CLOSE_ANCHOR_KEY, JSON.stringify({ v: 2, tx: tx, ty: ty }));
-      } catch (e) {}
-      window.requestAnimationFrame(function () {
-        if (fab.dataset.cmDockCloseAnchor === '1') fab.style.transition = '';
-      });
-    });
+    /* Disabled: FAB and Dock stay at their fixed/saved position */
+    return;
   }
 
   function ensureDockCloseButton(dock, head) {
@@ -3729,7 +3588,6 @@
     if (!head) return;
     ensureDockCloseButton(dock, head);
     if (dock.__cmDragDock === dock) {
-      if (!isFloatDragging()) applyLinkedSavedTransform();
       return;
     }
     dock.dataset.cmDrag = "1";
@@ -3737,7 +3595,7 @@
     dockDragCtl = makeDraggable({
       grip: dock,
       el: dock,
-      storageKey: FAB_POS_KEY,
+      storageKey: LOG_POS_KEY,
       resettable: true,
       /* Header, top drag bar & frame handle drag the window smoothly.
          The inner list (.cm-dock-list) scrolls freely, while close/size buttons click normally. */
@@ -3766,28 +3624,21 @@
         dock.style.transition = "none";
         dock.style.willChange = "transform";
       },
-      onMove: function () {
-        mirrorFloatTransform(dock);
-      },
+      onMove: function () {},
       onEnd: function () {
         setFloatDraggingActive(false);
         delete dock.dataset.cmDragging;
         dock.classList.remove("cm-dock-dragging");
         dock.style.transition = "";
         dock.style.willChange = "";
-        mirrorFloatTransform(dock);
       },
       onReset: function () {
         setFloatDraggingActive(false);
-        try { localStorage.removeItem(FAB_POS_KEY); } catch (e) {}
-        invalidateLinkedSavedTransform();
-        clearLinkedFloatTransform();
+        try { localStorage.removeItem(LOG_POS_KEY); } catch (e) {}
+        dock.style.transform = "";
       },
-      onDrop: function () {
-        persistFabTransformOffset();
-      }
+      onDrop: function () {}
     });
-    applyLinkedSavedTransform(true);
   }  /* ------------------------------------------------------------ log button */
   function attachFabDrag() {
     if (fab.dataset.cmDrag) {
@@ -3815,7 +3666,6 @@
         fab.style.transition = 'none';
       },
       onMove: function (pos, motion) {
-        mirrorFloatTransform(fab);
         applyLinkedTail(fab, motion);
       },
       onEnd: function () {
@@ -3825,10 +3675,18 @@
         fab.style.willChange = '';
         fab.style.transition = '';
         clearLinkedTail();
-        mirrorFloatTransform(fab);
       },
-      onDrop: function () {
-        persistFabTransformOffset();
+      onDrop: function (pos) {
+        if (!pos) return;
+        try {
+          var winW = window.innerWidth || 360;
+          var winH = window.innerHeight || 600;
+          localStorage.setItem(FAB_POS_KEY, JSON.stringify({
+            x: pos.left / winW,
+            y: pos.top / winH
+          }));
+        } catch (e) {}
+        invalidateLinkedSavedTransform();
       },
       onTap: function () {
         delete fab.dataset.cmDockCloseAnchor;

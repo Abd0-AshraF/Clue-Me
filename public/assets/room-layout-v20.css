@@ -714,38 +714,39 @@ html.cm-v20.mani-dark {
    ------------------------------------------------------------------------- */
 .cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
-  position: fixed;
-  inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
-  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
-  z-index: 46;
+  position: fixed !important;
+  inset-inline-end: clamp(0.75rem, 2vw, 1.25rem) !important;
+  inset-block-end: calc(var(--cm-safe-bottom, 0px) + clamp(4.25rem, 8dvh, 5.25rem)) !important;
+  inset-block-start: auto !important;
+  z-index: 998 !important;
   display: flex !important; /* re-enable on ≤360px where base hid it */
   flex-direction: column;
-  width: min(80vw, 15.25rem);
+  width: min(calc(100vw - 1.5rem), 18.5rem) !important;
   max-width: calc(100vw - 16px);
-  height: min(48dvh, 23rem);
-  max-height: calc(100dvh - 12px);
+  height: min(42dvh, 21rem);
+  max-height: calc(100dvh - 5.5rem);
   min-height: 8rem;
   box-sizing: border-box;
   flex: none;
   border-radius: 1.25rem;
   overflow: hidden;
-  background: color-mix(in srgb, var(--cm-surface) 52%, transparent) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 45%, rgba(255, 255, 255, 0.22));
+  background: color-mix(in srgb, var(--cm-surface, #1e1926) 90%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  border: 3.5px solid var(--cm-border-strong, #524263) !important;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(12px) scale(0.97);
-  transform-origin: 0 100%;
+  transform: scale(0.92) translateY(12px);
+  transform-origin: 100% 100%;
   transition:
-    opacity 0.18s ease,
-    transform 0.2s var(--cm-ease),
-    visibility 0.2s;
+    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.22s;
   box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.25),
-    0 3px 10px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 18px 48px rgba(0, 0, 0, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
   will-change: transform, opacity;
 }
 
@@ -786,7 +787,7 @@ html.cm-v20.mani-dark {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
+  transform: scale(1);
 }
 
 .cm-v20 .cm-dock .cm-dock-head,
@@ -1701,13 +1702,13 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-back {
 @media (max-width: 640px) {
   .cm-v20 .cm-side-row > .cm-dock,
   .cm-v20 .cm-dock {
-    transform: translateY(8px);
-    transition: opacity 0.16s ease, transform 0.16s var(--cm-ease), visibility 0.16s;
+    transform: scale(0.96);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
   }
 
   .cm-v20.cm-log-open .cm-side-row > .cm-dock,
   .cm-v20.cm-log-open .cm-dock {
-    transform: translateY(0);
+    transform: scale(1);
   }
 
   .cm-v20 .cm-side-clue-compose-top {
@@ -1987,15 +1988,16 @@ html.cm-v20.dark:not(.mani):not(.mani-dark):not(.mot) {
 .cm-v20 .cm-dock {
   position: fixed;
   inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
-  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
-  z-index: 46;
+  inset-block-start: calc(var(--cm-header-h, 52px) + max(var(--cm-safe-top, 0px), 8px));
+  inset-block-end: auto;
+  z-index: 95;
 }
 
 .cm-v20.cm-log-open .cm-dock {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: scale(1);
 }
 
 .cm-v20 .cm-dock .cm-dock-head,
@@ -2929,8 +2931,8 @@ html.cm-v20.cm-min-effects .cm-petals i {
   --cm-vp-w: 100vw;
   --cm-vp-h: 100dvh;
   --cm-header-h: 56px;
-  --cm-board-fit-width: min(100%, 40rem);
-  --cm-stage-fit-width: min(100%, 40rem);
+  --cm-board-fit-width: min(100%, 35.5rem);
+  --cm-stage-fit-width: min(100%, 35.5rem);
   --cm-side-fit-height: 8.5rem;
   --cm-roster-width-fit: 11rem;
 }
@@ -2938,10 +2940,15 @@ html.cm-v20.cm-min-effects .cm-petals i {
 .cm-v20 .cm-game-page {
   height: var(--cm-vp-h, 100dvh);
   max-height: var(--cm-vp-h, 100dvh);
+  padding-top: max(env(safe-area-inset-top, 0px), var(--cm-safe-top, 0px));
   overflow: hidden;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+html.cm-v20.cm-discord-activity.cm-ui-phone .cm-game-page {
+  padding-top: max(48px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 48px)) !important;
 }
 
 .cm-v20 .cm-game-shell {
@@ -2961,28 +2968,34 @@ html.cm-v20.cm-min-effects .cm-petals i {
   max-height: 100%;
   margin-inline: auto;
   padding-block-end: 0 !important;
-  overflow: hidden;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: stretch;
+  gap: clamp(0.25rem, 0.8vw, 0.45rem);
 }
 
-.cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+.cm-v20 .cm-game-shell > main > [aria-live="polite"],
+.cm-v20 .cm-game-shell > main > .cm-turn-hint,
+.cm-v20 .cm-turn-hint,
+.cm-v20 .cm-game-shell > main > p {
+  flex-shrink: 0 !important;
+  min-height: auto !important;
+  overflow: visible !important;
   align-self: center !important;
   margin-inline: auto !important;
   justify-content: center !important;
   text-align: center !important;
   width: fit-content !important;
   max-width: min(100%, var(--cm-stage-fit-width, 100%));
-}
-
-.cm-v20 .cm-game-shell > main > .cm-turn-hint,
-.cm-v20 .cm-turn-hint,
-.cm-v20 .cm-game-shell > main > p {
-  align-self: center !important;
-  text-align: center !important;
-  margin-inline: auto !important;
+  padding: 0.18rem 0.6rem !important;
+  font-size: clamp(0.72rem, 2.2vw, 0.95rem) !important;
+  line-height: 1.3 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 .cm-v20 .cm-board-row,
@@ -3133,61 +3146,121 @@ html.cm-v20.cm-ui-phone .cm-teambar {
   width: 100% !important;
   max-width: 100% !important;
   gap: 0.5rem !important;
+  overflow: visible !important;
+  flex-shrink: 0 !important;
 }
 
 /* Enlarge team list container for both teams */
 html.cm-v20.cm-ui-phone .cm-teambar-side {
-  padding: 0.65rem 0.75rem !important;
-  border-radius: 1rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  padding: 0.6rem 0.8rem !important;
+  border-radius: 1.15rem !important;
   gap: 0.4rem !important;
-  min-height: 4.4rem !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  min-height: 4.8rem !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22) !important;
+  overflow: visible !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar-head {
-  font-size: 1.05rem !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  font-size: 0.95rem !important;
   font-weight: 900 !important;
   letter-spacing: -0.01em !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+  padding-bottom: 0.35rem !important;
+  margin-bottom: 0.1rem !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar-icon-badge {
-  width: 1.65rem !important;
-  height: 1.65rem !important;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar-count {
-  min-width: 2.2rem !important;
-  padding: 0.12rem 0.55rem !important;
-  font-size: 0.9rem !important;
+  min-width: 2rem !important;
+  padding: 0.12rem 0.5rem !important;
+  font-size: 0.85rem !important;
   font-weight: 900 !important;
 }
 
-/* Compact player chips showing only avatar, name, and role badge */
+/* Player chips container inside teambar side */
+html.cm-v20.cm-ui-phone .cm-teambar-players {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.35rem !important;
+  width: 100% !important;
+  min-height: 2rem !important;
+  overflow: visible !important;
+}
+
+/* Reduced player font size, elegant pill styling, clean layout for people */
 html.cm-v20.cm-ui-phone .cm-teambar-player.cm-mobile-roster-chip {
-  min-height: 1.45rem !important;
-  padding: 0.1rem 0.4rem !important;
-  font-size: 0.72rem !important;
-  gap: 0.25rem !important;
-  border-radius: 0.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 1.5rem !important;
+  padding: 0.15rem 0.5rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 800 !important;
+  gap: 0.3rem !important;
+  border-radius: 999px !important;
+  background: var(--cm-surface, #1e1926) !important;
+  border: 1.5px solid var(--cm-border, rgba(255, 255, 255, 0.18)) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.14) !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar-player .h-5.w-5,
 html.cm-v20.cm-ui-phone .cm-teambar-player img {
-  width: 1.1rem !important;
-  height: 1.1rem !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
   border-radius: 50% !important;
+  border: 1px solid var(--cm-lobby-icon-border, rgba(255,255,255,0.2)) !important;
+  flex-shrink: 0 !important;
+  object-fit: cover !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-mobile-roster-captain .cm-teambar-role {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.05rem 0.32rem !important;
+  font-size: 0.58rem !important;
+  font-weight: 850 !important;
+  border-radius: 0.35rem !important;
+  background: linear-gradient(135deg, #ffd700, #ffa500) !important;
+  color: #222 !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
   flex-shrink: 0 !important;
 }
 
-html.cm-v20.cm-ui-phone .cm-mobile-roster-captain .cm-teambar-role,
 html.cm-v20.cm-ui-phone .cm-mobile-roster-operative .cm-teambar-role {
   display: inline-flex !important;
   align-items: center !important;
-  padding: 0.05rem 0.25rem !important;
+  padding: 0.05rem 0.28rem !important;
   font-size: 0.58rem !important;
   font-weight: 800 !important;
   border-radius: 0.35rem !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: inherit !important;
   flex-shrink: 0 !important;
+}
+
+/* Adjust board frame size on phone to give teambar more vertical room */
+html.cm-v20.cm-ui-phone .cm-play-center > .cm-board-frame.cm-game-width {
+  aspect-ratio: 4 / 3.4 !important;
+  max-height: 48dvh !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-word {
@@ -4369,39 +4442,41 @@ html.cm-v20.cm-ui-desktop .cm-clue-live-dot {
 .cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
   touch-action: auto !important;
+  background: var(--cm-surface, #1e1926) !important;
 }
 
-/* Top Grab Handle Pill */
+/* Top Grab Handle Pill - Thicker & Larger Drag Area */
 .cm-v20 .cm-dock .cm-dock-android-handle,
 .cm-v20 .cm-dock-android-handle {
-  width: 52px !important;
-  height: 5px !important;
-  margin: 6px auto 3px !important;
+  width: 60px !important;
+  height: 7px !important;
+  margin: 7px auto 4px !important;
   border-radius: 999px !important;
-  background: color-mix(in srgb, var(--cm-ink) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--cm-ink) 48%, transparent) !important;
   flex: 0 0 auto !important;
   pointer-events: auto !important;
   touch-action: none !important;
   cursor: grab !important;
-  transition: width 0.15s ease, background-color 0.15s ease;
+  transition: width 0.15s ease, background-color 0.15s ease, height 0.15s ease;
 }
 
 .cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle,
 .cm-v20 .cm-dock:hover .cm-dock-android-handle {
-  background: var(--cm-blue) !important;
-  width: 64px !important;
+  background: var(--cm-blue, #38bdf8) !important;
+  width: 74px !important;
+  height: 8px !important;
 }
 
-/* Window Header Bar (Grab Surface) */
+/* Window Header Bar (Thicker Grab Surface) */
 .cm-v20 .cm-dock .cm-dock-head,
 .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 0.5rem !important;
-  padding: 0.35rem 0.65rem 0.45rem !important;
-  background: color-mix(in srgb, var(--cm-surface) 65%, transparent) !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent) !important;
+  padding: 0.55rem 0.8rem 0.55rem !important;
+  background: var(--cm-surface, #1e1926) !important;
+  border-bottom: 2.5px solid var(--cm-border-strong, #524263) !important;
   touch-action: none !important;
   cursor: grab !important;
   user-select: none !important;
@@ -4750,28 +4825,35 @@ html.cm-v20.mani-dark .cm-teambar-blue {
 @media (max-width: 640px), (max-height: 700px) {
   .cm-v20 .cm-dock,
   .cm-v20 .cm-side-row > .cm-dock {
-    width: clamp(11.5rem, 68vw, 13.5rem) !important;
-    height: min(40dvh, 16.5rem) !important;
-    border-radius: 1.05rem !important;
-    border-width: 1.5px !important;
+    width: clamp(12rem, 72vw, 14.5rem) !important;
+    height: min(42dvh, 17.5rem) !important;
+    border-radius: 1.1rem !important;
+    border-width: 3.5px !important;
+    border-style: solid !important;
+    border-color: var(--cm-border-strong, #524263) !important;
+    background: color-mix(in srgb, var(--cm-surface, #1e1926) 82%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
   }
 
   .cm-v20 .cm-dock.cm-dock-tall,
   .cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
-    height: min(58dvh, 22rem) !important;
+    height: min(60dvh, 23rem) !important;
   }
 
   .cm-v20 .cm-dock-android-handle,
   .cm-v20 .cm-dock .cm-dock-android-handle {
-    width: 38px !important;
-    height: 3.5px !important;
-    margin: 5px auto 2px !important;
+    width: 58px !important;
+    height: 7px !important;
+    margin: 6px auto 3px !important;
+    background: color-mix(in srgb, var(--cm-ink) 55%, transparent) !important;
   }
 
   .cm-v20 .cm-dock .cm-dock-head,
   .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
-    padding: 0.2rem 0.45rem 0.32rem !important;
+    padding: 0.45rem 0.65rem 0.45rem !important;
     gap: 0.35rem !important;
+    background: color-mix(in srgb, var(--cm-surface, #1e1926) 88%, transparent) !important;
   }
 
   .cm-v20 .cm-dock-title,

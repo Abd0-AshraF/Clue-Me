@@ -28,17 +28,17 @@
                     (window.location && window.location.search && (
                       window.location.search.indexOf('frame_id') !== -1 ||
                       window.location.search.indexOf('instance_id') !== -1 ||
+                      window.location.search.indexOf('discord') !== -1 ||
                       window.location.search.indexOf('activity=mock') !== -1
                     )) ||
-                    (window.DiscordNative !== undefined) ||
-                    (window.name && window.name.indexOf('discord') !== -1);
+                    (window.DiscordNative !== undefined);
 
     var isPhone = root.classList.contains('cm-ui-phone') || (window.innerWidth <= 768 && window.innerHeight <= 950);
 
-    /* Enforce safe padding for mobile devices & Discord mobile overlay controls */
-    if (isPhone && isDiscord) {
-      if (top < 36) top = 38;
-      if (bottom < 48) bottom = 48;
+    /* Enforce safe top padding ONLY for Discord mobile activity overlay controls */
+    if (isDiscord && isPhone) {
+      if (top < 48) top = 48;
+      if (bottom < 12) bottom = 12;
     } else if (isPhone) {
       if (top < 4) top = 4;
       if (bottom < 4) bottom = 4;
