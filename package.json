@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "node index.js",
     "start": "node index.js",
-    "build": "node scripts/patch-bundle.cjs",
+    "build": "echo \"[clue-me] already built — nothing to do\"",
     "db:generate": "echo \"[clue-me] database client is bundled — nothing to generate\"",
     "db:migrate": "node scripts/check-config.mjs --database-only",
     "config:check": "node scripts/check-config.mjs",
@@ -36,7 +36,6 @@
     "@capacitor/status-bar": "^8.0.3"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "sharp": "^0.35.4"
+    "@capacitor/assets": "^3.0.5"
   }
 }
