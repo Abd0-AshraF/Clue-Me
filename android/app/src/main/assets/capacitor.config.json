@@ -4,7 +4,7 @@
   "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
-    "androidScheme": "https",
+    "url": "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
     "cleartext": true,
     "allowNavigation": [
       "*.run.app",
@@ -17,7 +17,7 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 1200,
+      "launchShowDuration": 1000,
       "launchAutoHide": true,
       "backgroundColor": "#17131a",
       "androidSplashResourceName": "splash",
