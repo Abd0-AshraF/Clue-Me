@@ -1,0 +1,73 @@
+{
+  "id": "/",
+  "name": "Clue Me",
+  "short_name": "Clue Me",
+  "description": "لعبة تخمين كلمات عربية جماعية للأصدقاء — أنشئ غرفة وابدأ اللعب مباشرة وبشكل فوري",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#17131a",
+  "theme_color": "#B83A3A",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["games", "entertainment", "social"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/discord-embed-v1.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "شاشة لعبة Clue Me"
+    },
+    {
+      "src": "/discord-embed-v1.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "شاشة لعبة Clue Me للجوال"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "إنشاء أو دخول غرفة",
+      "short_name": "لعب سريع",
+      "description": "دخول اللعبة فورا",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -31,6 +31,13 @@
     <!-- SOCIAL_META_END -->
     <meta http-equiv="Cache-Control" content="no-store" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Clue Me" />
+    <meta name="application-name" content="Clue Me" />
     <title>Clue Me — كلمة واحدة… تصنع الفوز</title>
     <style>
       :root {
@@ -208,6 +215,19 @@
     <link rel="stylesheet" href="/assets/room-layout-v20.css?v=153">
     <script src="/assets/useSafeArea.js?v=153"></script>
     <script defer src="/assets/game-room-v20.js?v=153"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(reg) {
+              console.log('[PWA] Service Worker registered:', reg.scope);
+            })
+            .catch(function(err) {
+              console.warn('[PWA] Service Worker registration failed:', err);
+            });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
