@@ -24,6 +24,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Custom Scheme Deep Linking: clueme://room/{code} or clueme://{code} -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="clueme" />
+                <data android:scheme="web+clueme" />
+            </intent-filter>
+
+            <!-- Web App Links for room shares -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="clue-me.ai.studio" />
+                <data android:scheme="https" android:host="ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app" />
+                <data android:scheme="https" android:host="ais-dev-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app" />
+            </intent-filter>
+
         </activity>
 
         <provider

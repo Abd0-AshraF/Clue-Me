@@ -4,13 +4,11 @@
   "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://clue-me.ai.studio",
     "androidScheme": "https",
     "cleartext": true,
     "allowNavigation": [
-      "clue-me.ai.studio",
-      "*.ai.studio",
       "*.run.app",
+      "*.ai.studio",
       "discord.com",
       "*.discord.com",
       "discordapp.com",

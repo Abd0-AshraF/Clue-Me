@@ -420,6 +420,15 @@
   function handleAuthoritativeGuessResult(result) {
     if (!result || result.kind !== 'guess') return;
     var kind = guessSoundKind(result.cardColor, lastGameView);
+    if (result.winner) {
+      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('win'); } catch (e) {}
+    } else if (kind === 'correct') {
+      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('success'); } catch (e) {}
+    } else if (kind === 'wrong') {
+      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('warning'); } catch (e) {}
+    } else if (kind === 'assassin') {
+      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('heavy'); } catch (e) {}
+    }
     if (!kind) return;
     playSoundEffect(kind, [result.actorTeam, result.cardColor, result.index, result.winner || ''].join('|'));
   }
