@@ -89,10 +89,21 @@
       html.cm-discord-activity .cm-game-shell {
         box-sizing: border-box;
       }
-      html.cm-discord-activity.cm-ui-phone .cm-game-page,
-      html.cm-ui-phone .cm-game-page {
+      html.cm-discord-activity.cm-ui-phone .cm-game-page {
         padding-top: max(var(--cm-safe-top, 0px), 40px);
         padding-bottom: max(var(--cm-safe-bottom, 0px), 58px);
+      }
+      /* Native Phone safe spacing - Prevents status bar overlap */
+      html.cm-native-app body,
+      body.cm-native-app {
+        padding-top: env(safe-area-inset-top, 24px);
+        padding-bottom: env(safe-area-inset-bottom, 16px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+        box-sizing: border-box;
+      }
+      .cm-game-header, header {
+        padding-top: env(safe-area-inset-top, 0px);
       }
       html.cm-discord-activity.cm-ui-phone .cm-game-shell {
         padding-top: 0;
@@ -139,8 +150,7 @@
       (function() {
         var SERVERS = [
           "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
-          "https://ais-dev-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
-          "https://clue-me.ai.studio"
+          "https://ais-dev-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app"
         ];
         
         var isNativeApp = (
@@ -151,66 +161,82 @@
           location.hostname === "127.0.0.1" ||
           location.origin.indexOf("localhost") !== -1
         );
-        
+
+        if (isNativeApp) {
+          document.documentElement.classList.add('cm-native-app');
+          document.body && document.body.classList.add('cm-native-app');
+        }
+
         var customServer = "";
-        try { customServer = localStorage.getItem("clue_me_custom_server") || ""; } catch(e){}
+        try { 
+          customServer = localStorage.getItem("clue_me_custom_server") || localStorage.getItem("clue_me_active_server") || ""; 
+        } catch(e){}
         
-        var activeServer = (customServer || (isNativeApp ? SERVERS[0] : "")).replace(/\/$/, "");
+        var activeServer = (customServer || SERVERS[0]).replace(/\/$/, "");
         window.__CLUE_ME_SERVER_URL__ = activeServer;
 
         // Auto-detect and failover if primary is unreachable
         function checkServerHealth(url, timeoutMs) {
           return new Promise(function(resolve) {
             var ctrl = new AbortController();
-            var timer = setTimeout(function() { ctrl.abort(); resolve(false); }, timeoutMs || 3500);
+            var timer = setTimeout(function() { ctrl.abort(); resolve(false); }, timeoutMs || 3000);
             fetch(url + "/api/health", { signal: ctrl.signal })
               .then(function(r) { clearTimeout(timer); resolve(r.ok); })
               .catch(function() { clearTimeout(timer); resolve(false); });
           });
         }
 
-        if (isNativeApp && !customServer) {
+        if (isNativeApp) {
           // Probe servers in background and pick the fastest responding one
-          checkServerHealth(SERVERS[0], 2500).then(function(ok) {
+          checkServerHealth(activeServer, 2000).then(function(ok) {
             if (!ok) {
-              checkServerHealth(SERVERS[1], 2500).then(function(ok2) {
-                if (ok2) {
-                  activeServer = SERVERS[1];
-                  window.__CLUE_ME_SERVER_URL__ = activeServer;
-                  try { localStorage.setItem("clue_me_active_server", activeServer); } catch(e){}
-                }
-              });
+              var alt = SERVERS.find(function(s) { return s !== activeServer; });
+              if (alt) {
+                checkServerHealth(alt, 2500).then(function(ok2) {
+                  if (ok2) {
+                    activeServer = alt;
+                    window.__CLUE_ME_SERVER_URL__ = activeServer;
+                    try { localStorage.setItem("clue_me_active_server", activeServer); } catch(e){}
+                    if (window.__clueMeSocket && typeof window.__clueMeSocket.connect === "function") {
+                      window.__clueMeSocket.io.uri = activeServer;
+                      window.__clueMeSocket.connect();
+                    }
+                  }
+                });
+              }
             }
           });
         }
 
-        if (activeServer) {
-          // Intercept fetch calls for API and Socket.IO
-          var origFetch = window.fetch;
-          window.fetch = function(input, init) {
-            if (typeof input === "string") {
-              if (input.startsWith("/api/") || input.startsWith("/socket.io") || (input.startsWith("/") && input.length > 1 && !input.startsWith("/assets/") && !input.startsWith("/sounds/") && !input.endsWith(".png") && !input.endsWith(".svg") && !input.endsWith(".json"))) {
-                input = (window.__CLUE_ME_SERVER_URL__ || activeServer) + input;
-              }
-            } else if (input && typeof input.url === "string") {
-              if (input.url.startsWith("/api/") || input.url.startsWith("/socket.io")) {
-                input = new Request((window.__CLUE_ME_SERVER_URL__ || activeServer) + input.url, input);
-              }
+        // Intercept fetch calls for API and Socket.IO
+        var origFetch = window.fetch;
+        window.fetch = function(input, init) {
+          var prefix = window.__CLUE_ME_SERVER_URL__ || activeServer;
+          if (typeof input === "string") {
+            if (input.startsWith("/api/") || input.startsWith("/socket.io")) {
+              input = prefix + input;
+            } else if (input.startsWith("/") && !input.startsWith("/assets/") && !input.startsWith("/sounds/") && !input.endsWith(".png") && !input.endsWith(".svg") && !input.endsWith(".json") && !input.endsWith(".js") && !input.endsWith(".css") && !input.endsWith(".html")) {
+              input = prefix + input;
             }
-            return origFetch.call(this, input, init);
-          };
-
-          // Intercept XMLHttpRequest
-          var origOpen = window.XMLHttpRequest.prototype.open;
-          window.XMLHttpRequest.prototype.open = function(method, url, async, user, pass) {
-            if (typeof url === "string" && (url.startsWith("/api/") || url.startsWith("/socket.io"))) {
-              url = (window.__CLUE_ME_SERVER_URL__ || activeServer) + url;
+          } else if (input && typeof input.url === "string") {
+            if (input.url.startsWith("/api/") || input.url.startsWith("/socket.io")) {
+              input = new Request(prefix + input.url, input);
             }
-            return origOpen.call(this, method, url, async, user, pass);
-          };
-        }
+          }
+          return origFetch.call(this, input, init);
+        };
 
-        // Deep Link Handling for Room Links (clueme://room/{code} or https://clue-me.ai.studio/?room={code})
+        // Intercept XMLHttpRequest
+        var origOpen = window.XMLHttpRequest.prototype.open;
+        window.XMLHttpRequest.prototype.open = function(method, url, async, user, pass) {
+          var prefix = window.__CLUE_ME_SERVER_URL__ || activeServer;
+          if (typeof url === "string" && (url.startsWith("/api/") || url.startsWith("/socket.io"))) {
+            url = prefix + url;
+          }
+          return origOpen.call(this, method, url, async, user, pass);
+        };
+
+        // Deep Link Handling for Room Links
         function handleDeepLinkUrl(urlStr) {
           if (!urlStr) return;
           try {
@@ -228,14 +254,17 @@
                 var newUrl = window.location.pathname + "?room=" + cleanCode;
                 window.history.replaceState(null, "", newUrl);
               }
-              // Dispatch custom event for React applet
               window.dispatchEvent(new CustomEvent("clue-me:join-room", { detail: { code: cleanCode } }));
             }
           } catch(e) {}
         }
 
-        // Initialize Native Device Features (Status Bar, Safe Areas, Deep Links)
+        // Initialize Native Device Features
         document.addEventListener("DOMContentLoaded", function() {
+          if (isNativeApp) {
+            document.documentElement.classList.add('cm-native-app');
+            document.body && document.body.classList.add('cm-native-app');
+          }
           try {
             if (window.Capacitor && window.Capacitor.Plugins) {
               var StatusBar = window.Capacitor.Plugins.StatusBar;
@@ -276,9 +305,9 @@
           } catch(e) {}
         };
 
-        // Attach tactile touch feedback to all interactive buttons, cards, and keys
+        // Attach tactile touch feedback
         document.addEventListener("click", function(e) {
-          var target = e.target && e.target.closest ? e.target.closest("button, a, [role=\"button\"], .cm-card, [tabindex=\"0\"]") : null;
+          var target = e.target && e.target.closest ? e.target.closest("button, a, [role="button"], .cm-card, [tabindex="0"]") : null;
           if (target) {
             window.cmTriggerHaptic("light");
           }
@@ -293,30 +322,14 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v30.js?v=153"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=153">
-    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=153">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=153">
-    <script src="/assets/useSafeArea.js?v=153"></script>
-    <script defer src="/assets/game-room-v20.js?v=153"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(reg) {
-              console.log('[PWA] Service Worker registered:', reg.scope);
-            })
-            .catch(function(err) {
-              console.warn('[PWA] Service Worker registration failed:', err);
-            });
-        });
-      }
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-  
-    <!-- Mobile Server Connection Config Modal -->
+    <script type="module" crossorigin src="/assets/index-discord-v30.js?v=154"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=154">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=154">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=154">
+    <script src="/assets/useSafeArea.js?v=154"></script>
+    <script defer src="/assets/game-room-v20.js?v=154"></script>
+
+<!-- Mobile Server Connection Config Modal -->
     <div id="cm-server-config-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999999; align-items:center; justify-content:center; padding:16px; font-family:sans-serif;">
       <div style="background:#211a24; border:1px solid #4a3b52; border-radius:16px; padding:20px; max-width:400px; width:100%; color:#fff;">
         <h3 style="margin:0 0 8px 0; font-size:18px; font-weight:700;">إعدادات سيرفر اللعبة (Server Connection)</h3>
