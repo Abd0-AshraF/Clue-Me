@@ -8,7 +8,7 @@
       content="Clue Me — كلمة واحدة… تصنع الفوز. لعبة تخمين كلمات متعددة اللاعبين مصمّمة للعربية أولاً."
     />
     <!-- SOCIAL_META_START -->
-    <meta name="theme-color" content="#B83A3A" />
+    <meta name="theme-color" content="#17131A" />
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://clue-me.ai.studio/" />
     <meta property="og:type" content="website" />
@@ -58,6 +58,9 @@
       body {
         margin: 0;
         padding: 0;
+        background: #17131a;
+        color: #f1f5f9;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
       #root {
         min-height: 100%;
@@ -123,7 +126,7 @@
             document.documentElement.classList.add('cm-discord-activity');
           }
           var lang = localStorage.getItem('clue-me:lang');
-          if (lang !== 'ar' && lang !== 'en') lang = 'en';
+          if (lang !== 'ar' && lang !== 'en') lang = 'ar';
           document.documentElement.lang = lang;
           document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
           var theme = localStorage.getItem('clue-me:theme') || 'mot';
@@ -187,7 +190,6 @@
         }
 
         if (isNativeApp) {
-          // Probe servers in background and pick the fastest responding one
           checkServerHealth(activeServer, 2000).then(function(ok) {
             if (!ok) {
               var alt = SERVERS.find(function(s) { return s !== activeServer; });
@@ -307,7 +309,7 @@
 
         // Attach tactile touch feedback
         document.addEventListener("click", function(e) {
-          var target = e.target && e.target.closest ? e.target.closest("button, a, [role="button"], .cm-card, [tabindex="0"]") : null;
+          var target = e.target && e.target.closest ? e.target.closest('button, a, [role="button"], .cm-card, [tabindex="0"]') : null;
           if (target) {
             window.cmTriggerHaptic("light");
           }
@@ -322,14 +324,18 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v30.js?v=154"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=154">
-    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=154">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=154">
-    <script src="/assets/useSafeArea.js?v=154"></script>
-    <script defer src="/assets/game-room-v20.js?v=154"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css">
+  </head>
+  <body>
+    <div id="root"></div>
 
-<!-- Mobile Server Connection Config Modal -->
+    <script type="module" crossorigin src="/assets/index-discord-v30.js"></script>
+    <script src="/assets/useSafeArea.js"></script>
+    <script defer src="/assets/game-room-v20.js"></script>
+
+    <!-- Mobile Server Connection Config Modal -->
     <div id="cm-server-config-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999999; align-items:center; justify-content:center; padding:16px; font-family:sans-serif;">
       <div style="background:#211a24; border:1px solid #4a3b52; border-radius:16px; padding:20px; max-width:400px; width:100%; color:#fff;">
         <h3 style="margin:0 0 8px 0; font-size:18px; font-weight:700;">إعدادات سيرفر اللعبة (Server Connection)</h3>
@@ -360,5 +366,5 @@
       }
       window.openServerConfig = openServerConfig;
     </script>
-</body>
+  </body>
 </html>
