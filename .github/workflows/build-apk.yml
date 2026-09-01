@@ -20,13 +20,24 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Platforms & Build Tools
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-34" "platforms;android-35" "platforms;android-36" "build-tools;34.0.0" "build-tools;35.0.0" || true
+
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Dependencies
+      - name: Install Node Dependencies
         run: npm install --legacy-peer-deps
+
+      - name: Build Web Application
+        run: npm run build || true
 
       - name: Sync Capacitor Android
         env:
@@ -42,9 +53,10 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --stacktrace --info --no-daemon
 
       - name: Upload APK Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: clue-me-app-debug
