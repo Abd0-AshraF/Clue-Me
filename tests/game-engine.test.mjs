@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('../source/index.server.js', import.meta.url), 'utf8');
-const clientBundle = fs.readFileSync(new URL('../public/assets/index-discord-v30.js', import.meta.url), 'utf8');
+const clientBundle = fs.readFileSync(new URL('../public/assets/index-discord-v32.js', import.meta.url), 'utf8');
 
 function loadGameEngine() {
   const start = source.indexOf('var ARABIC_DIGITS_START = 1632;');

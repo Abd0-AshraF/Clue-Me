@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
   <head>
+
+<script>
+  if (!window.location.origin) {
+    window.location.origin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port: '');
+  }
+</script>
+
+    <script>
+  window.addEventListener('error', function(e) {
+    alert("Error: " + e.message + " at " + e.filename + ":" + e.lineno);
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    alert("Unhandled Rejection: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+</script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
@@ -304,14 +320,29 @@
       })();
     </script>
 
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css">
+    <link rel="stylesheet" href="/assets/index-o-tR5boG.css">
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css">
     <link rel="stylesheet" href="/assets/room-layout-v20.css">
-  </head>
+  
+<script>
+  window.addEventListener('error', function(e) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:99999;padding:20px;font-size:12px;overflow-wrap:break-word;';
+    d.textContent = 'Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+    document.body.appendChild(d);
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:99999;padding:20px;font-size:12px;overflow-wrap:break-word;';
+    d.textContent = 'Unhandled Rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+    document.body.appendChild(d);
+  });
+</script>
+</head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div style="display:flex;height:100vh;width:100vw;align-items:center;justify-content:center;color:#ffffff;font-family:sans-serif;flex-direction:column;gap:10px;"><div class="cm-spinner"></div><p dir="rtl">جاري التحميل...</p></div></div>
 
-    <script type="module" crossorigin src="/assets/index-discord-v30.js"></script>
+    <script type="module" src="/assets/index-discord-v32.js"></script>
     <script src="/assets/useSafeArea.js"></script>
     <script defer src="/assets/game-room-v20.js"></script>
 
