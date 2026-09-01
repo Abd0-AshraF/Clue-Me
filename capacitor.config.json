@@ -4,8 +4,16 @@
   "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
+    "url": "https://clueme.wisp.uno",
     "androidScheme": "https",
-    "cleartext": true
+    "cleartext": true,
+    "allowNavigation": [
+      "clueme.wisp.uno",
+      "discord.com",
+      "*.discord.com",
+      "discordapp.com",
+      "*.discordapp.com"
+    ]
   },
   "plugins": {
     "SplashScreen": {
