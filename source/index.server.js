@@ -3552,9 +3552,31 @@ function createApp(options = {}) {
         }
       })
     );
+    app2.get(["/download", "/download.html", "/app-download"], (req, res) => {
+      const downloadPath = join(clientDist, "download.html");
+      if (existsSync(downloadPath)) {
+        res.sendFile(downloadPath);
+      } else {
+        res.redirect("/");
+      }
+    });
+
     app2.get(/.*/, (req, res, next) => {
       if (req.path.startsWith("/api/") || req.path.startsWith("/socket.io")) {
         next();
+        return;
+      }
+      if (req.path.endsWith(".apk")) {
+        const apkFile = join(clientDist, "clue-me-app.apk");
+        if (existsSync(apkFile)) {
+          res.sendFile(apkFile);
+          return;
+        }
+        res.redirect("/download");
+        return;
+      }
+      if (/\.(png|jpg|jpeg|gif|ico|svg|css|js|woff|woff2|ttf|eot|zip|json)$/i.test(req.path)) {
+        res.status(404).send("File not found");
         return;
       }
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
