@@ -3,8 +3,13 @@
   "appName": "Clue Me",
   "webDir": "public",
   "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
   "server": {
-    "url": "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
+    "androidScheme": "https",
     "cleartext": true,
     "allowNavigation": [
       "*.run.app",
@@ -17,7 +22,7 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 1000,
+      "launchShowDuration": 800,
       "launchAutoHide": true,
       "backgroundColor": "#17131a",
       "androidSplashResourceName": "splash",
