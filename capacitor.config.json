@@ -4,11 +4,13 @@
   "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://clueme.wisp.uno",
+    "url": "https://clue-me.ai.studio",
     "androidScheme": "https",
     "cleartext": true,
     "allowNavigation": [
-      "clueme.wisp.uno",
+      "clue-me.ai.studio",
+      "*.ai.studio",
+      "*.run.app",
       "discord.com",
       "*.discord.com",
       "discordapp.com",
