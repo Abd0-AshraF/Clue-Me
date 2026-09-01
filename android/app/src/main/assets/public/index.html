@@ -1,6 +1,19 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
+  <head><script>
+  (function() {
+    var defaultServer = 'https://clue-me.ai.studio';
+    window.__CLUE_ME_SERVER_URL__ = defaultServer;
+    
+    var originalFetch = window.fetch;
+    window.fetch = function(url, options) {
+      if (typeof url === 'string' && url.startsWith('/api/')) {
+        url = defaultServer + url;
+      }
+      return originalFetch.apply(this, arguments);
+    };
+  })();
+</script>
 
 <script>
   if (!window.location.origin) {
@@ -351,6 +364,37 @@
     document.body.appendChild(d);
   });
 </script>
+<style>
+  /* Robust Theme Background & Surface Enforcement for Light, Mani, Dark, Mot */
+  html:not(.dark):not(.mot) body,
+  html:not(.dark):not(.mot) #root,
+  html:not(.dark):not(.mot) .cm-game-page,
+  html:not(.dark):not(.mot) .cm-game-shell {
+    background-color: var(--cm-paper, #f5f1e8) !important;
+    color: var(--cm-ink, #000000) !important;
+  }
+  html.mani body,
+  html.mani #root,
+  html.mani .cm-game-page,
+  html.mani .cm-game-shell {
+    background-color: var(--cm-paper, #fdf3f6) !important;
+    color: var(--cm-ink, #0d040a) !important;
+  }
+  html.dark body,
+  html.dark #root,
+  html.dark .cm-game-page,
+  html.dark .cm-game-shell {
+    background-color: var(--cm-paper, #171716) !important;
+    color: var(--cm-ink, #ffffff) !important;
+  }
+  html.mot body,
+  html.mot #root,
+  html.mot .cm-game-page,
+  html.mot .cm-game-shell {
+    background-color: var(--cm-paper, #090d14) !important;
+    color: var(--cm-ink, #f0f6fc) !important;
+  }
+</style>
 </head>
   <body>
     <div id="root"><div style="display:flex;height:100vh;width:100vw;align-items:center;justify-content:center;color:#ffffff;font-family:sans-serif;flex-direction:column;gap:10px;"><div class="cm-spinner"></div><p dir="rtl">جاري التحميل...</p></div></div>
@@ -359,112 +403,4 @@
     <script src="/assets/useSafeArea.js"></script>
     <script defer src="/assets/game-room-v20.js"></script>
 
-    <!-- Mobile Server Connection Config Modal -->
-    <div id="cm-server-config-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:999999; align-items:center; justify-content:center; padding:16px; font-family:system-ui, -apple-system, sans-serif; box-sizing:border-box;">
-      <div style="background:#201824; border:1.5px solid #4d3a54; border-radius:20px; padding:22px; max-width:440px; width:100%; color:#fff; box-shadow:0 20px 40px rgba(0,0,0,0.6); box-sizing:border-box;">
-        
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-          <h3 style="margin:0; font-size:18px; font-weight:800; color:#f43f5e; display:flex; align-items:center; gap:8px;">
-            <span>🌐</span> حالة اتصال السيرفر
-          </h3>
-          <button type="button" onclick="document.getElementById('cm-server-config-modal').style.display='none'" style="background:transparent; border:none; color:#999; font-size:20px; cursor:pointer; padding:4px 8px;">✕</button>
-        </div>
-
-        <p style="font-size:13px; color:#cbd5e1; line-height:1.5; margin:0 0 14px 0;">
-          خادم اللعبة الرسمي المتصل هو <strong>https://clue-me.ai.studio</strong>. يمكنك تغييره أو إعادة فحص الاتصال:
-        </p>
-
-        <div style="background:#150f18; border:1px solid #3d2c44; border-radius:12px; padding:12px; margin-bottom:14px;">
-          <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:6px;">رابط السيرفر (Backend Server):</label>
-          <input id="cm-server-url-input" type="text" placeholder="https://clue-me.ai.studio" style="width:100%; box-sizing:border-box; padding:10px 12px; background:#291e2f; border:1.5px solid #5a4364; border-radius:8px; color:#fff; font-size:13px; outline:none;" />
-          <div id="cm-test-status" style="font-size:12px; margin-top:8px; display:none;"></div>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-          <button type="button" onclick="testCurrentServer()" style="background:#3b2d42; border:1px solid #63476d; color:#e2e8f0; font-size:13px; font-weight:600; padding:9px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <span>🔍</span> فحص الاتصال الآن
-          </button>
-        </div>
-
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button type="button" onclick="resetToOfficialServer()" style="background:transparent; border:1px solid #555; color:#cbd5e1; padding:9px 14px; border-radius:10px; cursor:pointer; font-size:13px;">استعادة السيرفر الرسمي</button>
-          <button type="button" onclick="saveCustomServer()" style="background:#e11d48; border:none; color:#fff; font-weight:700; padding:9px 20px; border-radius:10px; cursor:pointer; font-size:13px;">حفظ والاتصال</button>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      function openServerConfig() {
-        var modal = document.getElementById('cm-server-config-modal');
-        var input = document.getElementById('cm-server-url-input');
-        var statusDiv = document.getElementById('cm-test-status');
-        if (input) input.value = window.__CLUE_ME_SERVER_URL__ || localStorage.getItem('clue_me_custom_server') || 'https://clue-me.ai.studio';
-        if (statusDiv) statusDiv.style.display = 'none';
-        if (modal) modal.style.display = 'flex';
-      }
-
-      function testCurrentServer() {
-        var input = document.getElementById('cm-server-url-input');
-        var statusDiv = document.getElementById('cm-test-status');
-        if (!input || !statusDiv) return;
-        var url = (input.value || "").trim().replace(/\/$/, "");
-        if (!url) {
-          statusDiv.style.display = 'block';
-          statusDiv.style.color = '#f87171';
-          statusDiv.innerText = '⚠️ يرجى إدخال رابط السيرفر أولاً.';
-          return;
-        }
-        statusDiv.style.display = 'block';
-        statusDiv.style.color = '#38bdf8';
-        statusDiv.innerText = '⏳ جاري فحص الاتصال بالخادم...';
-        
-        var ctrl = new AbortController();
-        var timer = setTimeout(function() { ctrl.abort(); }, 5000);
-
-        fetch(url + '/api/health', { signal: ctrl.signal })
-          .then(function(res) {
-            clearTimeout(timer);
-            if (res.ok) {
-              return res.json().then(function(data) {
-                statusDiv.style.color = '#4ade80';
-                statusDiv.innerText = '✅ الخادم متصل وشغال بنجاح! (Clue Me v' + (data.version || '0.3.7') + ')';
-              });
-            } else {
-              statusDiv.style.color = '#f87171';
-              statusDiv.innerText = '❌ الخادم رد برمز خطأ (' + res.status + ').';
-            }
-          })
-          .catch(function(err) {
-            clearTimeout(timer);
-            statusDiv.style.color = '#f87171';
-            statusDiv.innerText = '❌ تعذر الوصول للسيرفر (' + (err.name === 'AbortError' ? 'انتهت المهلة' : 'خطأ اتصال') + ').';
-          });
-      }
-
-      function resetToOfficialServer() {
-        var input = document.getElementById('cm-server-url-input');
-        if (input) input.value = "https://clue-me.ai.studio";
-        localStorage.removeItem('clue_me_custom_server');
-        localStorage.removeItem('clue_me_active_server');
-        window.__CLUE_ME_SERVER_URL__ = "https://clue-me.ai.studio";
-        testCurrentServer();
-      }
-
-      function saveCustomServer() {
-        var input = document.getElementById('cm-server-url-input');
-        if (input && input.value.trim()) {
-          var val = input.value.trim().replace(/\/$/, '');
-          localStorage.setItem('clue_me_custom_server', val);
-          localStorage.setItem('clue_me_active_server', val);
-          window.__CLUE_ME_SERVER_URL__ = val;
-          location.reload();
-        }
-      }
-
-      window.openServerConfig = openServerConfig;
-      window.testCurrentServer = testCurrentServer;
-      window.resetToOfficialServer = resetToOfficialServer;
-      window.saveCustomServer = saveCustomServer;
-    </script>
-  </body>
-</html>
+    
