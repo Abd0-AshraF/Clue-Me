@@ -72,24 +72,19 @@
         min-height: 100vh !important;
       }
       html.cm-discord-activity #root > div {
-        min-height: 100%;
-        height: 100%;
-      }
-      html.cm-discord-activity .cm-game-page,
-      html.cm-discord-activity .cm-home-page,
-      html.cm-discord-activity .cm-lobby-page {
-        min-height: 100%;
-        height: 100%;
-        box-sizing: border-box;
-      }
-      html.cm-discord-activity .cm-game-shell {
-        box-sizing: border-box;
-      }
-      html.cm-discord-activity .cm-game-page,
-      html.cm-discord-activity .cm-home-page,
-      html.cm-discord-activity .cm-lobby-page {
-        padding-top: max(var(--cm-safe-top, 72px), 72px) !important;
+        min-height: 100vh;
+        box-sizing: border-box !important;
+        padding-top: max(var(--cm-safe-top, 84px), 84px) !important;
         padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
+      }
+      html.cm-discord-activity header.sticky,
+      html.cm-discord-activity .sticky.top-0 {
+        top: max(var(--cm-safe-top, 84px), 84px) !important;
+      }
+      html.cm-discord-activity .cm-game-page,
+      html.cm-discord-activity .cm-home-page,
+      html.cm-discord-activity .cm-lobby-page {
+        box-sizing: border-box;
       }
       html.cm-ui-phone:not(.cm-discord-activity) .cm-game-page {
         padding-top: max(var(--cm-safe-top, 0px), 12px);
@@ -199,6 +194,29 @@
             }
           } catch(e) {}
         };
+
+        // Intercept link clicks in Discord activity to prevent disallowed page navigation
+        document.addEventListener("click", function(e) {
+          var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
+          if (anchor) {
+            var href = anchor.getAttribute("href");
+            if (!href || href === "#" || href.indexOf("javascript:") === 0) {
+              e.preventDefault();
+              return;
+            }
+            if (document.documentElement.classList.contains("cm-discord-activity")) {
+              if (href.indexOf("http://") === 0 || href.indexOf("https://") === 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.discordSdk && window.discordSdk.commands && window.discordSdk.commands.openExternalLink) {
+                  window.discordSdk.commands.openExternalLink({ url: href }).catch(function(){});
+                } else {
+                  window.open(href, "_blank", "noopener,noreferrer");
+                }
+              }
+            }
+          }
+        }, true);
 
         // Attach subtle touch feedback to buttons and interactive elements
         document.addEventListener("click", function(e) {

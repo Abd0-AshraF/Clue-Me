@@ -900,6 +900,7 @@ html, body, #root {
 }
 
 /* Home / Lobby / Game Container Safe Padding */
+#root > div,
 .cm-game-page,
 .cm-game-shell,
 .cm-home-page,
@@ -908,10 +909,11 @@ html, body, #root {
   padding-bottom: max(var(--cm-safe-bottom, 0px), 12px) !important;
 }
 
+html.cm-discord-activity #root > div,
 html.cm-discord-activity .cm-game-page,
 html.cm-discord-activity .cm-home-page,
 html.cm-discord-activity .cm-lobby-page {
-  padding-top: max(var(--cm-safe-top, 72px), 72px) !important;
+  padding-top: max(var(--cm-safe-top, 84px), 84px) !important;
   padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
 }
 

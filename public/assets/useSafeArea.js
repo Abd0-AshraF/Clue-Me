@@ -37,11 +37,7 @@
 
     /* Enforce safe top padding ONLY for Discord activity overlay controls */
     if (isDiscord) {
-      if (isPhone) {
-        if (top < 76) top = 76;
-      } else {
-        if (top < 64) top = 64;
-      }
+      if (top < 84) top = 84;
       if (bottom < 12) bottom = 12;
     } else if (isPhone) {
       if (top < 4) top = 4;
@@ -82,7 +78,7 @@
           if (targetEl && targetEl.style) {
             applySafeAreaToContainer(targetEl, updated);
           } else {
-            var page = document.querySelector('.cm-game-page, .cm-game-shell, #root');
+            var page = document.querySelector('#root > div, .cm-game-page, .cm-game-shell, #root');
             if (page) applySafeAreaToContainer(page, updated);
           }
         }
@@ -121,7 +117,7 @@
     if (target && target.style) {
       applySafeAreaToContainer(target, insets);
     } else {
-      var mainPage = document.querySelector('.cm-game-page, .cm-game-shell, #root');
+      var mainPage = document.querySelector('#root > div, .cm-game-page, .cm-game-shell, #root');
       if (mainPage) applySafeAreaToContainer(mainPage, insets);
     }
 

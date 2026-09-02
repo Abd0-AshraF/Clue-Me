@@ -807,7 +807,7 @@
           setHomeMenuOpen(false);
           window.requestAnimationFrame(function () {
             if (clickable) clickable.click();
-            else location.assign('/login');
+            else { window.history.pushState({}, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')); }
             window.setTimeout(function () {
               try { syncMobileHomeHeader(); } catch (e) {}
             }, 0);
@@ -5041,7 +5041,8 @@
     btn.className = "cm-lobby-return-btn";
     btn.textContent = html.lang === "en" ? "Back to the game" : "\u0627\u0644\u0631\u062C\u0648\u0639 \u0644\u0644\u0639\u0628\u0629";
     btn.addEventListener("click", function () {
-      location.assign("/room/" + code + "/game");
+      window.history.pushState({}, '', "/room/" + code + "/game");
+      window.dispatchEvent(new PopStateEvent('popstate'));
     });
     card.appendChild(btn);
   }
