@@ -2,17 +2,22 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build APK
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Set up Java JDK 21
         uses: actions/setup-java@v4
@@ -23,44 +28,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Licenses & Install SDK 36
+      - name: Install dependencies
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "platforms;android-35" "platforms;android-34" "build-tools;36.0.0" "build-tools;35.0.0" || true
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Node Dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Build Web Application
-        run: npm run build || true
+          npm install --legacy-peer-deps
 
       - name: Sync Capacitor Android
-        env:
-          CI: true
-          CAPACITOR_TELEMETRY: 0
         run: |
-          npx @capacitor/cli copy android || true
-          rm -rf android/app/src/main/assets/public && cp -r public android/app/src/main/assets/public
+          npx cap sync android
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.14.3'
+      - name: Grant execute permission for Gradle
+        run: chmod +x android/gradlew
 
-      - name: Build Android APK with Gradle
+      - name: Build Android APK
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: clue-me-app-debug
+          name: ClueMe-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+

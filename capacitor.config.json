@@ -3,26 +3,13 @@
   "appName": "Clue Me",
   "webDir": "public",
   "bundledWebRuntime": false,
-  "android": {
-    "allowMixedContent": true,
-    "captureInput": true,
-    "webContentsDebuggingEnabled": true
-  },
   "server": {
     "androidScheme": "https",
-    "cleartext": true,
-    "allowNavigation": [
-      "*.run.app",
-      "*.ai.studio",
-      "discord.com",
-      "*.discord.com",
-      "discordapp.com",
-      "*.discordapp.com"
-    ]
+    "cleartext": true
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 800,
+      "launchShowDuration": 1200,
       "launchAutoHide": true,
       "backgroundColor": "#17131a",
       "androidSplashResourceName": "splash",
@@ -31,8 +18,8 @@
     },
     "StatusBar": {
       "style": "DARK",
-      "backgroundColor": "#00000000",
-      "overlaysWebView": true
+      "backgroundColor": "#17131a",
+      "overlaysWebView": false
     }
   }
 }

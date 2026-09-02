@@ -420,15 +420,6 @@
   function handleAuthoritativeGuessResult(result) {
     if (!result || result.kind !== 'guess') return;
     var kind = guessSoundKind(result.cardColor, lastGameView);
-    if (result.winner) {
-      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('win'); } catch (e) {}
-    } else if (kind === 'correct') {
-      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('success'); } catch (e) {}
-    } else if (kind === 'wrong') {
-      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('warning'); } catch (e) {}
-    } else if (kind === 'assassin') {
-      try { if (window.cmTriggerHaptic) window.cmTriggerHaptic('heavy'); } catch (e) {}
-    }
     if (!kind) return;
     playSoundEffect(kind, [result.actorTeam, result.cardColor, result.index, result.winner || ''].join('|'));
   }
@@ -3390,12 +3381,16 @@
   }
 
   function mirrorFloatTransform(sourceEl) {
-    /* Dock and FAB are separate elements and do not copy each other's position. */
+    var dock = linkedDock();
+    if (!sourceEl) return;
+    var tr = sourceEl.style.transform || '';
+    if (sourceEl !== fab) fab.style.transform = tr;
+    if (dock && sourceEl !== dock) dock.style.transform = tr;
   }
 
   function clearLinkedFloatTransform() {
-    fab.style.transform = '';
     var dock = linkedDock();
+    fab.style.transform = '';
     if (dock) dock.style.transform = '';
   }
 
@@ -3424,55 +3419,164 @@
 
   function applyLinkedSavedTransform(force) {
     if (isFloatDragging()) return;
+    if (!force && fab.dataset.cmDockCloseAnchor === '1') return;
 
     var raw = '';
+    var anchorRaw = '';
     try {
       raw = localStorage.getItem(FAB_POS_KEY) || '';
+      anchorRaw = localStorage.getItem(FAB_CLOSE_ANCHOR_KEY) || '';
     } catch (e) {}
     var dock = linkedDock();
-    var signature = [raw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
+    var signature = [raw, anchorRaw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
 
+    /* The FAB lives outside React. Re-applying an unchanged translate on every
+       DOM sync can make it drift or shake horizontally. Recalculate only after
+       a real resize, a new dock node, or a changed saved position. */
     if (!force && signature === lastLinkedFloatSignature && dock === lastLinkedFloatDock) return;
 
     var saved = null;
+    var closeAnchor = null;
     try {
       saved = raw ? JSON.parse(raw) : null;
+      closeAnchor = anchorRaw ? JSON.parse(anchorRaw) : null;
     } catch (e) {}
 
-    if (!saved || (typeof saved.tx !== 'number' && typeof saved.x !== 'number')) {
-      fab.style.transform = '';
+    /* A closed drawer presents the icon exactly at the X button's last
+       position. This is intentionally independent from the drawer transform. */
+    if (!open && !fab.hidden && closeAnchor && closeAnchor.v === 2 &&
+        Number.isFinite(closeAnchor.tx) && Number.isFinite(closeAnchor.ty)) {
+      var anchorRect = fab.getBoundingClientRect();
+      var anchorCurrent = readTranslate(fab);
+      var anchorBase = {
+        left: anchorRect.left - anchorCurrent.x,
+        top: anchorRect.top - anchorCurrent.y,
+        width: anchorRect.width,
+        height: anchorRect.height
+      };
+      var anchored = clampToViewport(
+        anchorBase.left + closeAnchor.tx,
+        anchorBase.top + closeAnchor.ty,
+        anchorBase.width,
+        anchorBase.height
+      );
+      var anchorTx = anchored.left - anchorBase.left;
+      var anchorTy = anchored.top - anchorBase.top;
+      fab.style.transform = 'translate3d(' + anchorTx + 'px,' + anchorTy + 'px,0)';
+      fab.dataset.cmDockCloseAnchor = '1';
+      if (anchorTx !== closeAnchor.tx || anchorTy !== closeAnchor.ty) {
+        try {
+          anchorRaw = JSON.stringify({ v: 2, tx: anchorTx, ty: anchorTy });
+          localStorage.setItem(FAB_CLOSE_ANCHOR_KEY, anchorRaw);
+          signature = [raw, anchorRaw, 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
+        } catch (e) {}
+      }
       lastLinkedFloatSignature = signature;
       lastLinkedFloatDock = dock;
       return;
     }
 
-    var fabRect = fab.getBoundingClientRect();
-    var current = readTranslate(fab);
-    var fabW = fabRect.width || 48;
-    var fabH = fabRect.height || 48;
-    var fabBase = {
-      left: fabRect.left - current.x,
-      top: fabRect.top - current.y
-    };
-
-    var winW = window.innerWidth || 360;
-    var winH = window.innerHeight || 600;
-
-    var targetLeft, targetTop;
-    if (saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-      targetLeft = fabBase.left + saved.tx;
-      targetTop = fabBase.top + saved.ty;
-    } else {
-      targetLeft = saved.x * winW;
-      targetTop = saved.y * winH;
+    if (!saved || (typeof saved.tx !== 'number' && typeof saved.x !== 'number')) {
+      clearLinkedFloatTransform();
+      lastLinkedFloatSignature = signature;
+      lastLinkedFloatDock = dock;
+      return;
     }
 
-    var clamped = clampToViewport(targetLeft, targetTop, fabW, fabH);
-    var tx = clamped.left - fabBase.left;
-    var ty = clamped.top - fabBase.top;
+    /* When the floating dock is open, clamp the dock itself strictly to the screen */
+    if (open && dock) {
+      var dockRect = dock.getBoundingClientRect();
+      var dockCurrent = readTranslate(dock);
+      var dockBase = {
+        left: dockRect.left - dockCurrent.x,
+        top: dockRect.top - dockCurrent.y,
+        width: dockRect.width || 320,
+        height: dockRect.height || 260
+      };
+      var targetDock;
+      if (saved && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
+        targetDock = clampToViewport(
+          dockBase.left + saved.tx,
+          dockBase.top + saved.ty,
+          dockBase.width,
+          dockBase.height
+        );
+      } else if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+        targetDock = clampToViewport(
+          saved.x * window.innerWidth,
+          saved.y * window.innerHeight,
+          dockBase.width,
+          dockBase.height
+        );
+      } else {
+        targetDock = clampToViewport(
+          dockBase.left,
+          dockBase.top,
+          dockBase.width,
+          dockBase.height
+        );
+      }
+      var dTx = targetDock.left - dockBase.left;
+      var dTy = targetDock.top - dockBase.top;
+      dock.style.transform = 'translate3d(' + dTx + 'px,' + dTy + 'px,0)';
+      fab.style.transform = dock.style.transform;
+      lastLinkedFloatSignature = signature;
+      lastLinkedFloatDock = dock;
+      return;
+    }
 
+    /* While the hybrid drawer is open the FAB is intentionally hidden and its
+       rect is 0 × 0. Keep the stored v2 offset verbatim so a React redraw of
+       the dock cannot corrupt its position from a zero-sized measurement. */
+    if (fab.hidden && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
+      fab.style.transform = 'translate3d(' + saved.tx + 'px,' + saved.ty + 'px,0)';
+      if (dock) dock.style.transform = fab.style.transform;
+      lastLinkedFloatSignature = signature;
+      lastLinkedFloatDock = dock;
+      return;
+    }
+
+    /* v2 stores the FAB's transform offset, not a normalized coordinate from
+       the drawer's different fixed base. It restores exactly at the same size
+       and clamps safely once when the viewport truly changes. */
+    var fabRect = fab.getBoundingClientRect();
+    var current = readTranslate(fab);
+    var fabBase = {
+      left: fabRect.left - current.x,
+      top: fabRect.top - current.y,
+      width: fabRect.width,
+      height: fabRect.height
+    };
+    var target;
+    if (saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
+      target = clampToViewport(
+        fabBase.left + saved.tx,
+        fabBase.top + saved.ty,
+        fabBase.width,
+        fabBase.height
+      );
+    } else {
+      /* Read older normalized saved positions once, then migrate them to the
+         stable transform-offset format below. */
+      target = clampToViewport(
+        saved.x * window.innerWidth,
+        saved.y * window.innerHeight,
+        fabBase.width,
+        fabBase.height
+      );
+    }
+    var tx = target.left - fabBase.left;
+    var ty = target.top - fabBase.top;
     fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
+    mirrorFloatTransform(fab);
 
+    if (saved.v !== 2 || !Number.isFinite(saved.tx) || !Number.isFinite(saved.ty)) {
+      try {
+        raw = JSON.stringify({ v: 2, tx: tx, ty: ty });
+        localStorage.setItem(FAB_POS_KEY, raw);
+        signature = [raw, anchorRaw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
+      } catch (e) {}
+    }
     lastLinkedFloatSignature = signature;
     lastLinkedFloatDock = dock;
   }
@@ -3510,8 +3614,36 @@
   }
 
   function anchorFabAtCloseButton(closeRect) {
-    /* Disabled: FAB and Dock stay at their fixed/saved position */
-    return;
+    if (!closeRect) return;
+    window.requestAnimationFrame(function () {
+      if (fab.hidden) return;
+      var fabRect = fab.getBoundingClientRect();
+      if (!fabRect.width || !fabRect.height) return;
+      var current = readTranslate(fab);
+      var base = {
+        left: fabRect.left - current.x,
+        top: fabRect.top - current.y,
+        width: fabRect.width,
+        height: fabRect.height
+      };
+      var target = clampToViewport(
+        closeRect.left + (closeRect.width - base.width) / 2,
+        closeRect.top + (closeRect.height - base.height) / 2,
+        base.width,
+        base.height
+      );
+      fab.style.transition = 'none';
+      var tx = target.left - base.left;
+      var ty = target.top - base.top;
+      fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
+      fab.dataset.cmDockCloseAnchor = '1';
+      try {
+        localStorage.setItem(FAB_CLOSE_ANCHOR_KEY, JSON.stringify({ v: 2, tx: tx, ty: ty }));
+      } catch (e) {}
+      window.requestAnimationFrame(function () {
+        if (fab.dataset.cmDockCloseAnchor === '1') fab.style.transition = '';
+      });
+    });
   }
 
   function ensureDockCloseButton(dock, head) {
@@ -3597,6 +3729,7 @@
     if (!head) return;
     ensureDockCloseButton(dock, head);
     if (dock.__cmDragDock === dock) {
+      if (!isFloatDragging()) applyLinkedSavedTransform();
       return;
     }
     dock.dataset.cmDrag = "1";
@@ -3604,7 +3737,7 @@
     dockDragCtl = makeDraggable({
       grip: dock,
       el: dock,
-      storageKey: LOG_POS_KEY,
+      storageKey: FAB_POS_KEY,
       resettable: true,
       /* Header, top drag bar & frame handle drag the window smoothly.
          The inner list (.cm-dock-list) scrolls freely, while close/size buttons click normally. */
@@ -3633,21 +3766,28 @@
         dock.style.transition = "none";
         dock.style.willChange = "transform";
       },
-      onMove: function () {},
+      onMove: function () {
+        mirrorFloatTransform(dock);
+      },
       onEnd: function () {
         setFloatDraggingActive(false);
         delete dock.dataset.cmDragging;
         dock.classList.remove("cm-dock-dragging");
         dock.style.transition = "";
         dock.style.willChange = "";
+        mirrorFloatTransform(dock);
       },
       onReset: function () {
         setFloatDraggingActive(false);
-        try { localStorage.removeItem(LOG_POS_KEY); } catch (e) {}
-        dock.style.transform = "";
+        try { localStorage.removeItem(FAB_POS_KEY); } catch (e) {}
+        invalidateLinkedSavedTransform();
+        clearLinkedFloatTransform();
       },
-      onDrop: function () {}
+      onDrop: function () {
+        persistFabTransformOffset();
+      }
     });
+    applyLinkedSavedTransform(true);
   }  /* ------------------------------------------------------------ log button */
   function attachFabDrag() {
     if (fab.dataset.cmDrag) {
@@ -3675,6 +3815,7 @@
         fab.style.transition = 'none';
       },
       onMove: function (pos, motion) {
+        mirrorFloatTransform(fab);
         applyLinkedTail(fab, motion);
       },
       onEnd: function () {
@@ -3684,18 +3825,10 @@
         fab.style.willChange = '';
         fab.style.transition = '';
         clearLinkedTail();
+        mirrorFloatTransform(fab);
       },
-      onDrop: function (pos) {
-        if (!pos) return;
-        try {
-          var winW = window.innerWidth || 360;
-          var winH = window.innerHeight || 600;
-          localStorage.setItem(FAB_POS_KEY, JSON.stringify({
-            x: pos.left / winW,
-            y: pos.top / winH
-          }));
-        } catch (e) {}
-        invalidateLinkedSavedTransform();
+      onDrop: function () {
+        persistFabTransformOffset();
       },
       onTap: function () {
         delete fab.dataset.cmDockCloseAnchor;
@@ -4168,16 +4301,11 @@
       Number(window.innerHeight),
       viewportSensorBox && Number(viewportSensorBox.height)
     ].filter(function (value) { return Number.isFinite(value) && value > 0; });
-
-    var insets = window.useSafeArea ? window.useSafeArea.detect() : { top: 0, bottom: 0, left: 0, right: 0 };
-
     return {
       /* The smallest positive reading is the safe visible region when a host
          chrome/keyboard reports different layout and visual dimensions. */
       width: widths.length ? Math.round(Math.min.apply(Math, widths)) : 0,
-      height: heights.length ? Math.round(Math.min.apply(Math, heights)) : 0,
-      safeTop: insets.top,
-      safeBottom: insets.bottom
+      height: heights.length ? Math.round(Math.min.apply(Math, heights)) : 0
     };
   }
 
@@ -4219,16 +4347,8 @@
     if (!box) return;
     html.style.setProperty('--cm-vp-w', box.width + 'px');
     html.style.setProperty('--cm-vp-h', box.height + 'px');
-
-    var insets = window.useSafeArea ? window.useSafeArea.detect() : { top: 0, bottom: 0 };
-    var safeTop = Math.max(box.safeTop || 0, insets.top || 0);
-    var safeBottom = Math.max(box.safeBottom || 0, insets.bottom || 0);
-
-    html.style.setProperty('--cm-safe-top', safeTop + 'px');
-    html.style.setProperty('--cm-safe-bottom', safeBottom + 'px');
-
     var header = query('.cm-game-page > header');
-    var headerH = measureRectHeight(header) || 48;
+    var headerH = measureRectHeight(header) || 56;
     html.style.setProperty('--cm-header-h', headerH + 'px');
     var main = query('.cm-game-shell > main');
     if (!main) return;
@@ -4241,68 +4361,61 @@
     var banner = main.querySelector(':scope > [aria-live="polite"]');
     var teambarH = measureRectHeight(teambar);
     var bannerH = measureRectHeight(banner);
+    var mainHeight = Math.max(220, Math.round(mainRect.height || Math.max(0, box.height - headerH)));
+    var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 4 + 8;
 
-    /* Total available height inside viewport accounting for safe area insets & header */
-    var totalAvailableH = Math.max(220, box.height - headerH - safeTop - safeBottom);
-    var mainHeight = Math.max(200, Math.round(mainRect.height ? Math.min(mainRect.height, totalAvailableH) : totalAvailableH));
-    var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 3 + 4;
+    /* Reserve a stable, fixed height for the bottom panel (clue composer, live clue,
+       operative guess controls) based purely on viewport geometry so the board NEVER
+       shrinks or grows when turns or roles switch. */
+    var sideTarget =
+      mode === 'desktop' ? clamp(mainHeight * 0.075, 46, 60) :
+      mode === 'tablet' ? clamp(mainHeight * 0.075, 44, 58) :
+      mode === 'phone-landscape' ? clamp(mainHeight * 0.09, 36, 48) :
+      clamp(mainHeight * 0.08, 40, 52);
+    var sideMin = mode === 'desktop' ? 44 : mode === 'tablet' ? 42 : mode === 'phone-landscape' ? 34 : 38;
 
-    /* Measure actual clue panel height if present, so we reserve exact needed space */
-    var sideEl = query('.cm-side-clue') || query('.cm-side');
-    var measuredSideH = sideEl ? measureRectHeight(sideEl) : 0;
-
-    /* Reserve height for the bottom panel (clue composer, live clue, operative guess controls) */
-    var sideTarget = Math.max(
-      measuredSideH,
-      mode === 'desktop' ? clamp(mainHeight * 0.16, 85, 120) :
-      mode === 'tablet' ? clamp(mainHeight * 0.16, 80, 110) :
-      mode === 'phone-landscape' ? clamp(mainHeight * 0.16, 50, 75) :
-      clamp(mainHeight * 0.18, 80, 120)
-    );
-    var sideMin = mode === 'desktop' ? 82 : mode === 'tablet' ? 76 : mode === 'phone-landscape' ? 48 : 76;
-
-    /* Calculate available usable height inside main for the stage (Board + attached Clue Panel) */
-    var usableHeight = Math.max(140, mainHeight - reserveWithinMain);
-
-    /* Priority Rule: The Word Board takes primary sizing based on available screen space (72-78% of usable height) */
-    var boardHeightRatio = mode === 'desktop' ? 0.76 : mode === 'tablet' ? 0.74 : mode === 'phone-landscape' ? 0.68 : 0.72;
-    var targetBoardHeight = Math.floor(usableHeight * boardHeightRatio);
-
-    /* Clue panel gets the remaining height below the board, adapting to it */
-    var sideTarget = Math.max(mode === 'phone-landscape' ? 44 : 64, usableHeight - targetBoardHeight);
-    var sideMin = mode === 'desktop' ? 70 : mode === 'tablet' ? 64 : mode === 'phone-landscape' ? 42 : 64;
-
-    var boardHeight = Math.max(100, usableHeight - sideTarget);
+    var usableHeight = Math.max(180, mainHeight - reserveWithinMain);
+    var boardHeight = Math.max(120, usableHeight - sideTarget);
     var sideTeamsActive = html.classList.contains('cm-ui-side-teams');
+    var wideViewport = sideTeamsActive;
     var rosterWidth = mode === 'desktop' || sideTeamsActive ? clamp(box.width * 0.13, 176, 244) : 0;
     var availableWidth =
       mode === 'desktop' || sideTeamsActive
         ? Math.max(360, (mainRect.width || box.width) - rosterWidth * 2 - gap * 2)
-        : Math.max(200, Math.min(mainRect.width || box.width, box.width - 8));
+        : Math.max(220, Math.min(mainRect.width || box.width, box.width - 8));
     var stageMax =
       mode === 'desktop' ? Math.min(availableWidth, Math.max(720, box.width * 0.92)) :
       mode === 'tablet' ? Math.min(availableWidth, Math.max(500, box.width * 0.96)) :
       mode === 'phone-landscape' ? Math.min(availableWidth, Math.max(300, box.width * 0.95)) :
       availableWidth;
-
     var boardFitMaxWidth = Math.floor(Math.min(stageMax, availableWidth));
-    var boardWidthFromHeight = Math.floor(boardHeight * (4 / 3));
+    var boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
+    var desiredMinBoard = mode === 'desktop' ? 620 : mode === 'tablet' ? 380 : mode === 'phone-landscape' ? 270 : 290;
+    if (boardWidth < desiredMinBoard) {
+      sideTarget = Math.max(sideMin, sideTarget - (desiredMinBoard - boardWidth) * 0.72);
+      boardHeight = Math.max(120, usableHeight - sideTarget);
+      boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
+    }
+    boardWidth = Math.max(210, Math.floor(boardWidth));
+    sideTarget = Math.max(sideMin, Math.floor(sideTarget));
 
-    /* Board width primary calculation based on screen space - expanded to fill screen space */
-    var boardWidth = mode === 'desktop' || sideTeamsActive 
-      ? Math.min(Math.floor(availableWidth), 1000)
-      : Math.floor(availableWidth);
-    boardWidth = Math.max(280, boardWidth);
-    var stageWidth = boardWidth;
-
+    /* Adaptive board width derived directly from viewport geometry */
     clueComposerFit = null;
+  var useHeightDrivenStage = mode === 'desktop' || sideTeamsActive;
+    var stageWidth = useHeightDrivenStage ? boardWidth : Math.max(boardWidth, Math.floor(availableWidth));
+    html.classList.toggle('cm-ui-height-fit', useHeightDrivenStage);
+    html.classList.toggle('cm-ui-width-fit', !useHeightDrivenStage);
     html.style.setProperty('--cm-roster-width-fit', Math.round(rosterWidth) + 'px');
     html.style.setProperty('--cm-board-fit-width', boardWidth + 'px');
     html.style.setProperty('--cm-stage-fit-width', stageWidth + 'px');
-    html.style.setProperty('--cm-board-fit-max-width', stageWidth + 'px');
+    html.style.setProperty('--cm-board-fit-max-width', boardFitMaxWidth + 'px');
     html.style.setProperty('--cm-side-fit-height', sideTarget + 'px');
   }
 
+  /* A Discord Activity can expose a shorter visual viewport than the browser
+     window. Fit the stage from the rendered DOM only when lower clue controls
+     would otherwise be off screen, then hold that fitted size until the user
+     resizes the viewport. */
   function clueComposerViewportKey(box, mode) {
     return [
       Math.round(Number(box && box.width) || 0),
@@ -4991,321 +5104,7 @@
     syncGuessSoundboard(preGuessView);
     maybeRestoreModalInputFocus();
     syncGameOverOverlay();
-    syncAiClueRiskAnalyzer();
-    syncFloatingBubble();
   }
-
-  /* ============================================================================
-     INNOVATIVE MODULE 1: EMOJI PARTICLE PHYSICS ENGINE
-     ========================================================================== */
-  var particleCanvas = null;
-  var particleCtx = null;
-  var activeParticles = [];
-  var particleAnimId = null;
-
-  function initParticleCanvas() {
-    if (particleCanvas) return;
-    particleCanvas = document.createElement("canvas");
-    particleCanvas.id = "cm-particle-canvas";
-    document.body.appendChild(particleCanvas);
-    particleCtx = particleCanvas.getContext("2d");
-
-    function resize() {
-      if (!particleCanvas) return;
-      particleCanvas.width = window.innerWidth;
-      particleCanvas.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener("resize", resize, { passive: true });
-  }
-
-  function spawnEmojiParticles(emoji, count, originX, originY) {
-    initParticleCanvas();
-    count = count || 18;
-    var x = originX || window.innerWidth / 2;
-    var y = originY || window.innerHeight * 0.75;
-    var list = ["🔥", "🎉", "😱", "💀", "🧠", "🎯", "⭐", "🚀", "👑"];
-    var char = emoji || list[Math.floor(Math.random() * list.length)];
-
-    for (var i = 0; i < count; i++) {
-      var angle = Math.random() * Math.PI * 2;
-      var speed = 3 + Math.random() * 7;
-      activeParticles.push({
-        char: char,
-        x: x + (Math.random() * 40 - 20),
-        y: y + (Math.random() * 40 - 20),
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2.5,
-        size: 20 + Math.random() * 16,
-        alpha: 1.0,
-        decay: 0.012 + Math.random() * 0.015,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.1
-      });
-    }
-
-    if (!particleAnimId) runParticleLoop();
-  }
-  window.cmSpawnParticles = spawnEmojiParticles;
-
-  function runParticleLoop() {
-    if (!particleCtx) return;
-    particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
-    var next = [];
-
-    for (var i = 0; i < activeParticles.length; i++) {
-      var p = activeParticles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.12; // gravity
-      p.alpha -= p.decay;
-      p.rotation += p.rotSpeed;
-
-      if (p.alpha > 0) {
-        particleCtx.save();
-        particleCtx.globalAlpha = Math.max(0, p.alpha);
-        particleCtx.font = p.size + "px sans-serif";
-        particleCtx.textAlign = "center";
-        particleCtx.textBaseline = "middle";
-        particleCtx.translate(p.x, p.y);
-        particleCtx.rotate(p.rotation);
-        particleCtx.fillText(p.char, 0, 0);
-        particleCtx.restore();
-        next.push(p);
-      }
-    }
-
-    activeParticles = next;
-    if (activeParticles.length > 0) {
-      particleAnimId = requestAnimationFrame(runParticleLoop);
-    } else {
-      particleAnimId = null;
-    }
-  }
-
-  /* ============================================================================
-     INNOVATIVE MODULE 2: TACTICAL HAPTIC RADAR & SPATIAL AUDIO PANNER
-     ========================================================================== */
-  function cmTriggerHaptic(type, consensusCount) {
-    if (!readAudioSettings().haptics) return;
-    try {
-      // Capacitor Native Haptics
-      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
-        var haptics = window.Capacitor.Plugins.Haptics;
-        if (type === "heavy" || type === "assassin") {
-          haptics.impact({ style: "HEAVY" });
-        } else if (type === "medium" || type === "correct") {
-          haptics.impact({ style: "MEDIUM" });
-        } else {
-          haptics.impact({ style: "LIGHT" });
-        }
-        return;
-      }
-      // Web Vibrator API with Consensus Radar
-      if (navigator.vibrate) {
-        if (type === "assassin") {
-          navigator.vibrate([80, 50, 80, 50, 150]);
-        } else if (consensusCount && consensusCount > 1) {
-          var pattern = [];
-          for (var c = 0; c < consensusCount; c++) {
-            pattern.push(25);
-            pattern.push(35);
-          }
-          navigator.vibrate(pattern);
-        } else if (type === "correct") {
-          navigator.vibrate([40, 30, 60]);
-        } else {
-          navigator.vibrate(30);
-        }
-      }
-    } catch (e) {}
-  }
-  window.cmTriggerHaptic = cmTriggerHaptic;
-
-  function playSpatialSoundEffect(kind, team) {
-    var src =
-      kind === "correct" ? pickVariant(SOUNDBOARD.correct, "correct") :
-      kind === "wrong" ? pickVariant(SOUNDBOARD.wrong, "wrong") :
-      kind === "assassin" ? SOUNDBOARD.assassin : null;
-    var volume = soundboardVolume();
-    if (!src || volume <= 0.001) return;
-
-    try {
-      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      trackAudioContext(audioCtx);
-      var audio = new Audio(src);
-      audio.crossOrigin = "anonymous";
-      rememberSoundboardAudio(audio);
-
-      var source = audioCtx.createMediaElementSource(audio);
-      var gainNode = audioCtx.createGain();
-      gainNode.gain.value = volume;
-
-      if (audioCtx.createStereoPanner && team) {
-        var panner = audioCtx.createStereoPanner();
-        // Red team sound pans Left (-0.55), Blue team sound pans Right (+0.55)
-        panner.pan.value = team === "red" ? -0.55 : team === "blue" ? 0.55 : 0;
-        source.connect(panner);
-        panner.connect(gainNode);
-      } else {
-        source.connect(gainNode);
-      }
-      gainNode.connect(audioCtx.destination);
-      audio.play().catch(function () {});
-    } catch (e) {
-      playSoundEffect(kind);
-    }
-  }
-  window.cmPlaySpatialSound = playSpatialSoundEffect;
-
-  /* ============================================================================
-     INNOVATIVE MODULE 3: ON-DEVICE & HYBRID AI CLUE RISK ANALYZER
-     ========================================================================== */
-  var lastAnalyzedClue = "";
-  function syncAiClueRiskAnalyzer() {
-    var clueInput = document.querySelector('input[name="clue-input"], textarea[name="clue-input"]');
-    if (!clueInput) return;
-
-    var container = clueInput.parentElement;
-    if (!container) return;
-
-    var badge = container.querySelector(".cm-ai-risk-badge");
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.className = "cm-ai-risk-badge";
-      container.appendChild(badge);
-    }
-
-    var text = (clueInput.value || "").trim().toLowerCase();
-    if (!text || text.length < 2) {
-      badge.style.display = "none";
-      return;
-    }
-
-    if (text === lastAnalyzedClue) return;
-    lastAnalyzedClue = text;
-
-    // Fast semantic check against unrevealed words
-    var boardWords = Array.from(document.querySelectorAll(".cm-board-frame [data-word]")).map(function(el) {
-      return (el.getAttribute("data-word") || "").toLowerCase();
-    });
-
-    var risk = evaluateClueRisk(text, boardWords);
-    badge.style.display = "inline-flex";
-    badge.className = "cm-ai-risk-badge cm-" + risk.level;
-    badge.innerHTML = risk.icon + " " + risk.label;
-  }
-
-  function evaluateClueRisk(clue, words) {
-    var isAr = html.lang !== "en";
-    var containsDirectWord = false;
-    for (var i = 0; i < words.length; i++) {
-      if (words[i] && (words[i] === clue || words[i].indexOf(clue) !== -1 || clue.indexOf(words[i]) !== -1)) {
-        containsDirectWord = true;
-        break;
-      }
-    }
-
-    if (containsDirectWord) {
-      return {
-        level: "danger",
-        icon: "⚠️",
-        label: isAr ? "تحذير: التلميح يحوي كلمة متواجدة على الشاشة!" : "Warning: Clue contains a board word!"
-      };
-    }
-
-    // High safety score calculation
-    var score = Math.floor(82 + Math.random() * 16);
-    return {
-      level: "safe",
-      icon: "🟢",
-      label: isAr ? "درجة أمان التلميح: " + score + "% (ممتاز)" : "Clue Safety Score: " + score + "% (Safe)"
-    };
-  }
-
-  /* ============================================================================
-     INNOVATIVE MODULE 4: FLOATING MINI GAME BUBBLE WIDGET (NATIVE APP ONLY)
-     ========================================================================== */
-  function isNativeAppContainer() {
-    var isCap = !!(window.Capacitor && (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : window.Capacitor.getPlatform() === 'android' || window.Capacitor.getPlatform() === 'ios'));
-    var isNativeClass = html.classList.contains("cm-native-app") || document.body.classList.contains("cm-native-app");
-    var isUrlParam = location.search.indexOf("app=native") !== -1 || location.search.indexOf("capacitor=true") !== -1;
-    var isUA = navigator.userAgent.indexOf("ClueMeNative") !== -1 || navigator.userAgent.indexOf("Capacitor") !== -1;
-    return isCap || isNativeClass || isUrlParam || isUA;
-  }
-
-  var bubbleEl = null;
-  function syncFloatingBubble() {
-    var isRoom = /^\/room\/[A-Za-z0-9]+/.test(location.pathname);
-    var isNative = isNativeAppContainer();
-
-    // App-only requirement: floating bubble is strictly active for the mobile/native app container
-    if (!isRoom || !isNative) {
-      if (bubbleEl) bubbleEl.style.display = "none";
-      return;
-    }
-
-    if (!bubbleEl) {
-      bubbleEl = document.createElement("div");
-      bubbleEl.id = "cm-floating-bubble";
-      bubbleEl.innerHTML = '<span class="cm-bubble-pulse"></span><span class="cm-bubble-text">Clue Me Live</span>';
-      document.body.appendChild(bubbleEl);
-      makeBubbleDraggable(bubbleEl);
-    }
-
-    var isAr = html.lang !== "en";
-    var sideClue = document.querySelector(".cm-side-clue");
-    var clueTxt = sideClue ? (sideClue.textContent || "").trim() : "";
-
-    if (clueTxt && clueTxt.length > 3) {
-      bubbleEl.style.display = "flex";
-      var textEl = bubbleEl.querySelector(".cm-bubble-text");
-      if (textEl) textEl.textContent = clueTxt.slice(0, 24);
-    } else {
-      bubbleEl.style.display = "none";
-    }
-  }
-
-  function makeBubbleDraggable(el) {
-    var isDragging = false, startX, startY, initialX, initialY;
-    el.addEventListener("pointerdown", function(e) {
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      var rect = el.getBoundingClientRect();
-      initialX = rect.left;
-      initialY = rect.top;
-      el.setPointerCapture(e.pointerId);
-    });
-
-    el.addEventListener("pointermove", function(e) {
-      if (!isDragging) return;
-      var dx = e.clientX - startX;
-      var dy = e.clientY - startY;
-      el.style.left = (initialX + dx) + "px";
-      el.style.top = (initialY + dy) + "px";
-      el.style.right = "auto";
-      el.style.bottom = "auto";
-    });
-
-    el.addEventListener("pointerup", function(e) {
-      isDragging = false;
-    });
-  }
-
-  /* ============================================================================
-     INNOVATIVE MODULE 5: DISCORD ACTIVITY NATIVE BRIDGE
-     ========================================================================== */
-  function initDiscordNativeBridge() {
-    if (window.__cmDiscordBridgeInited) return;
-    window.__cmDiscordBridgeInited = true;
-
-    if (window.DiscordSDK || window.DiscordNative) {
-      html.classList.add("cm-in-discord");
-      console.log("[Clue Me] Discord Embedded Activity Native Bridge Active");
-    }
-  }
-  initDiscordNativeBridge();
 
   /* Lobby: when a game is running, the app renders a plain-text hint
      ("الرجوع للعبة") instead of a button — inject a real, prominent

@@ -4,40 +4,40 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:translateX="25.5"
-        android:translateY="25.5"
-        android:scaleX="1.18"
-        android:scaleY="1.18">
-        <!-- Main Clue Card -->
-        <path
-            android:fillColor="#FFFDF8"
-            android:strokeColor="#D1C7B7"
-            android:strokeWidth="1.6"
-            android:pathData="M10.5,8 h15 a5.5,5.5 0 0 1 5.5,5.5 v11 a5.5,5.5 0 0 1 -5.5,5.5 h-15 a5.5,5.5 0 0 1 -5.5,-5.5 v-11 a5.5,5.5 0 0 1 5.5,-5.5 z" />
-
-        <!-- Red Clue Bar -->
-        <path
-            android:fillColor="#B83A3A"
-            android:pathData="M11.2,14 h12.6 a1.7,1.7 0 0 1 1.7,1.7 v0 a1.7,1.7 0 0 1 -1.7,1.7 h-12.6 a1.7,1.7 0 0 1 -1.7,-1.7 v0 a1.7,1.7 0 0 1 1.7,-1.7 z" />
-
-        <!-- Blue Clue Bar -->
-        <path
-            android:fillColor="#315C88"
-            android:pathData="M11.2,20.6 h7.6 a1.7,1.7 0 0 1 1.7,1.7 v0 a1.7,1.7 0 0 1 -1.7,1.7 h-7.6 a1.7,1.7 0 0 1 -1.7,-1.7 v0 a1.7,1.7 0 0 1 1.7,-1.7 z" />
-
-        <!-- Magnifier Glass Ring -->
-        <path
-            android:fillColor="#00000000"
-            android:strokeColor="#252525"
-            android:strokeWidth="3"
-            android:pathData="M 31 30 m -9, 0 a 9,9 0 1,0 18,0 a 9,9 0 1,0 -18,0" />
-
-        <!-- Magnifier Handle -->
-        <path
-            android:strokeColor="#252525"
-            android:strokeWidth="3.6"
-            android:strokeLineCap="round"
-            android:pathData="M37.6,36.6 L43,42" />
-    </group>
+    
+    <!-- Outer Card Background -->
+    <path
+        android:fillColor="#FFFDF8"
+        android:strokeColor="#D1C7B7"
+        android:strokeWidth="2"
+        android:pathData="M30,30 h42 a8,8 0 0 1 8,8 v32 a8,8 0 0 1 -8,8 h-42 a8,8 0 0 1 -8,-8 v-32 a8,8 0 0 1 8,-8 z" />
+        
+    <!-- Red Bar Clue -->
+    <path
+        android:fillColor="#B83A3A"
+        android:pathData="M36,41 h28 a3.5,3.5 0 0 1 0,7 h-28 a3.5,3.5 0 0 1 0,-7 z" />
+        
+    <!-- Blue Bar Clue -->
+    <path
+        android:fillColor="#315C88"
+        android:pathData="M36,54 h20 a3.5,3.5 0 0 1 0,7 h-20 a3.5,3.5 0 0 1 0,-7 z" />
+        
+    <!-- Detective Magnifier Circle Inner Fill -->
+    <path
+        android:fillColor="#17131A"
+        android:pathData="M 72 70 m -14, 0 a 14,14 0 1,0 28,0 a 14,14 0 1,0 -28,0" />
+        
+    <!-- Magnifier Gold Ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFD56B"
+        android:strokeWidth="4"
+        android:pathData="M 72 70 m -14, 0 a 14,14 0 1,0 28,0 a 14,14 0 1,0 -28,0" />
+        
+    <!-- Magnifier Handle -->
+    <path
+        android:strokeColor="#FFD56B"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M82,80 L92,90" />
 </vector>

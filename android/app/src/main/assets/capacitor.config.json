@@ -1,38 +1,25 @@
 {
-  "appId": "com.clueme.game",
-  "appName": "Clue Me",
-  "webDir": "public",
-  "bundledWebRuntime": false,
-  "android": {
-    "allowMixedContent": true,
-    "captureInput": true,
-    "webContentsDebuggingEnabled": true
-  },
-  "server": {
-    "androidScheme": "https",
-    "cleartext": true,
-    "allowNavigation": [
-      "*.run.app",
-      "*.ai.studio",
-      "discord.com",
-      "*.discord.com",
-      "discordapp.com",
-      "*.discordapp.com"
-    ]
-  },
-  "plugins": {
-    "SplashScreen": {
-      "launchShowDuration": 800,
-      "launchAutoHide": true,
-      "backgroundColor": "#17131a",
-      "androidSplashResourceName": "splash",
-      "androidScaleType": "CENTER_CROP",
-      "showSpinner": false
-    },
-    "StatusBar": {
-      "style": "DARK",
-      "backgroundColor": "#17131a",
-      "overlaysWebView": false
-    }
-  }
+	"appId": "com.clueme.game",
+	"appName": "Clue Me",
+	"webDir": "public",
+	"bundledWebRuntime": false,
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 1200,
+			"launchAutoHide": true,
+			"backgroundColor": "#17131a",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_CROP",
+			"showSpinner": false
+		},
+		"StatusBar": {
+			"style": "DARK",
+			"backgroundColor": "#17131a",
+			"overlaysWebView": false
+		}
+	}
 }

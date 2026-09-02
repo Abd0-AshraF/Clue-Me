@@ -433,15 +433,8 @@ html.cm-v20.mani-dark {
   }
 
   .cm-v20 .cm-teambar {
-    flex: 0 0 auto;
-    max-height: clamp(3.2rem, 9.5dvh, 5.5rem);
-  }
-
-  @media (min-width: 768px) {
-    .cm-v20 .cm-teambar {
-      flex: 7 1 auto;
-      max-height: 9.5rem;
-    }
+    flex: 7 1 auto;
+    max-height: 9.5rem;
   }
 
   .cm-v20 .cm-board-row {
@@ -449,12 +442,10 @@ html.cm-v20.mani-dark {
   }
 
   .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
-    flex: 1 1 auto !important;
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-    aspect-ratio: auto !important;
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    max-height: min(100%, calc(100cqw * 1.04));
   }
 
   .cm-v20 .cm-play-center > .cm-side {
@@ -714,39 +705,38 @@ html.cm-v20.mani-dark {
    ------------------------------------------------------------------------- */
 .cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
-  position: fixed !important;
-  inset-inline-end: clamp(0.75rem, 2vw, 1.25rem) !important;
-  inset-block-end: calc(var(--cm-safe-bottom, 0px) + clamp(4.25rem, 8dvh, 5.25rem)) !important;
-  inset-block-start: auto !important;
-  z-index: 998 !important;
+  position: fixed;
+  inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
+  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
+  z-index: 46;
   display: flex !important; /* re-enable on ≤360px where base hid it */
   flex-direction: column;
-  width: min(calc(100vw - 1.5rem), 18.5rem) !important;
+  width: min(80vw, 15.25rem);
   max-width: calc(100vw - 16px);
-  height: min(42dvh, 21rem);
-  max-height: calc(100dvh - 5.5rem);
+  height: min(48dvh, 23rem);
+  max-height: calc(100dvh - 12px);
   min-height: 8rem;
   box-sizing: border-box;
   flex: none;
   border-radius: 1.25rem;
   overflow: hidden;
-  background: color-mix(in srgb, var(--cm-surface, #1e1926) 90%, transparent) !important;
-  backdrop-filter: blur(20px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
-  border: 3.5px solid var(--cm-border-strong, #524263) !important;
+  background: color-mix(in srgb, var(--cm-surface) 52%, transparent) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 45%, rgba(255, 255, 255, 0.22));
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: scale(0.92) translateY(12px);
-  transform-origin: 100% 100%;
+  transform: translateY(12px) scale(0.97);
+  transform-origin: 0 100%;
   transition:
-    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0.22s;
+    opacity 0.18s ease,
+    transform 0.2s var(--cm-ease),
+    visibility 0.2s;
   box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.55),
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    0 12px 36px rgba(0, 0, 0, 0.25),
+    0 3px 10px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   will-change: transform, opacity;
 }
 
@@ -787,7 +777,7 @@ html.cm-v20.mani-dark {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: scale(1);
+  transform: translateY(0) scale(1);
 }
 
 .cm-v20 .cm-dock .cm-dock-head,
@@ -1702,38 +1692,28 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-back {
 @media (max-width: 640px) {
   .cm-v20 .cm-side-row > .cm-dock,
   .cm-v20 .cm-dock {
-    transform: scale(0.96);
-    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+    transform: translateY(8px);
+    transition: opacity 0.16s ease, transform 0.16s var(--cm-ease), visibility 0.16s;
   }
 
   .cm-v20.cm-log-open .cm-side-row > .cm-dock,
   .cm-v20.cm-log-open .cm-dock {
-    transform: scale(1);
+    transform: translateY(0);
   }
 
   .cm-v20 .cm-side-clue-compose-top {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 0.38rem !important;
-    width: 100% !important;
-  }
-
-  .cm-v20 .cm-side-clue-compose-field {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-  }
-
-  .cm-v20 .cm-side-clue-compose-field > label {
-    display: none !important;
+    grid-template-columns: 1fr;
+    gap: 0.48rem;
   }
 
   .cm-v20 .cm-side-clue-compose-meta {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    flex: 0 0 auto !important;
-    gap: 0.32rem !important;
+    grid-auto-flow: row;
+    justify-content: stretch;
+    gap: 0.45rem;
+  }
+
+  .cm-v20 .cm-side-clue-compose-meta > * {
+    width: 100%;
   }
 
   .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-layout {
@@ -1988,16 +1968,15 @@ html.cm-v20.dark:not(.mani):not(.mani-dark):not(.mot) {
 .cm-v20 .cm-dock {
   position: fixed;
   inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
-  inset-block-start: calc(var(--cm-header-h, 52px) + max(var(--cm-safe-top, 0px), 8px));
-  inset-block-end: auto;
-  z-index: 95;
+  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
+  z-index: 46;
 }
 
 .cm-v20.cm-log-open .cm-dock {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: scale(1);
+  transform: translateY(0);
 }
 
 .cm-v20 .cm-dock .cm-dock-head,
@@ -2931,34 +2910,22 @@ html.cm-v20.cm-min-effects .cm-petals i {
   --cm-vp-w: 100vw;
   --cm-vp-h: 100dvh;
   --cm-header-h: 56px;
-  --cm-board-fit-width: min(100%, 35.5rem);
-  --cm-stage-fit-width: min(100%, 35.5rem);
+  --cm-board-fit-width: min(100%, 40rem);
+  --cm-stage-fit-width: min(100%, 40rem);
   --cm-side-fit-height: 8.5rem;
   --cm-roster-width-fit: 11rem;
 }
 
 .cm-v20 .cm-game-page {
-  height: var(--cm-vp-h, 100dvh);
-  max-height: var(--cm-vp-h, 100dvh);
-  padding-top: max(env(safe-area-inset-top, 0px), var(--cm-safe-top, 0px));
+  height: calc(var(--cm-vp-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
+  max-height: calc(var(--cm-vp-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
   overflow: hidden;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-
-html.cm-v20.cm-discord-activity.cm-ui-phone .cm-game-page {
-  padding-top: max(48px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 48px)) !important;
 }
 
 .cm-v20 .cm-game-shell {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: auto;
-  max-height: 100%;
+  height: calc(var(--cm-vp-h) - var(--cm-header-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
+  max-height: calc(var(--cm-vp-h) - var(--cm-header-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .cm-v20 .cm-game-shell > main {
@@ -2967,35 +2934,29 @@ html.cm-v20.cm-discord-activity.cm-ui-phone .cm-game-page {
   height: 100%;
   max-height: 100%;
   margin-inline: auto;
-  padding-block-end: 0 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  overscroll-behavior: contain;
+  padding-block-end: max(0.2rem, env(safe-area-inset-bottom, 0px)) !important;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: stretch;
-  gap: clamp(0.25rem, 0.8vw, 0.45rem);
 }
 
-.cm-v20 .cm-game-shell > main > [aria-live="polite"],
-.cm-v20 .cm-game-shell > main > .cm-turn-hint,
-.cm-v20 .cm-turn-hint,
-.cm-v20 .cm-game-shell > main > p {
-  flex-shrink: 0 !important;
-  min-height: auto !important;
-  overflow: visible !important;
+.cm-v20 .cm-game-shell > main > [aria-live="polite"] {
   align-self: center !important;
   margin-inline: auto !important;
   justify-content: center !important;
   text-align: center !important;
   width: fit-content !important;
   max-width: min(100%, var(--cm-stage-fit-width, 100%));
-  padding: 0.18rem 0.6rem !important;
-  font-size: clamp(0.72rem, 2.2vw, 0.95rem) !important;
-  line-height: 1.3 !important;
-  white-space: normal !important;
-  word-break: break-word !important;
+}
+
+.cm-v20 .cm-game-shell > main > .cm-turn-hint,
+.cm-v20 .cm-turn-hint,
+.cm-v20 .cm-game-shell > main > p {
+  align-self: center !important;
+  text-align: center !important;
+  margin-inline: auto !important;
 }
 
 .cm-v20 .cm-board-row,
@@ -3013,90 +2974,41 @@ html.cm-v20.cm-discord-activity.cm-ui-phone .cm-game-page {
 
 .cm-v20 .cm-play-center {
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: var(--cm-stage-fit-width);
   margin-inline: auto;
   align-items: stretch;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: 4px;
+  justify-content: space-between;
   flex: 1 1 auto;
   min-height: 0;
 }
 
 .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width,
 .cm-v20 .cm-play-center > .cm-side {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 100%;
+  max-width: none;
   align-self: stretch;
 }
 
 .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
-  flex: 1 1 auto !important;
-  width: 100% !important;
-  margin-inline: auto;
-  margin-bottom: 0 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: 100% !important;
-  aspect-ratio: 4 / 3 !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-  border-top-left-radius: 0.85rem !important;
-  border-top-right-radius: 0.85rem !important;
-}
-
-.cm-v20 .cm-board-frame > .grid {
-  display: grid !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
-  width: 100% !important;
-  height: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.cm-v20 .cm-word,
-.cm-v20 .cm-flip,
-.cm-v20 .cm-cell {
-  writing-mode: horizontal-tb !important;
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  direction: rtl !important;
-}
-
-.cm-v20 .cm-word {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  max-width: 98% !important;
-  overflow: hidden !important;
-  text-overflow: clip !important;
-  text-align: center !important;
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  direction: rtl !important;
-}
-
-.cm-v20 .cm-play-center > .cm-side,
-html.cm-v20 .cm-side,
-html.cm-v20.cm-ui-side-teams .cm-play-center > .cm-side,
-html.cm-v20.cm-ui-desktop .cm-play-center > .cm-side,
-html.cm-v20.cm-ui-tablet .cm-play-center > .cm-side {
   flex: 0 0 auto;
-  width: min(100%, var(--cm-board-fit-width)) !important;
-  margin-inline: auto !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
+  width: min(100%, var(--cm-board-fit-width));
+  margin-inline: auto;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 4 / 3;
+}
+
+.cm-v20 .cm-play-center > .cm-side {
+  flex: 0 0 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
   overflow: visible;
-  margin-top: 0 !important;
+  margin-top: auto !important;
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  border-bottom-left-radius: 0.85rem !important;
-  border-bottom-right-radius: 0.85rem !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .cm-v20 .cm-side-row,
@@ -3143,135 +3055,27 @@ html.cm-v20.cm-ui-phone .cm-side-row:has(> .cm-dock.cm-dock-tall) {
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar {
-  width: 100% !important;
-  max-width: 100% !important;
-  gap: 0.5rem !important;
-  overflow: visible !important;
-  flex-shrink: 0 !important;
+  gap: 0.35rem;
 }
 
-/* Enlarge team list container for both teams */
 html.cm-v20.cm-ui-phone .cm-teambar-side {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  justify-content: flex-start !important;
-  padding: 0.6rem 0.8rem !important;
-  border-radius: 1.15rem !important;
-  gap: 0.4rem !important;
-  min-height: 4.8rem !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22) !important;
-  overflow: visible !important;
+  padding: 0.42rem 0.52rem;
 }
 
-html.cm-v20.cm-ui-phone .cm-teambar-head {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  font-size: 0.95rem !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.01em !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-  padding-bottom: 0.35rem !important;
-  margin-bottom: 0.1rem !important;
-}
-
-html.cm-v20.cm-ui-phone .cm-teambar-icon-badge {
-  width: 1.5rem !important;
-  height: 1.5rem !important;
-}
-
-html.cm-v20.cm-ui-phone .cm-teambar-count {
-  min-width: 2rem !important;
-  padding: 0.12rem 0.5rem !important;
-  font-size: 0.85rem !important;
-  font-weight: 900 !important;
-}
-
-/* Player chips container inside teambar side */
-html.cm-v20.cm-ui-phone .cm-teambar-players {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 0.35rem !important;
-  width: 100% !important;
-  min-height: 2rem !important;
-  overflow: visible !important;
-}
-
-/* Reduced player font size, elegant pill styling, clean layout for people */
 html.cm-v20.cm-ui-phone .cm-teambar-player.cm-mobile-roster-chip {
-  display: inline-flex !important;
-  align-items: center !important;
-  min-height: 1.5rem !important;
-  padding: 0.15rem 0.5rem !important;
-  font-size: 0.7rem !important;
-  font-weight: 800 !important;
-  gap: 0.3rem !important;
-  border-radius: 999px !important;
-  background: var(--cm-surface, #1e1926) !important;
-  border: 1.5px solid var(--cm-border, rgba(255, 255, 255, 0.18)) !important;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.14) !important;
-  max-width: 100% !important;
-  white-space: nowrap !important;
-  flex-shrink: 0 !important;
-}
-
-html.cm-v20.cm-ui-phone .cm-teambar-player .h-5.w-5,
-html.cm-v20.cm-ui-phone .cm-teambar-player img {
-  width: 1.25rem !important;
-  height: 1.25rem !important;
-  border-radius: 50% !important;
-  border: 1px solid var(--cm-lobby-icon-border, rgba(255,255,255,0.2)) !important;
-  flex-shrink: 0 !important;
-  object-fit: cover !important;
-}
-
-html.cm-v20.cm-ui-phone .cm-mobile-roster-captain .cm-teambar-role {
-  display: inline-flex !important;
-  align-items: center !important;
-  padding: 0.05rem 0.32rem !important;
-  font-size: 0.58rem !important;
-  font-weight: 850 !important;
-  border-radius: 0.35rem !important;
-  background: linear-gradient(135deg, #ffd700, #ffa500) !important;
-  color: #222 !important;
-  border: none !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
-  flex-shrink: 0 !important;
-}
-
-html.cm-v20.cm-ui-phone .cm-mobile-roster-operative .cm-teambar-role {
-  display: inline-flex !important;
-  align-items: center !important;
-  padding: 0.05rem 0.28rem !important;
-  font-size: 0.58rem !important;
-  font-weight: 800 !important;
-  border-radius: 0.35rem !important;
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: inherit !important;
-  flex-shrink: 0 !important;
-}
-
-/* Adjust board frame size on phone to give teambar more vertical room */
-html.cm-v20.cm-ui-phone .cm-play-center > .cm-board-frame.cm-game-width {
-  aspect-ratio: 4 / 3.4 !important;
-  max-height: 48dvh !important;
+  min-height: 1.5rem;
+  padding: 0.14rem 0.42rem;
+  font-size: 0.7rem;
 }
 
 html.cm-v20.cm-ui-phone .cm-word {
-  font-size: clamp(0.55rem, 2.9vw, 0.92rem) !important;
-  line-height: 1.1 !important;
-  letter-spacing: -0.01em !important;
+  font-size: clamp(0.6rem, 3.25vw, 0.96rem);
+  line-height: 1.08;
 }
 
 html.cm-v20.cm-ui-phone .cm-word-plate {
-  max-width: 98% !important;
-  padding: 0.08em 0.25em !important;
+  max-width: 90%;
+  padding: 0.14em 0.46em;
 }
 
 html.cm-v20.cm-ui-phone.cm-ui-short .cm-side {
@@ -3364,10 +3168,9 @@ html.cm-v20.cm-ui-desktop {
 html.cm-v20.cm-ui-desktop .cm-board-row,
 html.cm-v20.cm-ui-side-teams .cm-board-row {
   display: grid;
-  grid-template-columns: var(--cm-roster-width-fit, 13rem) minmax(0, 1fr) var(--cm-roster-width-fit, 13rem);
-  align-items: stretch;
+  grid-template-columns: minmax(var(--cm-roster-width-fit), 1fr) minmax(0, var(--cm-stage-fit-width)) minmax(var(--cm-roster-width-fit), 1fr);
+  align-items: start;
   gap: var(--cm-fluid-gap);
-  width: 100%;
 }
 
 html.cm-v20.cm-ui-desktop .cm-board-row > .cm-play-center,
@@ -3375,7 +3178,7 @@ html.cm-v20.cm-ui-side-teams .cm-board-row > .cm-play-center {
   grid-column: 2;
   grid-row: 1;
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: var(--cm-stage-fit-width);
   justify-self: stretch;
 }
 
@@ -4442,41 +4245,39 @@ html.cm-v20.cm-ui-desktop .cm-clue-live-dot {
 .cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
   touch-action: auto !important;
-  background: var(--cm-surface, #1e1926) !important;
 }
 
-/* Top Grab Handle Pill - Thicker & Larger Drag Area */
+/* Top Grab Handle Pill */
 .cm-v20 .cm-dock .cm-dock-android-handle,
 .cm-v20 .cm-dock-android-handle {
-  width: 60px !important;
-  height: 7px !important;
-  margin: 7px auto 4px !important;
+  width: 52px !important;
+  height: 5px !important;
+  margin: 6px auto 3px !important;
   border-radius: 999px !important;
-  background: color-mix(in srgb, var(--cm-ink) 48%, transparent) !important;
+  background: color-mix(in srgb, var(--cm-ink) 38%, transparent) !important;
   flex: 0 0 auto !important;
   pointer-events: auto !important;
   touch-action: none !important;
   cursor: grab !important;
-  transition: width 0.15s ease, background-color 0.15s ease, height 0.15s ease;
+  transition: width 0.15s ease, background-color 0.15s ease;
 }
 
 .cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle,
 .cm-v20 .cm-dock:hover .cm-dock-android-handle {
-  background: var(--cm-blue, #38bdf8) !important;
-  width: 74px !important;
-  height: 8px !important;
+  background: var(--cm-blue) !important;
+  width: 64px !important;
 }
 
-/* Window Header Bar (Thicker Grab Surface) */
+/* Window Header Bar (Grab Surface) */
 .cm-v20 .cm-dock .cm-dock-head,
 .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 0.5rem !important;
-  padding: 0.55rem 0.8rem 0.55rem !important;
-  background: var(--cm-surface, #1e1926) !important;
-  border-bottom: 2.5px solid var(--cm-border-strong, #524263) !important;
+  padding: 0.35rem 0.65rem 0.45rem !important;
+  background: color-mix(in srgb, var(--cm-surface) 65%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent) !important;
   touch-action: none !important;
   cursor: grab !important;
   user-select: none !important;
@@ -4825,35 +4626,28 @@ html.cm-v20.mani-dark .cm-teambar-blue {
 @media (max-width: 640px), (max-height: 700px) {
   .cm-v20 .cm-dock,
   .cm-v20 .cm-side-row > .cm-dock {
-    width: clamp(12rem, 72vw, 14.5rem) !important;
-    height: min(42dvh, 17.5rem) !important;
-    border-radius: 1.1rem !important;
-    border-width: 3.5px !important;
-    border-style: solid !important;
-    border-color: var(--cm-border-strong, #524263) !important;
-    background: color-mix(in srgb, var(--cm-surface, #1e1926) 82%, transparent) !important;
-    backdrop-filter: blur(20px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+    width: clamp(11.5rem, 68vw, 13.5rem) !important;
+    height: min(40dvh, 16.5rem) !important;
+    border-radius: 1.05rem !important;
+    border-width: 1.5px !important;
   }
 
   .cm-v20 .cm-dock.cm-dock-tall,
   .cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
-    height: min(60dvh, 23rem) !important;
+    height: min(58dvh, 22rem) !important;
   }
 
   .cm-v20 .cm-dock-android-handle,
   .cm-v20 .cm-dock .cm-dock-android-handle {
-    width: 58px !important;
-    height: 7px !important;
-    margin: 6px auto 3px !important;
-    background: color-mix(in srgb, var(--cm-ink) 55%, transparent) !important;
+    width: 38px !important;
+    height: 3.5px !important;
+    margin: 5px auto 2px !important;
   }
 
   .cm-v20 .cm-dock .cm-dock-head,
   .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
-    padding: 0.45rem 0.65rem 0.45rem !important;
+    padding: 0.2rem 0.45rem 0.32rem !important;
     gap: 0.35rem !important;
-    background: color-mix(in srgb, var(--cm-surface, #1e1926) 88%, transparent) !important;
   }
 
   .cm-v20 .cm-dock-title,
@@ -4928,244 +4722,3 @@ html.cm-v20.mani-dark .cm-teambar-blue {
     padding: 0.6rem !important;
   }
 }
-
-/* ============================================================================
-   INNOVATIVE MODULES STYLING: MULTI-THEME PROFESSIONAL STYLING
-   (Supports: Default Light, Dark Obsidian, MOT Tactical, Mani Light, Mani Dark)
-   ========================================================================== */
-
-#cm-particle-canvas {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  pointer-events: none !important;
-  z-index: 99999 !important;
-}
-
-/* AI Clue Risk & Safety Badge - Theme Adaptations */
-.cm-ai-risk-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.38rem 0.8rem;
-  border-radius: 12px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  margin-top: 0.45rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  user-select: none;
-}
-
-/* Default / Light Theme */
-.cm-ai-risk-badge.cm-safe {
-  background: rgba(16, 185, 129, 0.12);
-  color: #047857;
-  border-color: rgba(16, 185, 129, 0.35);
-}
-
-.cm-ai-risk-badge.cm-warning {
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
-  border-color: rgba(245, 158, 11, 0.35);
-}
-
-.cm-ai-risk-badge.cm-danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: #b91c1c;
-  border-color: rgba(239, 68, 68, 0.4);
-  animation: cmPulseDanger 1.2s infinite ease-in-out;
-}
-
-/* Obsidian Dark Theme */
-html.dark .cm-ai-risk-badge.cm-safe {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.4);
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
-}
-
-html.dark .cm-ai-risk-badge.cm-warning {
-  background: rgba(245, 158, 11, 0.22);
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.45);
-}
-
-html.dark .cm-ai-risk-badge.cm-danger {
-  background: rgba(239, 68, 68, 0.25);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.5);
-}
-
-/* MOT Tactical Eye-Care Theme */
-html.mot .cm-ai-risk-badge {
-  border-radius: 8px;
-  font-family: monospace, system-ui;
-  letter-spacing: 0.02em;
-}
-
-html.mot .cm-ai-risk-badge.cm-safe {
-  background: rgba(56, 189, 248, 0.18);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.5);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
-}
-
-html.mot .cm-ai-risk-badge.cm-warning {
-  background: rgba(251, 191, 36, 0.22);
-  color: #fde047;
-  border-color: #fbbf24;
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
-}
-
-html.mot .cm-ai-risk-badge.cm-danger {
-  background: rgba(244, 63, 94, 0.25);
-  color: #fb7185;
-  border-color: #f43f5e;
-  box-shadow: 0 0 16px rgba(244, 63, 94, 0.35);
-}
-
-/* Mani Light Theme (Sakura Curves) */
-html.mani .cm-ai-risk-badge {
-  border-radius: 9999px;
-  padding: 0.4rem 0.9rem;
-}
-
-html.mani .cm-ai-risk-badge.cm-safe {
-  background: #f0fdf4;
-  color: #15803d;
-  border-color: #86efac;
-}
-
-html.mani .cm-ai-risk-badge.cm-warning {
-  background: #fffbeb;
-  color: #a16207;
-  border-color: #fde047;
-}
-
-html.mani .cm-ai-risk-badge.cm-danger {
-  background: #fff1f2;
-  color: #be123c;
-  border-color: #fda4af;
-}
-
-/* Mani Dark Twilight Theme (Cosmic Glow) */
-html.mani-dark .cm-ai-risk-badge {
-  border-radius: 9999px;
-  padding: 0.4rem 0.9rem;
-}
-
-html.mani-dark .cm-ai-risk-badge.cm-safe {
-  background: rgba(232, 121, 249, 0.2);
-  color: #f0abfc;
-  border-color: rgba(232, 121, 249, 0.45);
-  box-shadow: 0 0 15px rgba(232, 121, 249, 0.2);
-}
-
-html.mani-dark .cm-ai-risk-badge.cm-warning {
-  background: rgba(251, 146, 60, 0.22);
-  color: #fdba74;
-  border-color: rgba(251, 146, 60, 0.5);
-}
-
-html.mani-dark .cm-ai-risk-badge.cm-danger {
-  background: rgba(244, 63, 94, 0.28);
-  color: #fda4af;
-  border-color: rgba(244, 63, 94, 0.55);
-}
-
-@keyframes cmPulseDanger {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.03); opacity: 0.88; }
-}
-
-/* Floating Game Bubble - Multi-Theme Integration */
-#cm-floating-bubble {
-  position: fixed;
-  bottom: 5.5rem;
-  right: 1.2rem;
-  z-index: 9990;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 0.95rem;
-  border-radius: 9999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, background 0.25s ease;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  
-  /* Default Light Mode Bubble */
-  background: rgba(255, 255, 255, 0.92);
-  color: #1e293b;
-  border: 1.5px solid rgba(124, 58, 237, 0.35);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(124, 58, 237, 0.15);
-}
-
-/* Obsidian Dark Bubble */
-html.dark #cm-floating-bubble {
-  background: rgba(23, 19, 26, 0.9);
-  color: #f3f4f6;
-  border: 1.5px solid rgba(139, 92, 246, 0.45);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(139, 92, 246, 0.28);
-}
-
-/* MOT Tactical Bubble */
-html.mot #cm-floating-bubble {
-  background: #0f172a;
-  color: #f8fafc;
-  border: 1.5px solid #38bdf8;
-  border-radius: 12px;
-  font-family: monospace, system-ui;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.65), 0 0 14px rgba(56, 189, 248, 0.35);
-}
-
-/* Mani Light Bubble */
-html.mani #cm-floating-bubble {
-  background: rgba(255, 241, 244, 0.94);
-  color: #881337;
-  border: 1.5px solid #fb7185;
-  box-shadow: 0 10px 25px rgba(251, 113, 133, 0.22);
-}
-
-/* Mani Dark Twilight Bubble */
-html.mani-dark #cm-floating-bubble {
-  background: rgba(23, 15, 36, 0.94);
-  color: #f5d0fe;
-  border: 1.5px solid #e879f9;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(232, 121, 249, 0.35);
-}
-
-#cm-floating-bubble:active {
-  cursor: grabbing;
-  transform: scale(0.95);
-}
-
-#cm-floating-bubble .cm-bubble-pulse {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
-  animation: cmBubbleGlow 1.5s infinite ease-in-out;
-}
-
-@keyframes cmBubbleGlow {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.35); opacity: 0.55; }
-}
-
-[dir="rtl"] #cm-floating-bubble {
-  right: auto;
-  left: 1.2rem;
-}
-
-
