@@ -913,7 +913,7 @@ html.cm-discord-activity #root > div,
 html.cm-discord-activity .cm-game-page,
 html.cm-discord-activity .cm-home-page,
 html.cm-discord-activity .cm-lobby-page {
-  padding-top: max(var(--cm-safe-top, 84px), 84px) !important;
+  padding-top: max(var(--cm-safe-top, 48px), 48px) !important;
   padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
 }
 

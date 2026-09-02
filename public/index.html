@@ -74,12 +74,13 @@
       html.cm-discord-activity #root > div {
         min-height: 100vh;
         box-sizing: border-box !important;
-        padding-top: max(var(--cm-safe-top, 84px), 84px) !important;
+        padding-top: max(var(--cm-safe-top, 48px), 48px) !important;
         padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
       }
       html.cm-discord-activity header.sticky,
       html.cm-discord-activity .sticky.top-0 {
-        top: max(var(--cm-safe-top, 84px), 84px) !important;
+        position: relative !important;
+        top: 0 !important;
       }
       html.cm-discord-activity .cm-game-page,
       html.cm-discord-activity .cm-home-page,
@@ -195,28 +196,91 @@
           } catch(e) {}
         };
 
-        // Intercept link clicks in Discord activity to prevent disallowed page navigation
-        document.addEventListener("click", function(e) {
-          var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
-          if (anchor) {
-            var href = anchor.getAttribute("href");
-            if (!href || href === "#" || href.indexOf("javascript:") === 0) {
-              e.preventDefault();
-              return;
-            }
-            if (document.documentElement.classList.contains("cm-discord-activity")) {
-              if (href.indexOf("http://") === 0 || href.indexOf("https://") === 0) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (window.discordSdk && window.discordSdk.commands && window.discordSdk.commands.openExternalLink) {
-                  window.discordSdk.commands.openExternalLink({ url: href }).catch(function(){});
-                } else {
-                  window.open(href, "_blank", "noopener,noreferrer");
+        // Intercept link clicks and prevent top-level navigation in Discord activity
+        (function() {
+          var isDiscord = document.documentElement.classList.contains("cm-discord-activity") ||
+                          location.search.indexOf("frame_id") !== -1 ||
+                          location.search.indexOf("instance_id") !== -1 ||
+                          location.search.indexOf("activity=mock") !== -1;
+
+          if (isDiscord) {
+            document.documentElement.classList.add("cm-discord-activity");
+
+            var safeOpenExternal = function(url) {
+              if (!url) return;
+              if (window.discordSdk && window.discordSdk.commands && window.discordSdk.commands.openExternalLink) {
+                window.discordSdk.commands.openExternalLink({ url: url }).catch(function(){});
+              }
+            };
+
+            window.open = function(url) {
+              if (url && (url.indexOf("http://") === 0 || url.indexOf("https://") === 0)) {
+                safeOpenExternal(url);
+              }
+              return null;
+            };
+
+            window.location.assign = function(url) {
+              if (!url) return;
+              if (url.indexOf("http://") === 0 || url.indexOf("https://") === 0) {
+                safeOpenExternal(url);
+                return;
+              }
+              window.history.pushState({}, "", url);
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            };
+
+            window.location.replace = function(url) {
+              if (!url) return;
+              if (url.indexOf("http://") === 0 || url.indexOf("https://") === 0) {
+                safeOpenExternal(url);
+                return;
+              }
+              window.history.replaceState({}, "", url);
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            };
+
+            document.addEventListener("click", function(e) {
+              var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
+              if (anchor) {
+                var href = anchor.getAttribute("href");
+                if (!href || href === "#" || href.indexOf("javascript:") === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return;
+                }
+                if (href.indexOf("http://") === 0 || href.indexOf("https://") === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  safeOpenExternal(href);
+                  return;
+                }
+                if (href.indexOf("/") === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.history.pushState({}, "", href);
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                  return;
                 }
               }
-            }
+            }, true);
+
+            document.addEventListener("submit", function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }, true);
+          } else {
+            document.addEventListener("click", function(e) {
+              var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
+              if (anchor) {
+                var href = anchor.getAttribute("href");
+                if (!href || href === "#" || href.indexOf("javascript:") === 0) {
+                  e.preventDefault();
+                }
+              }
+            }, true);
           }
-        }, true);
+        })();
 
         // Attach subtle touch feedback to buttons and interactive elements
         document.addEventListener("click", function(e) {

@@ -37,7 +37,7 @@
 
     /* Enforce safe top padding ONLY for Discord activity overlay controls */
     if (isDiscord) {
-      if (top < 84) top = 84;
+      if (top < 48) top = 48;
       if (bottom < 12) bottom = 12;
     } else if (isPhone) {
       if (top < 4) top = 4;
