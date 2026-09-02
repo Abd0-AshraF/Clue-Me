@@ -35,9 +35,13 @@
 
     var isPhone = root.classList.contains('cm-ui-phone') || (window.innerWidth <= 768 && window.innerHeight <= 950);
 
-    /* Enforce safe top padding ONLY for Discord mobile activity overlay controls */
-    if (isDiscord && isPhone) {
-      if (top < 48) top = 48;
+    /* Enforce safe top padding ONLY for Discord activity overlay controls */
+    if (isDiscord) {
+      if (isPhone) {
+        if (top < 76) top = 76;
+      } else {
+        if (top < 64) top = 64;
+      }
       if (bottom < 12) bottom = 12;
     } else if (isPhone) {
       if (top < 4) top = 4;

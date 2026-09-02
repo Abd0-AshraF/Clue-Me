@@ -666,20 +666,31 @@
     return fallback;
   }
 
+  function applyThemeClasses(theme) {
+    try { localStorage.setItem('clue-me:theme', theme); } catch (e) {}
+    var isDark = theme === 'dark' || theme === 'mani-dark' || theme === 'mot' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    html.classList.toggle('dark', isDark);
+    html.classList.toggle('mani', theme === 'mani' || theme === 'mani-dark');
+    html.classList.toggle('mani-dark', theme === 'mani-dark');
+    html.classList.toggle('mot', theme === 'mot');
+  }
+
   function cycleThemePref() {
     try {
       var list = ['light', 'dark', 'mani', 'mani-dark', 'mot', 'system'];
       var cur = localStorage.getItem('clue-me:theme') || 'system';
       var idx = list.indexOf(cur);
       var next = list[(idx + 1 + list.length) % list.length];
-      localStorage.setItem('clue-me:theme', next);
+      applyThemeClasses(next);
     } catch (e) {}
-    location.reload();
   }
 
   function setHomeLang(lang) {
-    try { localStorage.setItem('clue-me:lang', lang === 'ar' ? 'ar' : 'en'); } catch (e) {}
-    location.reload();
+    var nextLang = lang === 'ar' ? 'ar' : 'en';
+    try { localStorage.setItem('clue-me:lang', nextLang); } catch (e) {}
+    html.lang = nextLang;
+    html.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+    window.dispatchEvent(new CustomEvent('cm:lang-changed', { detail: nextLang }));
   }
 
   function setHomeMenuOpen(open) {
@@ -809,15 +820,7 @@
           var chosen = ev.currentTarget.getAttribute('data-theme');
           setHomeMenuOpen(false);
           if (chosen) {
-            try {
-              localStorage.setItem('clue-me:theme', chosen);
-              var isDark = chosen === 'dark' || chosen === 'mani-dark' || chosen === 'mot' || (chosen === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-              html.classList.toggle('dark', isDark);
-              html.classList.toggle('mani', chosen === 'mani' || chosen === 'mani-dark');
-              html.classList.toggle('mani-dark', chosen === 'mani-dark');
-              html.classList.toggle('mot', chosen === 'mot');
-              location.reload();
-            } catch (e) {}
+            applyThemeClasses(chosen);
           } else {
             cycleThemePref();
           }

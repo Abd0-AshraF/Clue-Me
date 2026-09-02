@@ -908,11 +908,11 @@ html, body, #root {
   padding-bottom: max(var(--cm-safe-bottom, 0px), 12px) !important;
 }
 
-html.cm-discord-activity.cm-ui-phone .cm-game-page,
-html.cm-discord-activity.cm-ui-phone .cm-home-page,
-html.cm-discord-activity.cm-ui-phone .cm-lobby-page {
-  padding-top: max(var(--cm-safe-top, 0px), 38px) !important;
-  padding-bottom: max(var(--cm-safe-bottom, 0px), 48px) !important;
+html.cm-discord-activity .cm-game-page,
+html.cm-discord-activity .cm-home-page,
+html.cm-discord-activity .cm-lobby-page {
+  padding-top: max(var(--cm-safe-top, 72px), 72px) !important;
+  padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
 }
 
 html.cm-ui-phone:not(.cm-discord-activity) .cm-game-page,

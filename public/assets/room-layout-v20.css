@@ -2947,8 +2947,8 @@ html.cm-v20.cm-min-effects .cm-petals i {
   flex-direction: column;
 }
 
-html.cm-v20.cm-discord-activity.cm-ui-phone .cm-game-page {
-  padding-top: max(48px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 48px)) !important;
+html.cm-v20.cm-discord-activity .cm-game-page {
+  padding-top: max(72px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 72px)) !important;
 }
 
 .cm-v20 .cm-game-shell {
