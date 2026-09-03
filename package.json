@@ -20,6 +20,7 @@
     "db:migrate": "node scripts/check-config.mjs --database-only",
     "config:check": "node scripts/check-config.mjs",
     "test": "node --test tests/game-engine.test.mjs",
+    "generate:icons": "node scripts/generate-android-icons.cjs",
     "cap:sync": "cap sync",
     "cap:android": "cap add android && cap sync android",
     "cap:ios": "cap add ios && cap sync ios",
@@ -39,6 +40,7 @@
     "@resvg/resvg-js": "^2.6.2"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "sharp": "^0.35.4"
   }
 }

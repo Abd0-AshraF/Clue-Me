@@ -666,20 +666,31 @@
     return fallback;
   }
 
+  function applyThemeClasses(theme) {
+    try { localStorage.setItem('clue-me:theme', theme); } catch (e) {}
+    var isDark = theme === 'dark' || theme === 'mani-dark' || theme === 'mot' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    html.classList.toggle('dark', isDark);
+    html.classList.toggle('mani', theme === 'mani' || theme === 'mani-dark');
+    html.classList.toggle('mani-dark', theme === 'mani-dark');
+    html.classList.toggle('mot', theme === 'mot');
+  }
+
   function cycleThemePref() {
     try {
       var list = ['light', 'dark', 'mani', 'mani-dark', 'mot', 'system'];
       var cur = localStorage.getItem('clue-me:theme') || 'system';
       var idx = list.indexOf(cur);
       var next = list[(idx + 1 + list.length) % list.length];
-      localStorage.setItem('clue-me:theme', next);
+      applyThemeClasses(next);
     } catch (e) {}
-    location.reload();
   }
 
   function setHomeLang(lang) {
-    try { localStorage.setItem('clue-me:lang', lang === 'ar' ? 'ar' : 'en'); } catch (e) {}
-    location.reload();
+    var nextLang = lang === 'ar' ? 'ar' : 'en';
+    try { localStorage.setItem('clue-me:lang', nextLang); } catch (e) {}
+    html.lang = nextLang;
+    html.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+    window.dispatchEvent(new CustomEvent('cm:lang-changed', { detail: nextLang }));
   }
 
   function setHomeMenuOpen(open) {
@@ -796,7 +807,7 @@
           setHomeMenuOpen(false);
           window.requestAnimationFrame(function () {
             if (clickable) clickable.click();
-            else location.assign('/login');
+            else { window.history.pushState({}, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')); }
             window.setTimeout(function () {
               try { syncMobileHomeHeader(); } catch (e) {}
             }, 0);
@@ -809,15 +820,7 @@
           var chosen = ev.currentTarget.getAttribute('data-theme');
           setHomeMenuOpen(false);
           if (chosen) {
-            try {
-              localStorage.setItem('clue-me:theme', chosen);
-              var isDark = chosen === 'dark' || chosen === 'mani-dark' || chosen === 'mot' || (chosen === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-              html.classList.toggle('dark', isDark);
-              html.classList.toggle('mani', chosen === 'mani' || chosen === 'mani-dark');
-              html.classList.toggle('mani-dark', chosen === 'mani-dark');
-              html.classList.toggle('mot', chosen === 'mot');
-              location.reload();
-            } catch (e) {}
+            applyThemeClasses(chosen);
           } else {
             cycleThemePref();
           }
@@ -3381,16 +3384,12 @@
   }
 
   function mirrorFloatTransform(sourceEl) {
-    var dock = linkedDock();
-    if (!sourceEl) return;
-    var tr = sourceEl.style.transform || '';
-    if (sourceEl !== fab) fab.style.transform = tr;
-    if (dock && sourceEl !== dock) dock.style.transform = tr;
+    /* Dock and FAB are separate elements and do not copy each other's position. */
   }
 
   function clearLinkedFloatTransform() {
-    var dock = linkedDock();
     fab.style.transform = '';
+    var dock = linkedDock();
     if (dock) dock.style.transform = '';
   }
 
@@ -3419,164 +3418,55 @@
 
   function applyLinkedSavedTransform(force) {
     if (isFloatDragging()) return;
-    if (!force && fab.dataset.cmDockCloseAnchor === '1') return;
 
     var raw = '';
-    var anchorRaw = '';
     try {
       raw = localStorage.getItem(FAB_POS_KEY) || '';
-      anchorRaw = localStorage.getItem(FAB_CLOSE_ANCHOR_KEY) || '';
     } catch (e) {}
     var dock = linkedDock();
-    var signature = [raw, anchorRaw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
+    var signature = [raw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
 
-    /* The FAB lives outside React. Re-applying an unchanged translate on every
-       DOM sync can make it drift or shake horizontally. Recalculate only after
-       a real resize, a new dock node, or a changed saved position. */
     if (!force && signature === lastLinkedFloatSignature && dock === lastLinkedFloatDock) return;
 
     var saved = null;
-    var closeAnchor = null;
     try {
       saved = raw ? JSON.parse(raw) : null;
-      closeAnchor = anchorRaw ? JSON.parse(anchorRaw) : null;
     } catch (e) {}
 
-    /* A closed drawer presents the icon exactly at the X button's last
-       position. This is intentionally independent from the drawer transform. */
-    if (!open && !fab.hidden && closeAnchor && closeAnchor.v === 2 &&
-        Number.isFinite(closeAnchor.tx) && Number.isFinite(closeAnchor.ty)) {
-      var anchorRect = fab.getBoundingClientRect();
-      var anchorCurrent = readTranslate(fab);
-      var anchorBase = {
-        left: anchorRect.left - anchorCurrent.x,
-        top: anchorRect.top - anchorCurrent.y,
-        width: anchorRect.width,
-        height: anchorRect.height
-      };
-      var anchored = clampToViewport(
-        anchorBase.left + closeAnchor.tx,
-        anchorBase.top + closeAnchor.ty,
-        anchorBase.width,
-        anchorBase.height
-      );
-      var anchorTx = anchored.left - anchorBase.left;
-      var anchorTy = anchored.top - anchorBase.top;
-      fab.style.transform = 'translate3d(' + anchorTx + 'px,' + anchorTy + 'px,0)';
-      fab.dataset.cmDockCloseAnchor = '1';
-      if (anchorTx !== closeAnchor.tx || anchorTy !== closeAnchor.ty) {
-        try {
-          anchorRaw = JSON.stringify({ v: 2, tx: anchorTx, ty: anchorTy });
-          localStorage.setItem(FAB_CLOSE_ANCHOR_KEY, anchorRaw);
-          signature = [raw, anchorRaw, 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
-        } catch (e) {}
-      }
-      lastLinkedFloatSignature = signature;
-      lastLinkedFloatDock = dock;
-      return;
-    }
-
     if (!saved || (typeof saved.tx !== 'number' && typeof saved.x !== 'number')) {
-      clearLinkedFloatTransform();
+      fab.style.transform = '';
       lastLinkedFloatSignature = signature;
       lastLinkedFloatDock = dock;
       return;
     }
 
-    /* When the floating dock is open, clamp the dock itself strictly to the screen */
-    if (open && dock) {
-      var dockRect = dock.getBoundingClientRect();
-      var dockCurrent = readTranslate(dock);
-      var dockBase = {
-        left: dockRect.left - dockCurrent.x,
-        top: dockRect.top - dockCurrent.y,
-        width: dockRect.width || 320,
-        height: dockRect.height || 260
-      };
-      var targetDock;
-      if (saved && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-        targetDock = clampToViewport(
-          dockBase.left + saved.tx,
-          dockBase.top + saved.ty,
-          dockBase.width,
-          dockBase.height
-        );
-      } else if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
-        targetDock = clampToViewport(
-          saved.x * window.innerWidth,
-          saved.y * window.innerHeight,
-          dockBase.width,
-          dockBase.height
-        );
-      } else {
-        targetDock = clampToViewport(
-          dockBase.left,
-          dockBase.top,
-          dockBase.width,
-          dockBase.height
-        );
-      }
-      var dTx = targetDock.left - dockBase.left;
-      var dTy = targetDock.top - dockBase.top;
-      dock.style.transform = 'translate3d(' + dTx + 'px,' + dTy + 'px,0)';
-      fab.style.transform = dock.style.transform;
-      lastLinkedFloatSignature = signature;
-      lastLinkedFloatDock = dock;
-      return;
-    }
-
-    /* While the hybrid drawer is open the FAB is intentionally hidden and its
-       rect is 0 × 0. Keep the stored v2 offset verbatim so a React redraw of
-       the dock cannot corrupt its position from a zero-sized measurement. */
-    if (fab.hidden && saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-      fab.style.transform = 'translate3d(' + saved.tx + 'px,' + saved.ty + 'px,0)';
-      if (dock) dock.style.transform = fab.style.transform;
-      lastLinkedFloatSignature = signature;
-      lastLinkedFloatDock = dock;
-      return;
-    }
-
-    /* v2 stores the FAB's transform offset, not a normalized coordinate from
-       the drawer's different fixed base. It restores exactly at the same size
-       and clamps safely once when the viewport truly changes. */
     var fabRect = fab.getBoundingClientRect();
     var current = readTranslate(fab);
+    var fabW = fabRect.width || 48;
+    var fabH = fabRect.height || 48;
     var fabBase = {
       left: fabRect.left - current.x,
-      top: fabRect.top - current.y,
-      width: fabRect.width,
-      height: fabRect.height
+      top: fabRect.top - current.y
     };
-    var target;
-    if (saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
-      target = clampToViewport(
-        fabBase.left + saved.tx,
-        fabBase.top + saved.ty,
-        fabBase.width,
-        fabBase.height
-      );
-    } else {
-      /* Read older normalized saved positions once, then migrate them to the
-         stable transform-offset format below. */
-      target = clampToViewport(
-        saved.x * window.innerWidth,
-        saved.y * window.innerHeight,
-        fabBase.width,
-        fabBase.height
-      );
-    }
-    var tx = target.left - fabBase.left;
-    var ty = target.top - fabBase.top;
-    fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
-    mirrorFloatTransform(fab);
 
-    if (saved.v !== 2 || !Number.isFinite(saved.tx) || !Number.isFinite(saved.ty)) {
-      try {
-        raw = JSON.stringify({ v: 2, tx: tx, ty: ty });
-        localStorage.setItem(FAB_POS_KEY, raw);
-        signature = [raw, anchorRaw, open ? 1 : 0, window.innerWidth || 0, window.innerHeight || 0].join('|');
-      } catch (e) {}
+    var winW = window.innerWidth || 360;
+    var winH = window.innerHeight || 600;
+
+    var targetLeft, targetTop;
+    if (saved.v === 2 && Number.isFinite(saved.tx) && Number.isFinite(saved.ty)) {
+      targetLeft = fabBase.left + saved.tx;
+      targetTop = fabBase.top + saved.ty;
+    } else {
+      targetLeft = saved.x * winW;
+      targetTop = saved.y * winH;
     }
+
+    var clamped = clampToViewport(targetLeft, targetTop, fabW, fabH);
+    var tx = clamped.left - fabBase.left;
+    var ty = clamped.top - fabBase.top;
+
+    fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
+
     lastLinkedFloatSignature = signature;
     lastLinkedFloatDock = dock;
   }
@@ -3614,36 +3504,8 @@
   }
 
   function anchorFabAtCloseButton(closeRect) {
-    if (!closeRect) return;
-    window.requestAnimationFrame(function () {
-      if (fab.hidden) return;
-      var fabRect = fab.getBoundingClientRect();
-      if (!fabRect.width || !fabRect.height) return;
-      var current = readTranslate(fab);
-      var base = {
-        left: fabRect.left - current.x,
-        top: fabRect.top - current.y,
-        width: fabRect.width,
-        height: fabRect.height
-      };
-      var target = clampToViewport(
-        closeRect.left + (closeRect.width - base.width) / 2,
-        closeRect.top + (closeRect.height - base.height) / 2,
-        base.width,
-        base.height
-      );
-      fab.style.transition = 'none';
-      var tx = target.left - base.left;
-      var ty = target.top - base.top;
-      fab.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
-      fab.dataset.cmDockCloseAnchor = '1';
-      try {
-        localStorage.setItem(FAB_CLOSE_ANCHOR_KEY, JSON.stringify({ v: 2, tx: tx, ty: ty }));
-      } catch (e) {}
-      window.requestAnimationFrame(function () {
-        if (fab.dataset.cmDockCloseAnchor === '1') fab.style.transition = '';
-      });
-    });
+    /* Disabled: FAB and Dock stay at their fixed/saved position */
+    return;
   }
 
   function ensureDockCloseButton(dock, head) {
@@ -3729,7 +3591,6 @@
     if (!head) return;
     ensureDockCloseButton(dock, head);
     if (dock.__cmDragDock === dock) {
-      if (!isFloatDragging()) applyLinkedSavedTransform();
       return;
     }
     dock.dataset.cmDrag = "1";
@@ -3737,7 +3598,7 @@
     dockDragCtl = makeDraggable({
       grip: dock,
       el: dock,
-      storageKey: FAB_POS_KEY,
+      storageKey: LOG_POS_KEY,
       resettable: true,
       /* Header, top drag bar & frame handle drag the window smoothly.
          The inner list (.cm-dock-list) scrolls freely, while close/size buttons click normally. */
@@ -3766,28 +3627,21 @@
         dock.style.transition = "none";
         dock.style.willChange = "transform";
       },
-      onMove: function () {
-        mirrorFloatTransform(dock);
-      },
+      onMove: function () {},
       onEnd: function () {
         setFloatDraggingActive(false);
         delete dock.dataset.cmDragging;
         dock.classList.remove("cm-dock-dragging");
         dock.style.transition = "";
         dock.style.willChange = "";
-        mirrorFloatTransform(dock);
       },
       onReset: function () {
         setFloatDraggingActive(false);
-        try { localStorage.removeItem(FAB_POS_KEY); } catch (e) {}
-        invalidateLinkedSavedTransform();
-        clearLinkedFloatTransform();
+        try { localStorage.removeItem(LOG_POS_KEY); } catch (e) {}
+        dock.style.transform = "";
       },
-      onDrop: function () {
-        persistFabTransformOffset();
-      }
+      onDrop: function () {}
     });
-    applyLinkedSavedTransform(true);
   }  /* ------------------------------------------------------------ log button */
   function attachFabDrag() {
     if (fab.dataset.cmDrag) {
@@ -3815,7 +3669,6 @@
         fab.style.transition = 'none';
       },
       onMove: function (pos, motion) {
-        mirrorFloatTransform(fab);
         applyLinkedTail(fab, motion);
       },
       onEnd: function () {
@@ -3825,10 +3678,18 @@
         fab.style.willChange = '';
         fab.style.transition = '';
         clearLinkedTail();
-        mirrorFloatTransform(fab);
       },
-      onDrop: function () {
-        persistFabTransformOffset();
+      onDrop: function (pos) {
+        if (!pos) return;
+        try {
+          var winW = window.innerWidth || 360;
+          var winH = window.innerHeight || 600;
+          localStorage.setItem(FAB_POS_KEY, JSON.stringify({
+            x: pos.left / winW,
+            y: pos.top / winH
+          }));
+        } catch (e) {}
+        invalidateLinkedSavedTransform();
       },
       onTap: function () {
         delete fab.dataset.cmDockCloseAnchor;
@@ -4301,11 +4162,16 @@
       Number(window.innerHeight),
       viewportSensorBox && Number(viewportSensorBox.height)
     ].filter(function (value) { return Number.isFinite(value) && value > 0; });
+
+    var insets = window.useSafeArea ? window.useSafeArea.detect() : { top: 0, bottom: 0, left: 0, right: 0 };
+
     return {
       /* The smallest positive reading is the safe visible region when a host
          chrome/keyboard reports different layout and visual dimensions. */
       width: widths.length ? Math.round(Math.min.apply(Math, widths)) : 0,
-      height: heights.length ? Math.round(Math.min.apply(Math, heights)) : 0
+      height: heights.length ? Math.round(Math.min.apply(Math, heights)) : 0,
+      safeTop: insets.top,
+      safeBottom: insets.bottom
     };
   }
 
@@ -4347,8 +4213,16 @@
     if (!box) return;
     html.style.setProperty('--cm-vp-w', box.width + 'px');
     html.style.setProperty('--cm-vp-h', box.height + 'px');
+
+    var insets = window.useSafeArea ? window.useSafeArea.detect() : { top: 0, bottom: 0 };
+    var safeTop = Math.max(box.safeTop || 0, insets.top || 0);
+    var safeBottom = Math.max(box.safeBottom || 0, insets.bottom || 0);
+
+    html.style.setProperty('--cm-safe-top', safeTop + 'px');
+    html.style.setProperty('--cm-safe-bottom', safeBottom + 'px');
+
     var header = query('.cm-game-page > header');
-    var headerH = measureRectHeight(header) || 56;
+    var headerH = measureRectHeight(header) || 48;
     html.style.setProperty('--cm-header-h', headerH + 'px');
     var main = query('.cm-game-shell > main');
     if (!main) return;
@@ -4361,61 +4235,68 @@
     var banner = main.querySelector(':scope > [aria-live="polite"]');
     var teambarH = measureRectHeight(teambar);
     var bannerH = measureRectHeight(banner);
-    var mainHeight = Math.max(220, Math.round(mainRect.height || Math.max(0, box.height - headerH)));
-    var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 4 + 8;
 
-    /* Reserve a stable, fixed height for the bottom panel (clue composer, live clue,
-       operative guess controls) based purely on viewport geometry so the board NEVER
-       shrinks or grows when turns or roles switch. */
-    var sideTarget =
-      mode === 'desktop' ? clamp(mainHeight * 0.075, 46, 60) :
-      mode === 'tablet' ? clamp(mainHeight * 0.075, 44, 58) :
-      mode === 'phone-landscape' ? clamp(mainHeight * 0.09, 36, 48) :
-      clamp(mainHeight * 0.08, 40, 52);
-    var sideMin = mode === 'desktop' ? 44 : mode === 'tablet' ? 42 : mode === 'phone-landscape' ? 34 : 38;
+    /* Total available height inside viewport accounting for safe area insets & header */
+    var totalAvailableH = Math.max(220, box.height - headerH - safeTop - safeBottom);
+    var mainHeight = Math.max(200, Math.round(mainRect.height ? Math.min(mainRect.height, totalAvailableH) : totalAvailableH));
+    var reserveWithinMain = padTop + padBottom + bannerH + teambarH + gap * 3 + 4;
 
-    var usableHeight = Math.max(180, mainHeight - reserveWithinMain);
-    var boardHeight = Math.max(120, usableHeight - sideTarget);
+    /* Measure actual clue panel height if present, so we reserve exact needed space */
+    var sideEl = query('.cm-side-clue') || query('.cm-side');
+    var measuredSideH = sideEl ? measureRectHeight(sideEl) : 0;
+
+    /* Reserve height for the bottom panel (clue composer, live clue, operative guess controls) */
+    var sideTarget = Math.max(
+      measuredSideH,
+      mode === 'desktop' ? clamp(mainHeight * 0.16, 85, 120) :
+      mode === 'tablet' ? clamp(mainHeight * 0.16, 80, 110) :
+      mode === 'phone-landscape' ? clamp(mainHeight * 0.16, 50, 75) :
+      clamp(mainHeight * 0.18, 80, 120)
+    );
+    var sideMin = mode === 'desktop' ? 82 : mode === 'tablet' ? 76 : mode === 'phone-landscape' ? 48 : 76;
+
+    /* Calculate available usable height inside main for the stage (Board + attached Clue Panel) */
+    var usableHeight = Math.max(140, mainHeight - reserveWithinMain);
+
+    /* Priority Rule: The Word Board takes primary sizing based on available screen space (72-78% of usable height) */
+    var boardHeightRatio = mode === 'desktop' ? 0.76 : mode === 'tablet' ? 0.74 : mode === 'phone-landscape' ? 0.68 : 0.72;
+    var targetBoardHeight = Math.floor(usableHeight * boardHeightRatio);
+
+    /* Clue panel gets the remaining height below the board, adapting to it */
+    var sideTarget = Math.max(mode === 'phone-landscape' ? 44 : 64, usableHeight - targetBoardHeight);
+    var sideMin = mode === 'desktop' ? 70 : mode === 'tablet' ? 64 : mode === 'phone-landscape' ? 42 : 64;
+
+    var boardHeight = Math.max(100, usableHeight - sideTarget);
     var sideTeamsActive = html.classList.contains('cm-ui-side-teams');
-    var wideViewport = sideTeamsActive;
     var rosterWidth = mode === 'desktop' || sideTeamsActive ? clamp(box.width * 0.13, 176, 244) : 0;
     var availableWidth =
       mode === 'desktop' || sideTeamsActive
         ? Math.max(360, (mainRect.width || box.width) - rosterWidth * 2 - gap * 2)
-        : Math.max(220, Math.min(mainRect.width || box.width, box.width - 8));
+        : Math.max(200, Math.min(mainRect.width || box.width, box.width - 8));
     var stageMax =
       mode === 'desktop' ? Math.min(availableWidth, Math.max(720, box.width * 0.92)) :
       mode === 'tablet' ? Math.min(availableWidth, Math.max(500, box.width * 0.96)) :
       mode === 'phone-landscape' ? Math.min(availableWidth, Math.max(300, box.width * 0.95)) :
       availableWidth;
-    var boardFitMaxWidth = Math.floor(Math.min(stageMax, availableWidth));
-    var boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
-    var desiredMinBoard = mode === 'desktop' ? 620 : mode === 'tablet' ? 380 : mode === 'phone-landscape' ? 270 : 290;
-    if (boardWidth < desiredMinBoard) {
-      sideTarget = Math.max(sideMin, sideTarget - (desiredMinBoard - boardWidth) * 0.72);
-      boardHeight = Math.max(120, usableHeight - sideTarget);
-      boardWidth = Math.min(stageMax, availableWidth, Math.max(180, Math.floor(boardHeight * (4 / 3))));
-    }
-    boardWidth = Math.max(210, Math.floor(boardWidth));
-    sideTarget = Math.max(sideMin, Math.floor(sideTarget));
 
-    /* Adaptive board width derived directly from viewport geometry */
+    var boardFitMaxWidth = Math.floor(Math.min(stageMax, availableWidth));
+    var boardWidthFromHeight = Math.floor(boardHeight * (4 / 3));
+
+    /* Board width primary calculation based on screen space - expanded to fill screen space */
+    var boardWidth = mode === 'desktop' || sideTeamsActive 
+      ? Math.min(Math.floor(availableWidth), 1000)
+      : Math.floor(availableWidth);
+    boardWidth = Math.max(280, boardWidth);
+    var stageWidth = boardWidth;
+
     clueComposerFit = null;
-  var useHeightDrivenStage = mode === 'desktop' || sideTeamsActive;
-    var stageWidth = useHeightDrivenStage ? boardWidth : Math.max(boardWidth, Math.floor(availableWidth));
-    html.classList.toggle('cm-ui-height-fit', useHeightDrivenStage);
-    html.classList.toggle('cm-ui-width-fit', !useHeightDrivenStage);
     html.style.setProperty('--cm-roster-width-fit', Math.round(rosterWidth) + 'px');
     html.style.setProperty('--cm-board-fit-width', boardWidth + 'px');
     html.style.setProperty('--cm-stage-fit-width', stageWidth + 'px');
-    html.style.setProperty('--cm-board-fit-max-width', boardFitMaxWidth + 'px');
+    html.style.setProperty('--cm-board-fit-max-width', stageWidth + 'px');
     html.style.setProperty('--cm-side-fit-height', sideTarget + 'px');
   }
 
-  /* A Discord Activity can expose a shorter visual viewport than the browser
-     window. Fit the stage from the rendered DOM only when lower clue controls
-     would otherwise be off screen, then hold that fitted size until the user
-     resizes the viewport. */
   function clueComposerViewportKey(box, mode) {
     return [
       Math.round(Number(box && box.width) || 0),
@@ -5160,7 +5041,8 @@
     btn.className = "cm-lobby-return-btn";
     btn.textContent = html.lang === "en" ? "Back to the game" : "\u0627\u0644\u0631\u062C\u0648\u0639 \u0644\u0644\u0639\u0628\u0629";
     btn.addEventListener("click", function () {
-      location.assign("/room/" + code + "/game");
+      window.history.pushState({}, '', "/room/" + code + "/game");
+      window.dispatchEvent(new PopStateEvent('popstate'));
     });
     card.appendChild(btn);
   }

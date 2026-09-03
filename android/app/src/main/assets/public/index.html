@@ -34,30 +34,54 @@
     <title>Clue Me — كلمة واحدة… تصنع الفوز</title>
     <style>
       :root {
-        --cm-safe-top: env(safe-area-inset-top, 0px);
-        --cm-safe-bottom: env(safe-area-inset-bottom, 0px);
-        --cm-safe-left: env(safe-area-inset-left, 0px);
-        --cm-safe-right: env(safe-area-inset-right, 0px);
+        --discord-safe-top: var(--discord-safe-area-inset-top, env(safe-area-inset-top, 0px));
+        --discord-safe-bottom: var(--discord-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+        --cm-safe-top: var(--discord-safe-area-inset-top, env(safe-area-inset-top, 0px));
+        --cm-safe-bottom: var(--discord-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+        --cm-safe-left: var(--discord-safe-area-inset-left, env(safe-area-inset-left, 0px));
+        --cm-safe-right: var(--discord-safe-area-inset-right, env(safe-area-inset-right, 0px));
       }
       html, body {
         min-height: 100%;
+        height: 100%;
         overscroll-behavior-y: none;
         -webkit-touch-callout: none;
         -webkit-tap-highlight-color: transparent;
       }
       body {
-        padding-top: env(safe-area-inset-top, 0px);
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-        padding-left: env(safe-area-inset-left, 0px);
-        padding-right: env(safe-area-inset-right, 0px);
+        margin: 0;
+        padding: 0;
       }
       #root {
         min-height: 100%;
+        height: 100%;
       }
+      .cm-game-page, .cm-game-shell {
+        box-sizing: border-box;
+      }
+
+      /* Native Android / Mobile App Polish */
+      html.cm-native-app {
+        --cm-safe-top: max(env(safe-area-inset-top, 36px), 36px);
+      }
+      html.cm-native-app header.sticky,
+      html.cm-native-app .sticky.top-0,
+      html.cm-native-app header,
+      html.cm-native-app .cm-head {
+        padding-top: max(var(--cm-safe-top, 36px), 36px) !important;
+      }
+      @media (max-width: 768px) {
+        header.sticky,
+        .sticky.top-0 {
+          padding-top: max(var(--cm-safe-top, 0px), env(safe-area-inset-top, 0px));
+        }
+      }
+
       html.cm-discord-activity, html.cm-discord-activity body, html.cm-discord-activity #root {
         height: 100%;
         min-height: 100%;
-        background: #17131a;
+        background: var(--cm-paper, #090d14);
+        color: var(--cm-ink, #ffffff);
       }
       html.cm-discord-activity body {
         margin: 0;
@@ -66,12 +90,28 @@
         min-height: 100vh !important;
       }
       html.cm-discord-activity #root > div {
-        min-height: 100%;
+        min-height: 100vh;
+        box-sizing: border-box !important;
+        padding-top: max(var(--cm-safe-top, 48px), 48px) !important;
+        padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
+      }
+      html.cm-discord-activity header.sticky,
+      html.cm-discord-activity .sticky.top-0 {
+        position: relative !important;
+        top: 0 !important;
       }
       html.cm-discord-activity .cm-game-page,
-      html.cm-discord-activity .cm-game-shell {
-        min-height: 100%;
-        height: 100%;
+      html.cm-discord-activity .cm-home-page,
+      html.cm-discord-activity .cm-lobby-page {
+        box-sizing: border-box;
+      }
+      html.cm-ui-phone:not(.cm-discord-activity) .cm-game-page {
+        padding-top: max(var(--cm-safe-top, 0px), 12px);
+        padding-bottom: max(var(--cm-safe-bottom, 0px), 16px);
+      }
+      html.cm-discord-activity.cm-ui-phone .cm-game-shell {
+        padding-top: 0;
+        padding-bottom: 0;
       }
       /* Professional Game Touch Polish */
       button, a, [role="button"], .cm-card {
@@ -112,37 +152,54 @@
     <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
     <script>
       (function() {
-        // Automatically route API and WebSocket traffic to production cloud server when running inside Android/iOS App
-        var PROD_SERVER = "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app";
-        var isNativeApp = window.Capacitor !== undefined || 
-                          location.protocol === "capacitor:" || 
-                          (location.protocol === "http:" && location.hostname === "localhost" && !location.port);
+        // Detect native Capacitor or standalone WebView environment
+        var isCapacitorNative = Boolean(
+          location.protocol === "capacitor:" || 
+          location.protocol === "ionic:" || 
+          (location.hostname === "localhost" && (!location.port || location.port === "80" || location.port === "443")) ||
+          (location.hostname === "127.0.0.1" && (!location.port || location.port === "80" || location.port === "443")) ||
+          (navigator.userAgent && (navigator.userAgent.indexOf("Capacitor") !== -1 || (navigator.userAgent.indexOf("Android") !== -1 && (navigator.userAgent.indexOf("; wv") !== -1 || navigator.userAgent.indexOf("Version/") !== -1)))) ||
+          (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform())
+        );
+
+        if (isCapacitorNative) {
+          document.documentElement.classList.add("cm-native-app");
+        }
         
         var customServer = "";
-        try { customServer = localStorage.getItem("clue_me_custom_server") || ""; } catch(e){}
+        try { 
+          if (isCapacitorNative) {
+            customServer = localStorage.getItem("clue_me_custom_server") || ""; 
+          }
+        } catch(e){}
         
-        var targetServer = (customServer || (isNativeApp ? PROD_SERVER : "")).replace(/\/$/, "");
+        var targetServer = "";
+        if (isCapacitorNative) {
+          targetServer = (customServer || "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app").replace(/\/$/, "");
+        }
         window.__CLUE_ME_SERVER_URL__ = targetServer;
 
-        if (targetServer) {
-          // Intercept fetch calls starting with /api/ or relative endpoints
+        if (targetServer && isCapacitorNative) {
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
             if (typeof input === "string") {
-              if (input.startsWith("/api/")) {
+              if (input.indexOf("/api/") === 0 || input.indexOf("/socket.io") === 0 || input === "/api/health") {
                 input = targetServer + input;
-              } else if (input.startsWith("/")) {
-                // If it asks for root /api or relative endpoints
-                if (input.indexOf("/api") === 0 || input.indexOf("/socket.io") === 0) {
-                  input = targetServer + input;
-                }
               }
             } else if (input && typeof input.url === "string") {
-              if (input.url.startsWith("/api/")) {
+              if (input.url.indexOf("/api/") === 0 || input.url.indexOf("/socket.io") === 0 || input.url === "/api/health") {
                 input = new Request(targetServer + input.url, input);
               }
             }
             return origFetch.call(this, input, init);
+          };
+
+          var origOpen = XMLHttpRequest.prototype.open;
+          XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+            if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("/socket.io") === 0 || url === "/api/health")) {
+              url = targetServer + url;
+            }
+            return origOpen.call(this, method, url, async !== false, user, password);
           };
         }
 
@@ -174,6 +231,69 @@
           } catch(e) {}
         };
 
+        // Intercept link clicks in Discord activity
+        (function() {
+          var isDiscord = document.documentElement.classList.contains("cm-discord-activity") ||
+                          location.search.indexOf("frame_id") !== -1 ||
+                          location.search.indexOf("instance_id") !== -1 ||
+                          location.search.indexOf("activity=mock") !== -1;
+
+          if (isDiscord) {
+            document.documentElement.classList.add("cm-discord-activity");
+
+            var safeOpenExternal = function(url) {
+              if (!url) return;
+              if (window.discordSdk && window.discordSdk.commands && window.discordSdk.commands.openExternalLink) {
+                window.discordSdk.commands.openExternalLink({ url: url }).catch(function(){});
+              }
+            };
+
+            try {
+              window.open = function(url) {
+                if (url && (url.indexOf("http://") === 0 || url.indexOf("https://") === 0)) {
+                  safeOpenExternal(url);
+                }
+                return null;
+              };
+            } catch(e) {}
+
+            document.addEventListener("click", function(e) {
+              var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
+              if (anchor) {
+                var href = anchor.getAttribute("href");
+                if (!href || href === "#" || href.indexOf("javascript:") === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return;
+                }
+                if (href.indexOf("http://") === 0 || href.indexOf("https://") === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  safeOpenExternal(href);
+                  return;
+                }
+                if (href.indexOf("/") === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.history.pushState({}, "", href);
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                  return;
+                }
+              }
+            }, true);
+          } else {
+            document.addEventListener("click", function(e) {
+              var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
+              if (anchor) {
+                var href = anchor.getAttribute("href");
+                if (!href || href === "#" || href.indexOf("javascript:") === 0) {
+                  e.preventDefault();
+                }
+              }
+            }, true);
+          }
+        })();
+
         // Attach subtle touch feedback to buttons and interactive elements
         document.addEventListener("click", function(e) {
           var target = e.target && e.target.closest ? e.target.closest("button, a, [role=\"button\"], .cm-card") : null;
@@ -187,8 +307,10 @@
     <script type="module" crossorigin src="/assets/index-discord-v30.js?v=153"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=153">
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=153">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=153">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=156">
+    <script src="/assets/useSafeArea.js?v=153"></script>
     <script defer src="/assets/game-room-v20.js?v=153"></script>
+    <script defer src="/assets/game-ai-hud-v21.js?v=156"></script>
   </head>
   <body>
     <div id="root"></div>

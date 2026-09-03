@@ -433,8 +433,15 @@ html.cm-v20.mani-dark {
   }
 
   .cm-v20 .cm-teambar {
-    flex: 7 1 auto;
-    max-height: 9.5rem;
+    flex: 0 0 auto;
+    max-height: clamp(3.2rem, 9.5dvh, 5.5rem);
+  }
+
+  @media (min-width: 768px) {
+    .cm-v20 .cm-teambar {
+      flex: 7 1 auto;
+      max-height: 9.5rem;
+    }
   }
 
   .cm-v20 .cm-board-row {
@@ -442,10 +449,12 @@ html.cm-v20.mani-dark {
   }
 
   .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
-    flex: 1 1 auto;
-    width: 100%;
-    height: auto;
-    max-height: min(100%, calc(100cqw * 1.04));
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    aspect-ratio: auto !important;
   }
 
   .cm-v20 .cm-play-center > .cm-side {
@@ -705,38 +714,39 @@ html.cm-v20.mani-dark {
    ------------------------------------------------------------------------- */
 .cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
-  position: fixed;
-  inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
-  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
-  z-index: 46;
+  position: fixed !important;
+  inset-inline-end: clamp(0.75rem, 2vw, 1.25rem) !important;
+  inset-block-end: calc(var(--cm-safe-bottom, 0px) + clamp(4.25rem, 8dvh, 5.25rem)) !important;
+  inset-block-start: auto !important;
+  z-index: 998 !important;
   display: flex !important; /* re-enable on ≤360px where base hid it */
   flex-direction: column;
-  width: min(80vw, 15.25rem);
+  width: min(calc(100vw - 1.5rem), 18.5rem) !important;
   max-width: calc(100vw - 16px);
-  height: min(48dvh, 23rem);
-  max-height: calc(100dvh - 12px);
+  height: min(42dvh, 21rem);
+  max-height: calc(100dvh - 5.5rem);
   min-height: 8rem;
   box-sizing: border-box;
   flex: none;
   border-radius: 1.25rem;
   overflow: hidden;
-  background: color-mix(in srgb, var(--cm-surface) 52%, transparent) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 45%, rgba(255, 255, 255, 0.22));
+  background: color-mix(in srgb, var(--cm-surface, #1e1926) 90%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+  border: 3.5px solid var(--cm-border-strong, #524263) !important;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(12px) scale(0.97);
-  transform-origin: 0 100%;
+  transform: scale(0.92) translateY(12px);
+  transform-origin: 100% 100%;
   transition:
-    opacity 0.18s ease,
-    transform 0.2s var(--cm-ease),
-    visibility 0.2s;
+    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.22s;
   box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.25),
-    0 3px 10px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 18px 48px rgba(0, 0, 0, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
   will-change: transform, opacity;
 }
 
@@ -777,7 +787,7 @@ html.cm-v20.mani-dark {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
+  transform: scale(1);
 }
 
 .cm-v20 .cm-dock .cm-dock-head,
@@ -1692,28 +1702,38 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card .cm-face-back {
 @media (max-width: 640px) {
   .cm-v20 .cm-side-row > .cm-dock,
   .cm-v20 .cm-dock {
-    transform: translateY(8px);
-    transition: opacity 0.16s ease, transform 0.16s var(--cm-ease), visibility 0.16s;
+    transform: scale(0.96);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
   }
 
   .cm-v20.cm-log-open .cm-side-row > .cm-dock,
   .cm-v20.cm-log-open .cm-dock {
-    transform: translateY(0);
+    transform: scale(1);
   }
 
   .cm-v20 .cm-side-clue-compose-top {
-    grid-template-columns: 1fr;
-    gap: 0.48rem;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.38rem !important;
+    width: 100% !important;
+  }
+
+  .cm-v20 .cm-side-clue-compose-field {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .cm-v20 .cm-side-clue-compose-field > label {
+    display: none !important;
   }
 
   .cm-v20 .cm-side-clue-compose-meta {
-    grid-auto-flow: row;
-    justify-content: stretch;
-    gap: 0.45rem;
-  }
-
-  .cm-v20 .cm-side-clue-compose-meta > * {
-    width: 100%;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex: 0 0 auto !important;
+    gap: 0.32rem !important;
   }
 
   .cm-v20 .cm-side-clue-mobile-guess .cm-side-clue-guess-layout {
@@ -1968,15 +1988,16 @@ html.cm-v20.dark:not(.mani):not(.mani-dark):not(.mot) {
 .cm-v20 .cm-dock {
   position: fixed;
   inset-inline-end: clamp(0.55rem, 1.2vw, 1rem);
-  inset-block-end: calc(var(--cm-fab-size) + 0.8rem);
-  z-index: 46;
+  inset-block-start: calc(var(--cm-header-h, 52px) + max(var(--cm-safe-top, 0px), 8px));
+  inset-block-end: auto;
+  z-index: 95;
 }
 
 .cm-v20.cm-log-open .cm-dock {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: scale(1);
 }
 
 .cm-v20 .cm-dock .cm-dock-head,
@@ -2910,22 +2931,34 @@ html.cm-v20.cm-min-effects .cm-petals i {
   --cm-vp-w: 100vw;
   --cm-vp-h: 100dvh;
   --cm-header-h: 56px;
-  --cm-board-fit-width: min(100%, 40rem);
-  --cm-stage-fit-width: min(100%, 40rem);
+  --cm-board-fit-width: min(100%, 35.5rem);
+  --cm-stage-fit-width: min(100%, 35.5rem);
   --cm-side-fit-height: 8.5rem;
   --cm-roster-width-fit: 11rem;
 }
 
 .cm-v20 .cm-game-page {
-  height: calc(var(--cm-vp-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
-  max-height: calc(var(--cm-vp-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
+  height: var(--cm-vp-h, 100dvh);
+  max-height: var(--cm-vp-h, 100dvh);
+  padding-top: max(env(safe-area-inset-top, 0px), var(--cm-safe-top, 0px));
   overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+html.cm-v20.cm-discord-activity .cm-game-page {
+  padding-top: max(72px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 72px)) !important;
 }
 
 .cm-v20 .cm-game-shell {
-  height: calc(var(--cm-vp-h) - var(--cm-header-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
-  max-height: calc(var(--cm-vp-h) - var(--cm-header-h) - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px));
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .cm-v20 .cm-game-shell > main {
@@ -2934,29 +2967,35 @@ html.cm-v20.cm-min-effects .cm-petals i {
   height: 100%;
   max-height: 100%;
   margin-inline: auto;
-  padding-block-end: max(0.2rem, env(safe-area-inset-bottom, 0px)) !important;
-  overflow: hidden;
+  padding-block-end: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: stretch;
+  gap: clamp(0.25rem, 0.8vw, 0.45rem);
 }
 
-.cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+.cm-v20 .cm-game-shell > main > [aria-live="polite"],
+.cm-v20 .cm-game-shell > main > .cm-turn-hint,
+.cm-v20 .cm-turn-hint,
+.cm-v20 .cm-game-shell > main > p {
+  flex-shrink: 0 !important;
+  min-height: auto !important;
+  overflow: visible !important;
   align-self: center !important;
   margin-inline: auto !important;
   justify-content: center !important;
   text-align: center !important;
   width: fit-content !important;
   max-width: min(100%, var(--cm-stage-fit-width, 100%));
-}
-
-.cm-v20 .cm-game-shell > main > .cm-turn-hint,
-.cm-v20 .cm-turn-hint,
-.cm-v20 .cm-game-shell > main > p {
-  align-self: center !important;
-  text-align: center !important;
-  margin-inline: auto !important;
+  padding: 0.18rem 0.6rem !important;
+  font-size: clamp(0.72rem, 2.2vw, 0.95rem) !important;
+  line-height: 1.3 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 .cm-v20 .cm-board-row,
@@ -2974,41 +3013,90 @@ html.cm-v20.cm-min-effects .cm-petals i {
 
 .cm-v20 .cm-play-center {
   width: 100% !important;
-  max-width: var(--cm-stage-fit-width);
+  max-width: 100% !important;
   margin-inline: auto;
   align-items: stretch;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 4px;
   flex: 1 1 auto;
   min-height: 0;
 }
 
 .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width,
 .cm-v20 .cm-play-center > .cm-side {
-  width: 100%;
-  max-width: none;
+  width: 100% !important;
+  max-width: 100% !important;
   align-self: stretch;
 }
 
 .cm-v20 .cm-play-center > .cm-board-frame.cm-game-width {
-  flex: 0 0 auto;
-  width: min(100%, var(--cm-board-fit-width));
+  flex: 1 1 auto !important;
+  width: 100% !important;
   margin-inline: auto;
-  height: auto;
-  max-height: none;
-  aspect-ratio: 4 / 3;
+  margin-bottom: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  aspect-ratio: 4 / 3 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-top-left-radius: 0.85rem !important;
+  border-top-right-radius: 0.85rem !important;
 }
 
-.cm-v20 .cm-play-center > .cm-side {
+.cm-v20 .cm-board-frame > .grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.cm-v20 .cm-word,
+.cm-v20 .cm-flip,
+.cm-v20 .cm-cell {
+  writing-mode: horizontal-tb !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  direction: rtl !important;
+}
+
+.cm-v20 .cm-word {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  max-width: 98% !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  direction: rtl !important;
+}
+
+.cm-v20 .cm-play-center > .cm-side,
+html.cm-v20 .cm-side,
+html.cm-v20.cm-ui-side-teams .cm-play-center > .cm-side,
+html.cm-v20.cm-ui-desktop .cm-play-center > .cm-side,
+html.cm-v20.cm-ui-tablet .cm-play-center > .cm-side {
   flex: 0 0 auto;
-  min-height: 0;
-  height: auto;
-  max-height: none;
+  width: min(100%, var(--cm-board-fit-width)) !important;
+  margin-inline: auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
   overflow: visible;
-  margin-top: auto !important;
+  margin-top: 0 !important;
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0.85rem !important;
+  border-bottom-right-radius: 0.85rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .cm-v20 .cm-side-row,
@@ -3055,27 +3143,135 @@ html.cm-v20.cm-ui-phone .cm-side-row:has(> .cm-dock.cm-dock-tall) {
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar {
-  gap: 0.35rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 0.5rem !important;
+  overflow: visible !important;
+  flex-shrink: 0 !important;
 }
 
+/* Enlarge team list container for both teams */
 html.cm-v20.cm-ui-phone .cm-teambar-side {
-  padding: 0.42rem 0.52rem;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  padding: 0.6rem 0.8rem !important;
+  border-radius: 1.15rem !important;
+  gap: 0.4rem !important;
+  min-height: 4.8rem !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22) !important;
+  overflow: visible !important;
 }
 
+html.cm-v20.cm-ui-phone .cm-teambar-head {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  font-size: 0.95rem !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.01em !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+  padding-bottom: 0.35rem !important;
+  margin-bottom: 0.1rem !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-teambar-icon-badge {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-teambar-count {
+  min-width: 2rem !important;
+  padding: 0.12rem 0.5rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 900 !important;
+}
+
+/* Player chips container inside teambar side */
+html.cm-v20.cm-ui-phone .cm-teambar-players {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.35rem !important;
+  width: 100% !important;
+  min-height: 2rem !important;
+  overflow: visible !important;
+}
+
+/* Reduced player font size, elegant pill styling, clean layout for people */
 html.cm-v20.cm-ui-phone .cm-teambar-player.cm-mobile-roster-chip {
-  min-height: 1.5rem;
-  padding: 0.14rem 0.42rem;
-  font-size: 0.7rem;
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 1.5rem !important;
+  padding: 0.15rem 0.5rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 800 !important;
+  gap: 0.3rem !important;
+  border-radius: 999px !important;
+  background: var(--cm-surface, #1e1926) !important;
+  border: 1.5px solid var(--cm-border, rgba(255, 255, 255, 0.18)) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.14) !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-teambar-player .h-5.w-5,
+html.cm-v20.cm-ui-phone .cm-teambar-player img {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--cm-lobby-icon-border, rgba(255,255,255,0.2)) !important;
+  flex-shrink: 0 !important;
+  object-fit: cover !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-mobile-roster-captain .cm-teambar-role {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.05rem 0.32rem !important;
+  font-size: 0.58rem !important;
+  font-weight: 850 !important;
+  border-radius: 0.35rem !important;
+  background: linear-gradient(135deg, #ffd700, #ffa500) !important;
+  color: #222 !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+  flex-shrink: 0 !important;
+}
+
+html.cm-v20.cm-ui-phone .cm-mobile-roster-operative .cm-teambar-role {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.05rem 0.28rem !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  border-radius: 0.35rem !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: inherit !important;
+  flex-shrink: 0 !important;
+}
+
+/* Adjust board frame size on phone to give teambar more vertical room */
+html.cm-v20.cm-ui-phone .cm-play-center > .cm-board-frame.cm-game-width {
+  aspect-ratio: 4 / 3.4 !important;
+  max-height: 48dvh !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-word {
-  font-size: clamp(0.6rem, 3.25vw, 0.96rem);
-  line-height: 1.08;
+  font-size: clamp(0.55rem, 2.9vw, 0.92rem) !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.01em !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-word-plate {
-  max-width: 90%;
-  padding: 0.14em 0.46em;
+  max-width: 98% !important;
+  padding: 0.08em 0.25em !important;
 }
 
 html.cm-v20.cm-ui-phone.cm-ui-short .cm-side {
@@ -3168,9 +3364,10 @@ html.cm-v20.cm-ui-desktop {
 html.cm-v20.cm-ui-desktop .cm-board-row,
 html.cm-v20.cm-ui-side-teams .cm-board-row {
   display: grid;
-  grid-template-columns: minmax(var(--cm-roster-width-fit), 1fr) minmax(0, var(--cm-stage-fit-width)) minmax(var(--cm-roster-width-fit), 1fr);
-  align-items: start;
+  grid-template-columns: var(--cm-roster-width-fit, 13rem) minmax(0, 1fr) var(--cm-roster-width-fit, 13rem);
+  align-items: stretch;
   gap: var(--cm-fluid-gap);
+  width: 100%;
 }
 
 html.cm-v20.cm-ui-desktop .cm-board-row > .cm-play-center,
@@ -3178,7 +3375,7 @@ html.cm-v20.cm-ui-side-teams .cm-board-row > .cm-play-center {
   grid-column: 2;
   grid-row: 1;
   width: 100% !important;
-  max-width: var(--cm-stage-fit-width);
+  max-width: 100% !important;
   justify-self: stretch;
 }
 
@@ -4245,39 +4442,41 @@ html.cm-v20.cm-ui-desktop .cm-clue-live-dot {
 .cm-v20 .cm-dock,
 .cm-v20 .cm-side-row > .cm-dock {
   touch-action: auto !important;
+  background: var(--cm-surface, #1e1926) !important;
 }
 
-/* Top Grab Handle Pill */
+/* Top Grab Handle Pill - Thicker & Larger Drag Area */
 .cm-v20 .cm-dock .cm-dock-android-handle,
 .cm-v20 .cm-dock-android-handle {
-  width: 52px !important;
-  height: 5px !important;
-  margin: 6px auto 3px !important;
+  width: 60px !important;
+  height: 7px !important;
+  margin: 7px auto 4px !important;
   border-radius: 999px !important;
-  background: color-mix(in srgb, var(--cm-ink) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--cm-ink) 48%, transparent) !important;
   flex: 0 0 auto !important;
   pointer-events: auto !important;
   touch-action: none !important;
   cursor: grab !important;
-  transition: width 0.15s ease, background-color 0.15s ease;
+  transition: width 0.15s ease, background-color 0.15s ease, height 0.15s ease;
 }
 
 .cm-v20 .cm-dock.cm-dock-dragging .cm-dock-android-handle,
 .cm-v20 .cm-dock:hover .cm-dock-android-handle {
-  background: var(--cm-blue) !important;
-  width: 64px !important;
+  background: var(--cm-blue, #38bdf8) !important;
+  width: 74px !important;
+  height: 8px !important;
 }
 
-/* Window Header Bar (Grab Surface) */
+/* Window Header Bar (Thicker Grab Surface) */
 .cm-v20 .cm-dock .cm-dock-head,
 .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 0.5rem !important;
-  padding: 0.35rem 0.65rem 0.45rem !important;
-  background: color-mix(in srgb, var(--cm-surface) 65%, transparent) !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent) !important;
+  padding: 0.55rem 0.8rem 0.55rem !important;
+  background: var(--cm-surface, #1e1926) !important;
+  border-bottom: 2.5px solid var(--cm-border-strong, #524263) !important;
   touch-action: none !important;
   cursor: grab !important;
   user-select: none !important;
@@ -4626,28 +4825,35 @@ html.cm-v20.mani-dark .cm-teambar-blue {
 @media (max-width: 640px), (max-height: 700px) {
   .cm-v20 .cm-dock,
   .cm-v20 .cm-side-row > .cm-dock {
-    width: clamp(11.5rem, 68vw, 13.5rem) !important;
-    height: min(40dvh, 16.5rem) !important;
-    border-radius: 1.05rem !important;
-    border-width: 1.5px !important;
+    width: clamp(12rem, 72vw, 14.5rem) !important;
+    height: min(42dvh, 17.5rem) !important;
+    border-radius: 1.1rem !important;
+    border-width: 3.5px !important;
+    border-style: solid !important;
+    border-color: var(--cm-border-strong, #524263) !important;
+    background: color-mix(in srgb, var(--cm-surface, #1e1926) 82%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
   }
 
   .cm-v20 .cm-dock.cm-dock-tall,
   .cm-v20 .cm-side-row > .cm-dock.cm-dock-tall {
-    height: min(58dvh, 22rem) !important;
+    height: min(60dvh, 23rem) !important;
   }
 
   .cm-v20 .cm-dock-android-handle,
   .cm-v20 .cm-dock .cm-dock-android-handle {
-    width: 38px !important;
-    height: 3.5px !important;
-    margin: 5px auto 2px !important;
+    width: 58px !important;
+    height: 7px !important;
+    margin: 6px auto 3px !important;
+    background: color-mix(in srgb, var(--cm-ink) 55%, transparent) !important;
   }
 
   .cm-v20 .cm-dock .cm-dock-head,
   .cm-v20 .cm-side-row > .cm-dock .cm-dock-head {
-    padding: 0.2rem 0.45rem 0.32rem !important;
+    padding: 0.45rem 0.65rem 0.45rem !important;
     gap: 0.35rem !important;
+    background: color-mix(in srgb, var(--cm-surface, #1e1926) 88%, transparent) !important;
   }
 
   .cm-v20 .cm-dock-title,
@@ -4722,3 +4928,1139 @@ html.cm-v20.mani-dark .cm-teambar-blue {
     padding: 0.6rem !important;
   }
 }
+
+/* ============================================================================
+   Clue Me — Official Android App Integration (Theme-Matched & Native)
+   ============================================================================ */
+
+/* 1. Home Page Android Actions */
+.cm-menu-choice-android {
+  cursor: pointer;
+}
+
+.cm-menu-choice-android .cm-menu-choice-icon {
+  background: var(--cm-success-pale, #dce8dc);
+  color: var(--cm-success, #4a7c59);
+}
+
+.cm-menu-choice-android:hover {
+  border-color: var(--cm-success, #4a7c59);
+}
+
+.cm-android-badge-chip {
+  align-self: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: var(--cm-success-pale, #dce8dc);
+  color: var(--cm-success, #4a7c59);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.cm-home-android-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--cm-ink-soft, #111827);
+  background: transparent;
+  border: 1px solid var(--cm-border, #cbd5e1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cm-home-android-pill:hover {
+  background: var(--cm-surface-soft, #ece7dc);
+  border-color: var(--cm-border-strong, #94a3b8);
+  color: var(--cm-ink, #000000);
+}
+
+.cm-home-android-pill svg {
+  color: var(--cm-success, #4a7c59);
+}
+
+/* 2. Room URL Entry Point Android Banner */
+.cm-room-link-android-banner {
+  margin: 0.85rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--cm-surface-soft, #ece7dc);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.cm-room-link-android-banner:hover {
+  border-color: var(--cm-border-strong, #94a3b8);
+}
+
+.cm-room-android-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cm-room-android-icon-box {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cm-success, #4a7c59);
+}
+
+.cm-room-android-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.cm-room-android-headline {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--cm-ink, #000000);
+  line-height: 1.3;
+}
+
+.cm-room-android-subline {
+  font-size: 0.78rem;
+  color: var(--cm-ink-soft, #111827);
+  line-height: 1.35;
+}
+
+.cm-room-android-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cm-btn-native-deep-link {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  background: var(--cm-blue, #315c88);
+  color: #ffffff !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none !important;
+  border: 1px solid var(--cm-blue-strong, #234568);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.cm-btn-native-deep-link:hover {
+  background: var(--cm-blue-strong, #234568);
+}
+
+.cm-btn-native-deep-link:active {
+  transform: scale(0.98);
+}
+
+.cm-btn-native-apk-dl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  background: var(--cm-surface, #fffdf8);
+  color: var(--cm-ink, #000000) !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none !important;
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cm-btn-native-apk-dl:hover {
+  background: var(--cm-surface-soft, #ece7dc);
+  border-color: var(--cm-border-strong, #94a3b8);
+}
+
+.cm-btn-native-apk-dl:active {
+  transform: scale(0.98);
+}
+
+/* 3. Theme-Matched Native App Modal */
+.cm-app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: cmModalFadeIn 0.18s ease-out forwards;
+}
+
+.cm-app-dialog-card {
+  background: var(--cm-surface, #fffdf8);
+  border: 2px solid var(--cm-border, #cbd5e1);
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: inherit;
+  animation: cmModalPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cmModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cmModalPopIn {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cm-app-dialog-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1.5px solid var(--cm-border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--cm-surface-soft, #ece7dc);
+}
+
+.cm-app-dialog-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--cm-ink, #000000);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cm-app-dialog-close {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--cm-ink-soft, #111827);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.35rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cm-app-dialog-close:hover {
+  background: var(--cm-border, #cbd5e1);
+  color: var(--cm-ink, #000000);
+}
+
+.cm-app-dialog-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cm-app-dialog-info-card {
+  background: var(--cm-surface-soft, #ece7dc);
+  border: 1px solid var(--cm-border, #cbd5e1);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* 4. Home Page Android Dock Button & Room Entry Banner (Attached to document.body) */
+.cm-home-android-dock {
+  position: fixed;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  animation: cmFadeSlideUp 0.25s ease-out forwards;
+}
+
+/* Hide dock button completely when any modal dialog or sheet is open */
+body:has([role="dialog"]) .cm-home-android-dock,
+body:has([aria-modal="true"]) .cm-home-android-dock,
+body:has(#cm-app-dialog-backdrop) .cm-home-android-dock,
+body:has(.fixed.inset-0.z-50) .cm-home-android-dock,
+body:has(.fixed.inset-0) .cm-home-android-dock,
+body.cm-modal-open .cm-home-android-dock {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.cm-app-icon-img {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.cm-app-icon-large {
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+  min-height: 68px;
+  display: block;
+  margin: 0 auto 0.75rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.12));
+}
+
+.cm-app-icon-banner {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  display: block;
+  flex-shrink: 0;
+}
+
+@keyframes cmFadeSlideUp {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.cm-home-android-dock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1.15rem;
+  border-radius: 9999px;
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  color: var(--cm-ink, #000000);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.cm-home-android-dock-btn:hover {
+  background: var(--cm-surface-soft, #ece7dc);
+  border-color: var(--cm-border-strong, #94a3b8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.cm-home-android-dock-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.cm-home-android-dock-btn svg {
+  color: var(--cm-success, #4a7c59);
+  flex-shrink: 0;
+}
+
+.cm-room-android-banner {
+  position: fixed;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 2rem);
+  max-width: 520px;
+  z-index: 85;
+  background: var(--cm-surface, #fffdf8);
+  border: 2px solid var(--cm-border, #cbd5e1);
+  border-radius: 1.1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  padding: 0.85rem 1.1rem;
+  font-family: inherit;
+  animation: cmBannerDropIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cmBannerDropIn {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.cm-room-android-banner-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cm-room-android-top-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cm-room-android-dismiss {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--cm-ink-soft, #111827);
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.35rem;
+  transition: all 0.15s;
+  align-self: flex-start;
+}
+
+.cm-room-android-dismiss:hover {
+  background: var(--cm-border, #cbd5e1);
+  color: var(--cm-ink, #000000);
+}
+
+.cm-room-android-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ============================================================================
+   Game AI Engine, Floating Activity HUD & Live In-Game Toasts Styling
+   ============================================================================ */
+
+/* 1. Floating Draggable Activity HUD */
+.cm-floating-activity-hud {
+  position: fixed;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: 1.5rem;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  border-radius: 9999px;
+  padding: 0.45rem 0.85rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+  transition: box-shadow 0.18s ease, transform 0.1s ease;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--cm-ink, #000000);
+}
+
+.cm-floating-activity-hud:active {
+  cursor: grabbing;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.cm-hud-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: cmHudPulse 1.6s infinite ease-in-out;
+}
+
+.cm-hud-pulse-dot.red {
+  background: var(--cm-red, #b83a3a);
+  box-shadow: 0 0 8px rgba(184, 58, 58, 0.6);
+}
+
+.cm-hud-pulse-dot.blue {
+  background: var(--cm-blue, #2563eb);
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+}
+
+@keyframes cmHudPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.75; }
+}
+
+.cm-hud-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.cm-hud-team-name {
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.cm-hud-phase-desc {
+  font-size: 0.72rem;
+  color: var(--cm-ink-soft, #111827);
+  font-weight: 600;
+}
+
+.cm-hud-toggle-btn {
+  background: var(--cm-surface-soft, #ece7dc);
+  border: 1px solid var(--cm-border, #cbd5e1);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  cursor: pointer;
+  color: var(--cm-ink-soft, #111827);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.cm-floating-activity-hud.minimized {
+  padding: 0.4rem;
+  border-radius: 50%;
+}
+
+.cm-floating-activity-hud.minimized .cm-hud-info,
+.cm-floating-activity-hud.minimized .cm-hud-toggle-btn {
+  display: none;
+}
+
+/* 2. Live In-Game Toasts (Container & Notifications) */
+.cm-toast-container {
+  position: fixed;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  max-width: 90vw;
+  width: 400px;
+}
+
+.cm-game-toast {
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  border-radius: 0.75rem;
+  padding: 0.6rem 1rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cm-ink, #000000);
+  pointer-events: auto;
+  animation: cmToastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cm-game-toast.fade-out {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+}
+
+@keyframes cmToastIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 3. AI Buttons */
+.cm-ai-spymaster-btn,
+.cm-ai-guess-advisor-btn,
+.cm-ai-pack-gen-btn,
+.cm-ai-recap-btn,
+.cm-android-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  padding: 0.45rem 0.85rem;
+}
+
+.cm-ai-spymaster-btn {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.18));
+  border: 1.5px solid #f59e0b;
+  color: #b45309;
+  margin-bottom: 0.4rem;
+}
+
+.cm-ai-spymaster-btn:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.28));
+  transform: translateY(-1px);
+}
+
+.cm-ai-guess-advisor-btn {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.12), rgba(126, 34, 206, 0.18));
+  border: 1.5px solid #a855f7;
+  color: #7e22ce;
+  margin-top: 0.35rem;
+}
+
+.cm-ai-guess-advisor-btn:hover {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.28));
+  transform: translateY(-1px);
+}
+
+.cm-ai-pack-gen-btn {
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  color: var(--cm-ink, #000000);
+}
+
+.cm-ai-pack-gen-btn:hover {
+  background: var(--cm-surface-soft, #ece7dc);
+  border-color: var(--cm-border-strong, #94a3b8);
+}
+
+.cm-ai-recap-btn {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(37, 99, 235, 0.2));
+  border: 1.5px solid #3b82f6;
+  color: #1d4ed8;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.9rem;
+}
+
+.cm-ai-recap-btn:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3));
+  transform: translateY(-1px);
+}
+
+.cm-android-header-btn {
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  color: var(--cm-ink, #000000);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.cm-android-header-btn:hover {
+  background: var(--cm-surface-soft, #ece7dc);
+  border-color: var(--cm-border-strong, #94a3b8);
+}
+
+/* 4. Tactical Overlays & AI Panels */
+.cm-ai-overlay-card {
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  border-radius: 0.85rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.6rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.cm-radar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.cm-radar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.cm-radar-badge.safe {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.cm-radar-badge.warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #a16207;
+  border: 1px solid #fde047;
+}
+
+.cm-radar-badge.critical {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  animation: cmHudPulse 1.2s infinite ease-in-out;
+}
+
+.cm-ai-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.cm-ai-suggestion-item {
+  background: var(--cm-surface-soft, #ece7dc);
+  border: 1px solid var(--cm-border, #cbd5e1);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.cm-ai-suggestion-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cm-ai-clue-title {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--cm-ink, #000000);
+}
+
+.cm-ai-target-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.cm-ai-word-chip {
+  background: var(--cm-surface, #fffdf8);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cm-ink, #000000);
+  box-shadow: var(--cm-shadow-card, 0 1px 2px rgba(0,0,0,0.08));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: transform 0.12s ease;
+}
+
+.cm-ai-word-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--cm-border-strong, #94a3b8);
+}
+
+.cm-ai-apply-btn {
+  background: var(--cm-ink, #000000);
+  color: var(--cm-surface, #ffffff);
+  border: none;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.cm-ai-apply-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+/* 5. Custom Pack & AI Modals (100% Theme Adaptive) */
+.cm-ai-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: cmFadeIn 0.2s ease-out forwards;
+}
+
+.cm-ai-modal-card {
+  background: var(--cm-surface, #fffdf8);
+  color: var(--cm-ink, #000000);
+  border: 1.5px solid var(--cm-border-strong, #94a3b8);
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.cm-ai-modal-header {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--cm-border, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cm-ai-modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--cm-ink, #000000);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cm-ai-modal-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cm-ai-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cm-ai-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cm-ink-soft, #111827);
+}
+
+.cm-ai-input,
+.cm-ai-textarea {
+  background: var(--cm-surface-soft, #ece7dc);
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--cm-ink, #000000);
+  caret-color: var(--cm-ink, #000000);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cm-ai-input::placeholder,
+.cm-ai-textarea::placeholder {
+  color: var(--cm-ink-faint, #64748b);
+  opacity: 0.8;
+}
+
+.cm-ai-input:focus,
+.cm-ai-textarea:focus {
+  outline: none;
+  border-color: var(--cm-red, #b83a3a);
+  box-shadow: 0 0 0 3px rgba(184, 58, 58, 0.18);
+}
+
+.cm-ai-suggestions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: -0.2rem;
+}
+
+.cm-ai-suggestions-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cm-ink-soft, #475569);
+  width: 100%;
+}
+
+.cm-ai-suggestion-chip {
+  background: var(--cm-surface-soft, #f4eee1);
+  border: 1px solid var(--cm-border, #d1c7b7);
+  border-radius: 9999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--cm-ink, #1c1917);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cm-ai-suggestion-chip:hover {
+  background: var(--cm-border-strong, #94a3b8);
+  color: var(--cm-surface, #ffffff);
+  transform: translateY(-1px);
+}
+
+.cm-ai-suggestion-chip:active {
+  transform: scale(0.96);
+}
+
+.cm-ai-error-box {
+  padding: 0.65rem 0.85rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 0.6rem;
+  color: #ef4444;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cm-ai-pack-footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--cm-border, #cbd5e1);
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cm-ai-count-hint {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--cm-ink-soft, #111827);
+}
+
+.cm-ai-count-highlight {
+  color: var(--cm-red, #b83a3a);
+  font-size: 0.92rem;
+}
+
+.cm-ai-gen-action-btn {
+  background: linear-gradient(135deg, var(--cm-red, #b83a3a), var(--cm-red-strong, #8f2d2d));
+  color: #ffffff !important;
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.65rem 1.35rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 4px 14px rgba(184, 58, 58, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.cm-ai-gen-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(184, 58, 58, 0.45);
+}
+
+.cm-ai-gen-action-btn:active {
+  transform: scale(0.98);
+}
+
+.cm-ai-preview-area {
+  border-top: 1.5px dashed var(--cm-border, #cbd5e1);
+  padding-top: 0.85rem;
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cm-ai-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cm-ai-preview-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--cm-ink, #000000);
+}
+
+.cm-ai-apply-pack-btn {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #ffffff !important;
+  border: none;
+  border-radius: 0.55rem;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 3px 12px rgba(22, 163, 74, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cm-ai-apply-pack-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(22, 163, 74, 0.45);
+}
+
+.cm-ai-pack-chips-grid {
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 0.55rem;
+  background: var(--cm-surface-soft, #ece7dc);
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--cm-border, #cbd5e1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Specific theme refinements for dark/mot/mani */
+.mot .cm-ai-modal-card,
+.dark .cm-ai-modal-card {
+  background: var(--cm-surface, #121822);
+  border-color: var(--cm-border-strong, #40597d);
+  color: var(--cm-ink, #f0f6fc);
+}
+
+.mot .cm-ai-modal-title,
+.dark .cm-ai-modal-title,
+.mot .cm-ai-preview-title,
+.dark .cm-ai-preview-title {
+  color: var(--cm-ink, #f0f6fc) !important;
+}
+
+.mot .cm-ai-label,
+.dark .cm-ai-label,
+.mot .cm-ai-count-hint,
+.dark .cm-ai-count-hint {
+  color: var(--cm-ink-soft, #c9d8e8) !important;
+}
+
+.mot .cm-ai-suggestions-label,
+.dark .cm-ai-suggestions-label {
+  color: var(--cm-ink-faint, #8da4be) !important;
+}
+
+.mot .cm-ai-input,
+.dark .cm-ai-input,
+.mot .cm-ai-textarea,
+.dark .cm-ai-textarea {
+  background: var(--cm-surface-soft, #1b2432) !important;
+  border-color: var(--cm-border, #28374d) !important;
+  color: var(--cm-ink, #f0f6fc) !important;
+  caret-color: var(--cm-ink, #f0f6fc) !important;
+}
+
+.mot .cm-ai-input::placeholder,
+.dark .cm-ai-input::placeholder,
+.mot .cm-ai-textarea::placeholder,
+.dark .cm-ai-textarea::placeholder {
+  color: var(--cm-ink-faint, #8da4be) !important;
+}
+
+.mot .cm-ai-word-chip,
+.dark .cm-ai-word-chip {
+  background: var(--cm-surface, #121822) !important;
+  border-color: var(--cm-border-strong, #40597d) !important;
+  color: var(--cm-ink, #f0f6fc) !important;
+}
+
+.mot .cm-ai-suggestion-chip,
+.dark .cm-ai-suggestion-chip {
+  background: var(--cm-surface-soft, #1b2432) !important;
+  border-color: var(--cm-border, #28374d) !important;
+  color: var(--cm-ink, #f0f6fc) !important;
+}
+
+.mot .cm-ai-suggestion-chip:hover,
+.dark .cm-ai-suggestion-chip:hover {
+  background: var(--cm-border-strong, #40597d) !important;
+  color: #ffffff !important;
+}
+
+.mot .cm-ai-pack-chips-grid,
+.dark .cm-ai-pack-chips-grid {
+  background: var(--cm-surface-soft, #1b2432) !important;
+  border-color: var(--cm-border, #28374d) !important;
+}
+
+.mot .cm-app-dialog-card,
+.dark .cm-app-dialog-card {
+  background: var(--cm-surface, #121822);
+  border-color: var(--cm-border, #28374d);
+  color: var(--cm-ink, #f0f6fc);
+}
+
+.mot .cm-app-dialog-header,
+.dark .cm-app-dialog-header {
+  background: var(--cm-surface-soft, #1b2432);
+  border-color: var(--cm-border, #28374d);
+}
+
+.mot .cm-app-dialog-info-card,
+.dark .cm-app-dialog-info-card {
+  background: var(--cm-surface-soft, #1b2432);
+  border-color: var(--cm-border, #28374d);
+}
+
+.mot .cm-room-android-banner,
+.dark .cm-room-android-banner {
+  background: var(--cm-surface, #121822);
+  border-color: var(--cm-border, #28374d);
+}
+
+.mot .cm-home-android-dock-btn,
+.dark .cm-home-android-dock-btn {
+  background: var(--cm-surface, #121822);
+  border-color: var(--cm-border, #28374d);
+  color: var(--cm-ink, #f0f6fc);
+}
+
+.mot .cm-game-toast,
+.dark .cm-game-toast {
+  background: var(--cm-surface, #121822);
+  border-color: var(--cm-border, #28374d);
+  color: var(--cm-ink, #f0f6fc);
+}
+
+.mani .cm-ai-modal-card {
+  border-color: #f3c2d4;
+}
+
+.mani .cm-ai-gen-action-btn {
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  border-radius: 9999px;
+}
+
+.mani .cm-ai-apply-pack-btn {
+  border-radius: 9999px;
+}
+
+.cm-spinner-inline {
+  display: inline-block;
+  animation: cmSpin 1s infinite linear;
+}
+
+@keyframes cmSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+

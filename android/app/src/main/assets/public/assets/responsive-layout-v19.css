@@ -890,3 +890,62 @@
     gap: 0.35rem;
   }
 }
+
+/* ============================================================================
+   Universal Adaptive Viewport & Safe-Area Adjustments (All Screens & Modals)
+   ============================================================================ */
+html, body, #root {
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+/* Home / Lobby / Game Container Safe Padding */
+#root > div,
+.cm-game-page,
+.cm-game-shell,
+.cm-home-page,
+.cm-lobby-page {
+  box-sizing: border-box;
+  padding-bottom: max(var(--cm-safe-bottom, 0px), 12px) !important;
+}
+
+html.cm-discord-activity #root > div,
+html.cm-discord-activity .cm-game-page,
+html.cm-discord-activity .cm-home-page,
+html.cm-discord-activity .cm-lobby-page {
+  padding-top: max(var(--cm-safe-top, 48px), 48px) !important;
+  padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
+}
+
+html.cm-ui-phone:not(.cm-discord-activity) .cm-game-page,
+html.cm-ui-phone:not(.cm-discord-activity) .cm-home-page,
+html.cm-ui-phone:not(.cm-discord-activity) .cm-lobby-page {
+  padding-top: max(var(--cm-safe-top, 0px), 0px) !important;
+  padding-bottom: max(var(--cm-safe-bottom, 0px), 0px) !important;
+}
+
+/* Universal Modal & Dialog Protection against Viewport Clipping */
+[role="dialog"],
+.cm-modal,
+.cm-dialog,
+.cm-home-mobile-menu {
+  max-height: calc(100dvh - var(--cm-safe-top, 0px) - var(--cm-safe-bottom, 0px) - 24px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+/* Virtual Keyboard Viewport Adaptation */
+@media (max-height: 500px) {
+  .cm-teambar {
+    display: none !important;
+  }
+  .cm-game-shell > main {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+  .cm-play-center {
+    gap: 2px !important;
+  }
+}
+

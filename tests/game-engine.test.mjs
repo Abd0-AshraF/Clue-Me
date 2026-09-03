@@ -170,7 +170,7 @@ test('AI service and native Android home and room link integration are configure
   assert.match(aiServiceCode, /\/api\/ai\/generate-pack/);
   assert.match(aiServiceCode, /\/api\/ai\/spymaster-advisor/);
   assert.match(aiServiceCode, /\/api\/ai\/guess-advisor/);
-  assert.match(aiServiceCode, /gemini-2\.5-flash/);
+  assert.match(aiServiceCode, /gemini-(2\.5|3\.6)-flash/);
 
   const aiHudCode = fs.readFileSync(new URL('../public/assets/game-ai-hud-v21.js', import.meta.url), 'utf8');
   assert.match(aiHudCode, /cm-home-android-btn/);

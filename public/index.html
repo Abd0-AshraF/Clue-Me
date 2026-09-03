@@ -59,6 +59,24 @@
       .cm-game-page, .cm-game-shell {
         box-sizing: border-box;
       }
+
+      /* Native Android / Mobile App Polish */
+      html.cm-native-app {
+        --cm-safe-top: max(env(safe-area-inset-top, 36px), 36px);
+      }
+      html.cm-native-app header.sticky,
+      html.cm-native-app .sticky.top-0,
+      html.cm-native-app header,
+      html.cm-native-app .cm-head {
+        padding-top: max(var(--cm-safe-top, 36px), 36px) !important;
+      }
+      @media (max-width: 768px) {
+        header.sticky,
+        .sticky.top-0 {
+          padding-top: max(var(--cm-safe-top, 0px), env(safe-area-inset-top, 0px));
+        }
+      }
+
       html.cm-discord-activity, html.cm-discord-activity body, html.cm-discord-activity #root {
         height: 100%;
         min-height: 100%;
@@ -134,10 +152,19 @@
     <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
     <script>
       (function() {
-        // Only route API traffic to remote production server if running strictly inside native Capacitor app without local server
-        var isCapacitorNative = location.protocol === "capacitor:" || 
-                                location.protocol === "ionic:" || 
-                                (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+        // Detect native Capacitor or standalone WebView environment
+        var isCapacitorNative = Boolean(
+          location.protocol === "capacitor:" || 
+          location.protocol === "ionic:" || 
+          (location.hostname === "localhost" && (!location.port || location.port === "80" || location.port === "443")) ||
+          (location.hostname === "127.0.0.1" && (!location.port || location.port === "80" || location.port === "443")) ||
+          (navigator.userAgent && (navigator.userAgent.indexOf("Capacitor") !== -1 || (navigator.userAgent.indexOf("Android") !== -1 && (navigator.userAgent.indexOf("; wv") !== -1 || navigator.userAgent.indexOf("Version/") !== -1)))) ||
+          (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform())
+        );
+
+        if (isCapacitorNative) {
+          document.documentElement.classList.add("cm-native-app");
+        }
         
         var customServer = "";
         try { 
@@ -156,15 +183,23 @@
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
             if (typeof input === "string") {
-              if (input.startsWith("/api/") || input.startsWith("/socket.io")) {
+              if (input.indexOf("/api/") === 0 || input.indexOf("/socket.io") === 0 || input === "/api/health") {
                 input = targetServer + input;
               }
             } else if (input && typeof input.url === "string") {
-              if (input.url.startsWith("/api/") || input.url.startsWith("/socket.io")) {
+              if (input.url.indexOf("/api/") === 0 || input.url.indexOf("/socket.io") === 0 || input.url === "/api/health") {
                 input = new Request(targetServer + input.url, input);
               }
             }
             return origFetch.call(this, input, init);
+          };
+
+          var origOpen = XMLHttpRequest.prototype.open;
+          XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+            if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("/socket.io") === 0 || url === "/api/health")) {
+              url = targetServer + url;
+            }
+            return origOpen.call(this, method, url, async !== false, user, password);
           };
         }
 
