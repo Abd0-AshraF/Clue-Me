@@ -214,7 +214,23 @@
           };
         }
 
-        // Initialize Native Device Features (Status Bar & Haptics)
+        // Initialize Native Device Features (Status Bar & Haptics & Deep Links)
+        function handleDeepLink(url) {
+          if (!url) return;
+          try {
+            var parsed = new URL(url);
+            var pathname = parsed.pathname || "/";
+            var search = parsed.search || "";
+            var hash = parsed.hash || "";
+            // If URL is pointing to clue-me.ai.studio domain or custom scheme
+            var targetPath = pathname + search + hash;
+            if (targetPath && targetPath !== "/" && targetPath !== location.pathname + location.search) {
+              window.history.pushState({}, "", targetPath);
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }
+          } catch(e) {}
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
           try {
             if (checkNative()) {
@@ -226,6 +242,19 @@
                 StatusBar.setOverlaysWebView({ overlay: false }).catch(function(){});
                 StatusBar.setStyle({ style: "DARK" }).catch(function(){});
                 StatusBar.setBackgroundColor({ color: "#17131a" }).catch(function(){});
+              }
+              var App = window.Capacitor.Plugins.App;
+              if (App) {
+                App.addListener("appUrlOpen", function(event) {
+                  if (event && event.url) {
+                    handleDeepLink(event.url);
+                  }
+                });
+                App.getLaunchUrl().then(function(res) {
+                  if (res && res.url) {
+                    handleDeepLink(res.url);
+                  }
+                }).catch(function(){});
               }
             }
           } catch(e) {}
