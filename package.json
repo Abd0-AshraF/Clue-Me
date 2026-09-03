@@ -15,6 +15,7 @@
     "dev": "node index.js",
     "start": "node index.js",
     "build": "echo \"[clue-me] already built — nothing to do\"",
+    "lint": "node --check index.js source/ai-service.js",
     "db:generate": "echo \"[clue-me] database client is bundled — nothing to generate\"",
     "db:migrate": "node scripts/check-config.mjs --database-only",
     "config:check": "node scripts/check-config.mjs",
@@ -33,7 +34,9 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.0",
     "@capacitor/screen-orientation": "^8.0.1",
-    "@capacitor/status-bar": "^8.0.3"
+    "@capacitor/status-bar": "^8.0.3",
+    "@google/genai": "^2.21.0",
+    "@resvg/resvg-js": "^2.6.2"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5"

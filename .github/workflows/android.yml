@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Signed Release APK
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Signed Release APK
+  build-android-release:
+    name: Build Signed Production APK
     runs-on: ubuntu-latest
 
     steps:
@@ -54,6 +54,9 @@ jobs:
               -storepass "$KEYSTORE_PASSWORD" \
               -keypass "$KEY_PASSWORD" \
               -dname "CN=ClueMe Game, OU=Mobile, O=ClueMe, L=Cairo, ST=Cairo, C=EG"
+            echo "Keystore successfully generated at android/app/my-release-key.jks"
+          else
+            echo "Keystore already exists at android/app/my-release-key.jks, skipping generation."
           fi
 
       - name: Grant execute permission for Gradle
@@ -70,11 +73,9 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Upload Signed Release APK
+      - name: Upload Signed Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ClueMe-Signed-Release-APK
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
-
-

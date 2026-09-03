@@ -163,3 +163,27 @@ test('game overlay and floating log patches include close control and drag-tail 
   assert.match(patch, /applyLinkedTail/);
   assert.match(patch, /blurActiveEditable\(\); setOpen\(!open\);/);
 });
+
+test('AI service and native Android home and room link integration are configured', () => {
+  const aiServiceCode = fs.readFileSync(new URL('../source/ai-service.js', import.meta.url), 'utf8');
+  assert.match(aiServiceCode, /registerAiRoutes/);
+  assert.match(aiServiceCode, /\/api\/ai\/generate-pack/);
+  assert.match(aiServiceCode, /\/api\/ai\/spymaster-advisor/);
+  assert.match(aiServiceCode, /\/api\/ai\/guess-advisor/);
+  assert.match(aiServiceCode, /gemini-2\.5-flash/);
+
+  const aiHudCode = fs.readFileSync(new URL('../public/assets/game-ai-hud-v21.js', import.meta.url), 'utf8');
+  assert.match(aiHudCode, /cm-home-android-btn/);
+  assert.match(aiHudCode, /cm-home-android-choice/);
+  assert.match(aiHudCode, /cm-room-android-cta/);
+  assert.match(aiHudCode, /clueme:\/\/room\//);
+  assert.match(aiHudCode, /purgeUnsolicitedClutter/);
+
+  const roomLayoutCss = fs.readFileSync(new URL('../public/assets/room-layout-v20.css', import.meta.url), 'utf8');
+  assert.match(roomLayoutCss, /cm-room-link-android-banner/);
+  assert.match(roomLayoutCss, /cm-menu-choice-android/);
+  assert.doesNotMatch(roomLayoutCss, /cm-live-toast-container/);
+
+  const indexHtml = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  assert.match(indexHtml, /game-ai-hud-v21\.js/);
+});

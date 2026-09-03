@@ -16,8 +16,29 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            def keystoreFile = file("my-release-key.jks")
+            if (!keystoreFile.exists()) {
+                keystoreFile = file("../../my-release-key.jks")
+            }
+            if (!keystoreFile.exists()) {
+                keystoreFile = rootProject.file("my-release-key.jks")
+            }
+            if (!keystoreFile.exists()) {
+                keystoreFile = file("my-release-key.jks")
+            }
+            storeFile keystoreFile
+            storePassword System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("RELEASE_STORE_PASSWORD") ?: "clueme123456"
+            keyAlias System.getenv("KEY_ALIAS") ?: System.getenv("RELEASE_KEY_ALIAS") ?: "my-game-key"
+            keyPassword System.getenv("KEY_PASSWORD") ?: System.getenv("RELEASE_KEY_PASSWORD") ?: "clueme123456"
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

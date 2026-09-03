@@ -1,6 +1,6 @@
 {
   "name": "Clue Me",
-  "description": "Arabic & English word-guessing game (Codenames style) with real-time multiplayer, game rooms, timer, clues, and team turns.",
+  "description": "Arabic & English multiplayer word-guessing game with native Android App integration, deep-linking, and seamless online/offline play.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

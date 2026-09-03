@@ -134,33 +134,33 @@
     <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
     <script>
       (function() {
-        // Automatically route API and WebSocket traffic to production cloud server when running inside Android/iOS App
-        var PROD_SERVER = "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app";
-        var isNativeApp = window.Capacitor !== undefined || 
-                          location.protocol === "capacitor:" || 
-                          (location.protocol === "http:" && location.hostname === "localhost" && !location.port);
+        // Only route API traffic to remote production server if running strictly inside native Capacitor app without local server
+        var isCapacitorNative = location.protocol === "capacitor:" || 
+                                location.protocol === "ionic:" || 
+                                (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
         
         var customServer = "";
-        try { customServer = localStorage.getItem("clue_me_custom_server") || ""; } catch(e){}
+        try { 
+          if (isCapacitorNative) {
+            customServer = localStorage.getItem("clue_me_custom_server") || ""; 
+          }
+        } catch(e){}
         
-        var targetServer = (customServer || (isNativeApp ? PROD_SERVER : "")).replace(/\/$/, "");
+        var targetServer = "";
+        if (isCapacitorNative) {
+          targetServer = (customServer || "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app").replace(/\/$/, "");
+        }
         window.__CLUE_ME_SERVER_URL__ = targetServer;
 
-        if (targetServer) {
-          // Intercept fetch calls starting with /api/ or relative endpoints
+        if (targetServer && isCapacitorNative) {
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
             if (typeof input === "string") {
-              if (input.startsWith("/api/")) {
+              if (input.startsWith("/api/") || input.startsWith("/socket.io")) {
                 input = targetServer + input;
-              } else if (input.startsWith("/")) {
-                // If it asks for root /api or relative endpoints
-                if (input.indexOf("/api") === 0 || input.indexOf("/socket.io") === 0) {
-                  input = targetServer + input;
-                }
               }
             } else if (input && typeof input.url === "string") {
-              if (input.url.startsWith("/api/")) {
+              if (input.url.startsWith("/api/") || input.url.startsWith("/socket.io")) {
                 input = new Request(targetServer + input.url, input);
               }
             }
@@ -196,7 +196,7 @@
           } catch(e) {}
         };
 
-        // Intercept link clicks and prevent top-level navigation in Discord activity
+        // Intercept link clicks in Discord activity
         (function() {
           var isDiscord = document.documentElement.classList.contains("cm-discord-activity") ||
                           location.search.indexOf("frame_id") !== -1 ||
@@ -213,32 +213,14 @@
               }
             };
 
-            window.open = function(url) {
-              if (url && (url.indexOf("http://") === 0 || url.indexOf("https://") === 0)) {
-                safeOpenExternal(url);
-              }
-              return null;
-            };
-
-            window.location.assign = function(url) {
-              if (!url) return;
-              if (url.indexOf("http://") === 0 || url.indexOf("https://") === 0) {
-                safeOpenExternal(url);
-                return;
-              }
-              window.history.pushState({}, "", url);
-              window.dispatchEvent(new PopStateEvent("popstate"));
-            };
-
-            window.location.replace = function(url) {
-              if (!url) return;
-              if (url.indexOf("http://") === 0 || url.indexOf("https://") === 0) {
-                safeOpenExternal(url);
-                return;
-              }
-              window.history.replaceState({}, "", url);
-              window.dispatchEvent(new PopStateEvent("popstate"));
-            };
+            try {
+              window.open = function(url) {
+                if (url && (url.indexOf("http://") === 0 || url.indexOf("https://") === 0)) {
+                  safeOpenExternal(url);
+                }
+                return null;
+              };
+            } catch(e) {}
 
             document.addEventListener("click", function(e) {
               var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
@@ -263,11 +245,6 @@
                   return;
                 }
               }
-            }, true);
-
-            document.addEventListener("submit", function(e) {
-              e.preventDefault();
-              e.stopPropagation();
             }, true);
           } else {
             document.addEventListener("click", function(e) {
@@ -295,9 +272,10 @@
     <script type="module" crossorigin src="/assets/index-discord-v30.js?v=153"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=153">
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=153">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=153">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=156">
     <script src="/assets/useSafeArea.js?v=153"></script>
     <script defer src="/assets/game-room-v20.js?v=153"></script>
+    <script defer src="/assets/game-ai-hud-v21.js?v=156"></script>
   </head>
   <body>
     <div id="root"></div>

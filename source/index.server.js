@@ -2,6 +2,7 @@
 import { existsSync as existsSync2 } from "node:fs";
 import { createServer } from "node:http";
 import { resolve as resolve2 } from "node:path";
+import { registerAiRoutes } from "./ai-service.js";
 
 // src/app.ts
 import { existsSync, readFileSync } from "node:fs";
@@ -3539,6 +3540,7 @@ function createApp(options = {}) {
   mountAuthRoutes(app2, authStore2);
   mountDiscordRoutes(app2, authStore2, options.discord ?? null);
   mountAdminRoutes(app2, { authStore: authStore2, roomStore: roomStore2, gameStore: gameStore2, adminStore: adminStore2 });
+  registerAiRoutes(app2, { authStore: authStore2, roomStore: roomStore2, gameStore: gameStore2 });
   const clientDist = findClientDist();
   if (clientDist) {
     const clientIndexPath = join(clientDist, "index.html");
