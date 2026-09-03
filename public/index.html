@@ -183,12 +183,30 @@
         }
         window.__CLUE_ME_SERVER_URL__ = targetServer;
 
+        var isDev = true; // Enable explicit request logging in development / diagnostic mode
+        try {
+          isDev = Boolean(
+            location.hostname === "localhost" || 
+            location.hostname === "127.0.0.1" || 
+            location.search.indexOf("debug=1") !== -1 || 
+            localStorage.getItem("clue_me_debug") === "true" ||
+            isCapacitorNative
+          );
+        } catch(e) {}
+
         function rewriteUrl(u) {
           if (!targetServer || !isCapacitorNative || typeof u !== "string") return u;
           if (u.indexOf("http://") === 0 || u.indexOf("https://") === 0) return u;
           var p = u.indexOf("/") === 0 ? u : ("/" + u);
           if (p.indexOf("/api/") === 0 || p.indexOf("/socket.io") === 0 || p === "/api/health" || p.indexOf("/api") === 0) {
-            return targetServer + p;
+            var rewritten = targetServer + p;
+            if (isDev) {
+              console.log("[ClueMe URL Interceptor] [API Request Rewrite] Original:", u, "-> Rewritten:", rewritten);
+            }
+            return rewritten;
+          }
+          if (isDev && (p.indexOf("/room/") !== -1 || p.indexOf("auth") !== -1)) {
+            console.log("[ClueMe URL Interceptor] [Route Pass-through] URL:", u);
           }
           return u;
         }
@@ -203,6 +221,9 @@
 
           var origAssign = window.location.assign;
           window.location.assign = function(url) {
+            if (isDev) {
+              console.log("[ClueMe URL Interceptor] location.assign called with:", url);
+            }
             if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("auth/discord") !== -1 || url.indexOf("/room/") === 0)) {
               url = rewriteUrl(url);
             }
@@ -211,6 +232,9 @@
 
           var origReplace = window.location.replace;
           window.location.replace = function(url) {
+            if (isDev) {
+              console.log("[ClueMe URL Interceptor] location.replace called with:", url);
+            }
             if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("auth/discord") !== -1 || url.indexOf("/room/") === 0)) {
               url = rewriteUrl(url);
             }
@@ -219,6 +243,10 @@
 
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
+            var reqUrl = typeof input === "string" ? input : (input && input.url ? input.url : String(input));
+            if (isDev && (reqUrl.indexOf("/api/") !== -1 || reqUrl.indexOf("auth") !== -1)) {
+              console.log("[ClueMe URL Interceptor] fetch request intercepted:", reqUrl, init);
+            }
             if (typeof input === "string") {
               input = rewriteUrl(input);
             } else if (input && typeof input.url === "string") {
@@ -232,6 +260,9 @@
 
           var origOpen = XMLHttpRequest.prototype.open;
           XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+            if (isDev && url && (String(url).indexOf("/api/") !== -1 || String(url).indexOf("auth") !== -1)) {
+              console.log("[ClueMe URL Interceptor] XHR open intercepted:", method, url);
+            }
             url = rewriteUrl(url);
             return origOpen.call(this, method, url, async !== false, user, password);
           };
