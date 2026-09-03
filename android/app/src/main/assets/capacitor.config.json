@@ -4,8 +4,15 @@
 	"webDir": "public",
 	"bundledWebRuntime": false,
 	"server": {
+		"url": "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
 		"androidScheme": "https",
-		"cleartext": true
+		"cleartext": true,
+		"allowNavigation": [
+			"*.europe-west3.run.app",
+			"*.run.app",
+			"https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
+			"https://ais-dev-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app"
+		]
 	},
 	"plugins": {
 		"SplashScreen": {

@@ -4,6 +4,7 @@
   "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
+    "url": "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
     "androidScheme": "https",
     "cleartext": true,
     "allowNavigation": [
