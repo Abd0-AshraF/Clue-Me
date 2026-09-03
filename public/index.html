@@ -194,6 +194,29 @@
         }
 
         if (targetServer && isCapacitorNative) {
+          try {
+            Object.defineProperty(window.location, "origin", {
+              get: function() { return targetServer; },
+              configurable: true
+            });
+          } catch(e) {}
+
+          var origAssign = window.location.assign;
+          window.location.assign = function(url) {
+            if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("auth/discord") !== -1 || url.indexOf("/room/") === 0)) {
+              url = rewriteUrl(url);
+            }
+            return origAssign.call(this, url);
+          };
+
+          var origReplace = window.location.replace;
+          window.location.replace = function(url) {
+            if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("auth/discord") !== -1 || url.indexOf("/room/") === 0)) {
+              url = rewriteUrl(url);
+            }
+            return origReplace.call(this, url);
+          };
+
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
             if (typeof input === "string") {
