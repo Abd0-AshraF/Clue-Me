@@ -153,15 +153,19 @@
     <script>
       (function() {
         // Detect native Capacitor or standalone WebView environment
-        var isCapacitorNative = Boolean(
-          location.protocol === "capacitor:" || 
-          location.protocol === "ionic:" || 
-          (location.hostname === "localhost" && (!location.port || location.port === "80" || location.port === "443")) ||
-          (location.hostname === "127.0.0.1" && (!location.port || location.port === "80" || location.port === "443")) ||
-          (navigator.userAgent && (navigator.userAgent.indexOf("Capacitor") !== -1 || (navigator.userAgent.indexOf("Android") !== -1 && (navigator.userAgent.indexOf("; wv") !== -1 || navigator.userAgent.indexOf("Version/") !== -1)))) ||
-          (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform())
-        );
+        function checkNative() {
+          return Boolean(
+            location.protocol === "capacitor:" || 
+            location.protocol === "ionic:" || 
+            (location.hostname === "localhost" && (!location.port || location.port === "80" || location.port === "443")) ||
+            (location.hostname === "127.0.0.1" && (!location.port || location.port === "80" || location.port === "443")) ||
+            (navigator.userAgent && (navigator.userAgent.indexOf("Capacitor") !== -1 || (navigator.userAgent.indexOf("Android") !== -1 && (navigator.userAgent.indexOf("; wv") !== -1 || navigator.userAgent.indexOf("Version/") !== -1)))) ||
+            (typeof window.Capacitor !== "undefined" && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) ||
+            (typeof window.Capacitor !== "undefined")
+          );
+        }
 
+        var isCapacitorNative = checkNative();
         if (isCapacitorNative) {
           document.documentElement.classList.add("cm-native-app");
         }
@@ -179,16 +183,25 @@
         }
         window.__CLUE_ME_SERVER_URL__ = targetServer;
 
+        function rewriteUrl(u) {
+          if (!targetServer || !isCapacitorNative || typeof u !== "string") return u;
+          if (u.indexOf("http://") === 0 || u.indexOf("https://") === 0) return u;
+          var p = u.indexOf("/") === 0 ? u : ("/" + u);
+          if (p.indexOf("/api/") === 0 || p.indexOf("/socket.io") === 0 || p === "/api/health" || p.indexOf("/api") === 0) {
+            return targetServer + p;
+          }
+          return u;
+        }
+
         if (targetServer && isCapacitorNative) {
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
             if (typeof input === "string") {
-              if (input.indexOf("/api/") === 0 || input.indexOf("/socket.io") === 0 || input === "/api/health") {
-                input = targetServer + input;
-              }
+              input = rewriteUrl(input);
             } else if (input && typeof input.url === "string") {
-              if (input.url.indexOf("/api/") === 0 || input.url.indexOf("/socket.io") === 0 || input.url === "/api/health") {
-                input = new Request(targetServer + input.url, input);
+              var rewritten = rewriteUrl(input.url);
+              if (rewritten !== input.url) {
+                input = new Request(rewritten, input);
               }
             }
             return origFetch.call(this, input, init);
@@ -196,9 +209,7 @@
 
           var origOpen = XMLHttpRequest.prototype.open;
           XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-            if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("/socket.io") === 0 || url === "/api/health")) {
-              url = targetServer + url;
-            }
+            url = rewriteUrl(url);
             return origOpen.call(this, method, url, async !== false, user, password);
           };
         }
@@ -206,6 +217,9 @@
         // Initialize Native Device Features (Status Bar & Haptics)
         document.addEventListener("DOMContentLoaded", function() {
           try {
+            if (checkNative()) {
+              document.documentElement.classList.add("cm-native-app");
+            }
             if (window.Capacitor && window.Capacitor.Plugins) {
               var StatusBar = window.Capacitor.Plugins.StatusBar;
               if (StatusBar) {

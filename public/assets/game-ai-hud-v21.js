@@ -267,7 +267,26 @@
   /* --------------------------------------------------------------------------
      Official Android App Integration & Modal
      -------------------------------------------------------------------------- */
+  function isNativeAppEnvironment() {
+    try {
+      return Boolean(
+        (document.documentElement && document.documentElement.classList.contains('cm-native-app')) ||
+        (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+        (typeof window.Capacitor !== 'undefined') ||
+        (window.__CLUE_ME_SERVER_URL__ && window.__CLUE_ME_SERVER_URL__.length > 0) ||
+        location.protocol === 'capacitor:' ||
+        location.protocol === 'ionic:' ||
+        (location.hostname === 'localhost' && (!location.port || location.port === '80' || location.port === '443')) ||
+        (location.hostname === '127.0.0.1' && (!location.port || location.port === '80' || location.port === '443')) ||
+        (navigator.userAgent && (navigator.userAgent.indexOf('Capacitor') !== -1 || (navigator.userAgent.indexOf('Android') !== -1 && (navigator.userAgent.indexOf('; wv') !== -1 || navigator.userAgent.indexOf('Version/') !== -1))))
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
   function openAppDialog() {
+    if (isNativeAppEnvironment()) return;
     var existing = document.getElementById('cm-app-dialog-backdrop');
     if (existing) existing.remove();
 
@@ -330,8 +349,13 @@
   }
 
   function syncHomePageAndroidButtons() {
-    var isHome = location.pathname === '/' || location.pathname === '';
     var existingDock = document.getElementById('cm-home-android-dock');
+    if (isNativeAppEnvironment()) {
+      if (existingDock) existingDock.remove();
+      return;
+    }
+
+    var isHome = location.pathname === '/' || location.pathname === '';
 
     if (!isHome) {
       if (existingDock) existingDock.remove();
@@ -383,8 +407,13 @@
   }
 
   function syncRoomUrlAndroidBanner() {
-    var roomCode = getRoomCodeFromUrl();
     var existingBanner = document.getElementById('cm-room-android-cta');
+    if (isNativeAppEnvironment()) {
+      if (existingBanner) existingBanner.remove();
+      return;
+    }
+
+    var roomCode = getRoomCodeFromUrl();
 
     if (!roomCode) {
       if (existingBanner) existingBanner.remove();

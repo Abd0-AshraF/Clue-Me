@@ -6064,3 +6064,22 @@ body.cm-modal-open .cm-home-android-dock {
   100% { transform: rotate(360deg); }
 }
 
+/* Native App APK Download Pill & CTA Suppression */
+html.cm-native-app #cm-home-android-dock,
+html.cm-native-app .cm-home-android-dock,
+html.cm-native-app #cm-room-android-cta,
+html.cm-native-app .cm-room-android-banner,
+html.cm-native-app #cm-android-header-btn,
+html.cm-native-app .cm-android-header-btn,
+html.cm-native-app #cm-app-dialog-backdrop,
+html.cm-native-app .cm-app-dialog-backdrop,
+body.cm-native-app #cm-home-android-dock,
+body.cm-native-app .cm-home-android-dock,
+body.cm-native-app #cm-room-android-cta,
+body.cm-native-app .cm-room-android-banner {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
