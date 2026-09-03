@@ -4,12 +4,13 @@
 	"webDir": "public",
 	"bundledWebRuntime": false,
 	"server": {
-		"url": "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
 		"androidScheme": "https",
 		"cleartext": true,
 		"allowNavigation": [
-			"*.europe-west3.run.app",
+			"clue-me.ai.studio",
+			"*.ai.studio",
 			"*.run.app",
+			"https://clue-me.ai.studio",
 			"https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
 			"https://ais-dev-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app"
 		]

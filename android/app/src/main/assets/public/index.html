@@ -153,15 +153,19 @@
     <script>
       (function() {
         // Detect native Capacitor or standalone WebView environment
-        var isCapacitorNative = Boolean(
-          location.protocol === "capacitor:" || 
-          location.protocol === "ionic:" || 
-          (location.hostname === "localhost" && (!location.port || location.port === "80" || location.port === "443")) ||
-          (location.hostname === "127.0.0.1" && (!location.port || location.port === "80" || location.port === "443")) ||
-          (navigator.userAgent && (navigator.userAgent.indexOf("Capacitor") !== -1 || (navigator.userAgent.indexOf("Android") !== -1 && (navigator.userAgent.indexOf("; wv") !== -1 || navigator.userAgent.indexOf("Version/") !== -1)))) ||
-          (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform())
-        );
+        function checkNative() {
+          return Boolean(
+            location.protocol === "capacitor:" || 
+            location.protocol === "ionic:" || 
+            (location.hostname === "localhost" && (!location.port || location.port === "80" || location.port === "443")) ||
+            (location.hostname === "127.0.0.1" && (!location.port || location.port === "80" || location.port === "443")) ||
+            (navigator.userAgent && (navigator.userAgent.indexOf("Capacitor") !== -1 || (navigator.userAgent.indexOf("Android") !== -1 && (navigator.userAgent.indexOf("; wv") !== -1 || navigator.userAgent.indexOf("Version/") !== -1)))) ||
+            (typeof window.Capacitor !== "undefined" && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) ||
+            (typeof window.Capacitor !== "undefined")
+          );
+        }
 
+        var isCapacitorNative = checkNative();
         if (isCapacitorNative) {
           document.documentElement.classList.add("cm-native-app");
         }
@@ -175,20 +179,29 @@
         
         var targetServer = "";
         if (isCapacitorNative) {
-          targetServer = (customServer || "https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app").replace(/\/$/, "");
+          targetServer = (customServer || "https://clue-me.ai.studio").replace(/\/$/, "");
         }
         window.__CLUE_ME_SERVER_URL__ = targetServer;
+
+        function rewriteUrl(u) {
+          if (!targetServer || !isCapacitorNative || typeof u !== "string") return u;
+          if (u.indexOf("http://") === 0 || u.indexOf("https://") === 0) return u;
+          var p = u.indexOf("/") === 0 ? u : ("/" + u);
+          if (p.indexOf("/api/") === 0 || p.indexOf("/socket.io") === 0 || p === "/api/health" || p.indexOf("/api") === 0) {
+            return targetServer + p;
+          }
+          return u;
+        }
 
         if (targetServer && isCapacitorNative) {
           var origFetch = window.fetch;
           window.fetch = function(input, init) {
             if (typeof input === "string") {
-              if (input.indexOf("/api/") === 0 || input.indexOf("/socket.io") === 0 || input === "/api/health") {
-                input = targetServer + input;
-              }
+              input = rewriteUrl(input);
             } else if (input && typeof input.url === "string") {
-              if (input.url.indexOf("/api/") === 0 || input.url.indexOf("/socket.io") === 0 || input.url === "/api/health") {
-                input = new Request(targetServer + input.url, input);
+              var rewritten = rewriteUrl(input.url);
+              if (rewritten !== input.url) {
+                input = new Request(rewritten, input);
               }
             }
             return origFetch.call(this, input, init);
@@ -196,9 +209,7 @@
 
           var origOpen = XMLHttpRequest.prototype.open;
           XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-            if (typeof url === "string" && (url.indexOf("/api/") === 0 || url.indexOf("/socket.io") === 0 || url === "/api/health")) {
-              url = targetServer + url;
-            }
+            url = rewriteUrl(url);
             return origOpen.call(this, method, url, async !== false, user, password);
           };
         }
@@ -206,6 +217,9 @@
         // Initialize Native Device Features (Status Bar & Haptics)
         document.addEventListener("DOMContentLoaded", function() {
           try {
+            if (checkNative()) {
+              document.documentElement.classList.add("cm-native-app");
+            }
             if (window.Capacitor && window.Capacitor.Plugins) {
               var StatusBar = window.Capacitor.Plugins.StatusBar;
               if (StatusBar) {
@@ -301,6 +315,83 @@
             window.cmTriggerHaptic("light");
           }
         }, { passive: true });
+
+        // Online-Only Gatekeeper for Clue Me
+        (function() {
+          var isAr = document.documentElement.lang !== "en";
+          function showOfflineScreen() {
+            var existing = document.getElementById("cm-offline-blocker");
+            if (existing) {
+              existing.style.display = "flex";
+              return;
+            }
+            var el = document.createElement("div");
+            el.id = "cm-offline-blocker";
+            el.style.cssText = "position:fixed; inset:0; z-index:999999; background:#120f16; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; font-family:system-ui,-apple-system,sans-serif; color:#f0f6fc;";
+            el.innerHTML = [
+              '<div style="max-width:380px; width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">',
+              '  <div style="width:72px; height:72px; border-radius:20px; background:#221b28; border:1px solid #3d2f47; display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:0 8px 24px rgba(0,0,0,0.5);">',
+              '    📡',
+              '  </div>',
+              '  <h2 style="margin:0; font-size:1.4rem; font-weight:700; color:#fff;">' + (isAr ? 'لا يوجد اتصال بالإنترنت' : 'No Internet Connection') + '</h2>',
+              '  <p style="margin:0; font-size:0.95rem; line-height:1.6; color:#a196aa;">' + (isAr ? 'لعبة Clue Me لعبة جماعية مباشرة أونلاين وتحتاج إلى اتصال نشط بالإنترنت للعب.' : 'Clue Me is a live online multiplayer game and requires an active internet connection.') + '</p>',
+              '  <button type="button" id="cm-retry-conn-btn" style="margin-top:8px; width:100%; padding:14px 20px; font-size:1rem; font-weight:600; background:#3b82f6; color:#fff; border:none; border-radius:12px; cursor:pointer; box-shadow:0 4px 12px rgba(59,130,246,0.3);">' + (isAr ? 'إعادة المحاولة والاتصال' : 'Retry Connection') + '</button>',
+              '</div>'
+            ].join("");
+            document.body ? document.body.appendChild(el) : document.documentElement.appendChild(el);
+            var btn = el.querySelector("#cm-retry-conn-btn");
+            if (btn) {
+              btn.addEventListener("click", function() {
+                btn.textContent = isAr ? "جارِ التحقق..." : "Checking...";
+                btn.style.opacity = "0.7";
+                checkConnectivity(function(online) {
+                  btn.textContent = isAr ? "إعادة المحاولة والاتصال" : "Retry Connection";
+                  btn.style.opacity = "1";
+                  if (online) {
+                    hideOfflineScreen();
+                    location.reload();
+                  }
+                });
+              });
+            }
+          }
+
+          function hideOfflineScreen() {
+            var el = document.getElementById("cm-offline-blocker");
+            if (el) el.style.display = "none";
+          }
+
+          function checkConnectivity(cb) {
+            if (!navigator.onLine) {
+              if (cb) cb(false);
+              return;
+            }
+            var target = (window.__CLUE_ME_SERVER_URL__ || "") + "/api/health";
+            fetch(target, { method: "GET", cache: "no-store", headers: { "Accept": "application/json" } })
+              .then(function(res) {
+                var ok = res.ok;
+                if (cb) cb(ok);
+              })
+              .catch(function() {
+                if (cb) cb(false);
+              });
+          }
+
+          window.addEventListener("offline", showOfflineScreen);
+          window.addEventListener("online", function() {
+            checkConnectivity(function(online) {
+              if (online) hideOfflineScreen();
+            });
+          });
+
+          if (!navigator.onLine) {
+            if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", showOfflineScreen);
+            } else {
+              showOfflineScreen();
+            }
+          }
+        })();
       })();
     </script>
 
