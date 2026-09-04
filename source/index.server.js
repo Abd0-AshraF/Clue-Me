@@ -3225,13 +3225,15 @@ function mountDiscordRoutes(app2, authStore2, config) {
     const state = randomBytes2(16).toString("hex");
     const token = bearerToken2(req);
     const linkUserId = token ? authStore2.me(token)?.id ?? null : null;
+    const customRedirect = typeof req.query.redirect_uri === "string" ? req.query.redirect_uri : (typeof req.query.redirectUri === "string" ? req.query.redirectUri : null);
+    const redirectUri = customRedirect ?? config.redirectUri ?? `${publicOrigin(req)}/api/auth/discord/callback`;
     pending.set(state, {
       origin: publicOrigin(req),
       returnTo: safeReturnTo(req.query.returnTo),
+      redirectUri,
       linkUserId,
       createdAt: Date.now()
     });
-    const redirectUri = config.redirectUri ?? `${publicOrigin(req)}/api/auth/discord/callback`;
     const params = new URLSearchParams({
       client_id: config.clientId,
       response_type: "code",
@@ -3292,7 +3294,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
       return;
     }
     try {
-      const redirectUri = config.redirectUri ?? `${entry.origin}/api/auth/discord/callback`;
+      const redirectUri = entry.redirectUri ?? config.redirectUri ?? `${entry.origin}/api/auth/discord/callback`;
       const identity = await exchangeCode(config, code, redirectUri);
       const avatar = await fetchAvatarDataUrl(identity);
       const displayName = identity.globalName ?? identity.username;
@@ -3333,6 +3335,10 @@ function mountDiscordRoutes(app2, authStore2, config) {
         maxAge: EXCHANGE_TTL_MS,
         path: COOKIE_PATH
       });
+      if (entry.redirectUri && (entry.redirectUri.startsWith("clue-me://") || entry.redirectUri.startsWith("clueme://"))) {
+        res.redirect(302, `${entry.redirectUri}?code=${encodeURIComponent(code)}&discord_session=${exchangeToken}`);
+        return;
+      }
       res.redirect(302, `${entry.origin}${entry.returnTo}?auth=discord`);
     } catch (err) {
       console.error("[discord] callback failed:", err);

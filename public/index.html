@@ -367,22 +367,33 @@
             var parsed = new URL(normUrl);
             var searchParams = new URLSearchParams(parsed.search || "");
             var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
-            var ses = searchParams.get("discord_session") || searchParams.get("code") || hashParams.get("access_token");
-            if (ses) {
+            var code = searchParams.get("code");
+            var ses = searchParams.get("discord_session") || hashParams.get("access_token");
+
+            var payload = {};
+            if (code) {
+              payload = { code: code, redirectUri: "clue-me://auth" };
+            } else if (ses) {
+              payload = { session: ses };
               try {
+                localStorage.setItem("discord_session", ses);
                 localStorage.setItem("clue-me:discord_session", ses);
                 localStorage.setItem("clue-me:pending_discord_session", ses);
               } catch(e) {}
+            }
+
+            if (code || ses) {
               fetch("/api/auth/discord/exchange", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ session: ses })
+                body: JSON.stringify(payload)
               })
               .then(function(res) { return res.json(); })
               .then(function(data) {
                 if (data && data.token) {
                   try {
                     localStorage.setItem("clue-me:token", data.token);
+                    localStorage.setItem("discord_session", data.token);
                     if (data.user && data.user.name) {
                       localStorage.setItem("clue-me:name", data.user.name);
                     }
@@ -406,7 +417,7 @@
             var searchParams = new URLSearchParams(parsed.search || "");
             var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
 
-            // Check if URL contains Discord OAuth parameters or session
+            // Check if URL contains Discord OAuth parameters or session or clue-me://auth
             var isDiscordOAuth =
               searchParams.has("code") ||
               searchParams.has("access_token") ||
@@ -414,10 +425,12 @@
               searchParams.has("state") ||
               searchParams.has("discord_session") ||
               searchParams.get("auth") === "discord" ||
+              rawUrl.indexOf("clue-me://auth") !== -1 ||
+              rawUrl.indexOf("clueme://auth") !== -1 ||
               rawUrl.indexOf("auth/discord") !== -1;
 
             if (isDiscordOAuth) {
-              window.handleDiscordCallback(normUrl);
+              window.handleDiscordCallback(rawUrl);
               var cleanUrl = "/";
               window.history.replaceState({}, document.title, cleanUrl);
               window.dispatchEvent(new PopStateEvent("popstate"));

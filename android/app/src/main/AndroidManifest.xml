@@ -37,6 +37,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="clueme" />
                 <data android:scheme="clue-me" />
+                <data android:scheme="clue-me" android:host="auth" />
             </intent-filter>
 
         </activity>
