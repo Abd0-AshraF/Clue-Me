@@ -3225,12 +3225,13 @@ function mountDiscordRoutes(app2, authStore2, config) {
     const state = randomBytes2(16).toString("hex");
     const token = bearerToken2(req);
     const linkUserId = token ? authStore2.me(token)?.id ?? null : null;
-    const customRedirect = typeof req.query.redirect_uri === "string" ? req.query.redirect_uri : (typeof req.query.redirectUri === "string" ? req.query.redirectUri : null);
-    const redirectUri = customRedirect ?? config.redirectUri ?? `${publicOrigin(req)}/api/auth/discord/callback`;
+    const appRedirect = typeof req.query.app_redirect === "string" ? req.query.app_redirect : (typeof req.query.redirect_uri === "string" ? req.query.redirect_uri : (typeof req.query.redirectUri === "string" ? req.query.redirectUri : null));
+    const redirectUri = config.redirectUri ?? "https://clue-me.ai.studio/api/auth/discord/callback";
     pending.set(state, {
       origin: publicOrigin(req),
       returnTo: safeReturnTo(req.query.returnTo),
       redirectUri,
+      appRedirect,
       linkUserId,
       createdAt: Date.now()
     });
@@ -3335,11 +3336,12 @@ function mountDiscordRoutes(app2, authStore2, config) {
         maxAge: EXCHANGE_TTL_MS,
         path: COOKIE_PATH
       });
-      if (entry.redirectUri && (entry.redirectUri.startsWith("clue-me://") || entry.redirectUri.startsWith("clueme://"))) {
-        res.redirect(302, `${entry.redirectUri}?code=${encodeURIComponent(code)}&discord_session=${exchangeToken}`);
+      const finalRedirect = entry.appRedirect || entry.redirectUri;
+      if (finalRedirect && (finalRedirect.startsWith("clue-me://") || finalRedirect.startsWith("clueme://"))) {
+        res.redirect(302, `${finalRedirect}?code=${encodeURIComponent(code)}&discord_session=${exchangeToken}`);
         return;
       }
-      res.redirect(302, `${entry.origin}${entry.returnTo}?auth=discord`);
+      res.redirect(302, `${entry.origin}${entry.returnTo}?auth=discord&discord_session=${exchangeToken}`);
     } catch (err) {
       console.error("[discord] callback failed:", err);
       redirectWithError(res, entry.origin, entry.returnTo, "failed");

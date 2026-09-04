@@ -202,7 +202,7 @@
                   banner.innerHTML =
                     '<div style="font-weight:bold;font-size:18px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
                     '<div style="font-size:14px;opacity:0.9;margin-bottom:16px;">اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب:</div>' +
-                    '<a href="' + appDeepLink + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:16px;box-shadow:0 3px 10px rgba(79,70,229,0.5);margin:4px;">اضغط هنا للعودة للتطبيق 📱</a>';
+                    '<a href="' + appDeepLink + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:16px;box-shadow:0 3px 10px rgba(79,70,229,0.5);margin:4px;white-space:nowrap;">تم تسجيل الدخول بنجاح! اضغط للعودة للتطبيق 📱</a>';
                   if (document.body) document.body.appendChild(banner);
                 }
 
@@ -441,10 +441,21 @@
             // ELSE IF room parameters exist (e.g. room or roomId or /room/ path):
             var roomCode = searchParams.get("room") || searchParams.get("roomId");
             var pathname = parsed.pathname || "/";
-            if (roomCode || pathname.indexOf("/room/") === 0) {
-              var targetPath = pathname + (parsed.search || "") + (parsed.hash || "");
+            var pathParts = pathname.split("/").filter(Boolean);
+            var pathRoomCode = (pathParts[0] === "room" && pathParts[1]) ? pathParts[1] : null;
+
+            var finalRoomCode = roomCode || pathRoomCode;
+            var isValidRoom = finalRoomCode && /^[A-Za-z]{4}$/.test(finalRoomCode);
+
+            if (isValidRoom) {
+              var targetPath = "/room/" + finalRoomCode.toUpperCase() + (parsed.search || "") + (parsed.hash || "");
               window.history.pushState({}, "", targetPath);
               window.dispatchEvent(new PopStateEvent("popstate"));
+              return;
+            }
+
+            if (pathname.indexOf("/room/") === 0) {
+              // Invalid room code path - do not navigate to it
               return;
             }
 
