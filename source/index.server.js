@@ -3372,7 +3372,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
       fresh: entry.fresh
     });
   });
-  app2.post("/api/auth/firebase/discord", (req, res) => {
+  app2.post("/api/auth/discord/implicit-callback", (req, res) => {
     try {
       const { discordId, name, email, avatar } = req.body;
       if (!discordId) {
@@ -3392,7 +3392,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
         fresh: result.fresh
       });
     } catch (err) {
-      console.error("[firebase/discord] auth failed:", err);
+      console.error("[discord-implicit] auth failed:", err);
       res.status(500).json({ error: { code: "INTERNAL", message: "Internal auth failed" } });
     }
   });

@@ -174,7 +174,7 @@
                     avatar: avatarUrl
                   };
                   
-                  fetch('/api/auth/firebase/discord', {
+                  fetch('/api/auth/discord/implicit-callback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -337,9 +337,9 @@
       })();
     </script>
     
-    <!-- PURE CLIENT-SIDE DISCORD IMPLICIT OAUTH (NO FIREBASE AUTH) -->
+    <!-- PURE CLIENT-SIDE DISCORD IMPLICIT OAUTH FLOW -->
     <script>
-      window.handleFirebaseDiscordLogin = function() {
+      window.handleDiscordImplicitLogin = function() {
         console.log("[Discord Auth] Initiating pure Client-Side Discord Implicit OAuth Flow...");
         
         // Clear any previous error banner
@@ -357,10 +357,8 @@
               return;
             }
 
-            // 2. Compute Redirect URI
-            var redirectUri = window.location.origin.indexOf('clue-me.ai.studio') !== -1 
-              ? 'https://clue-me.ai.studio/auth/callback' 
-              : window.location.origin + '/auth/callback';
+            // 2. Explicit Redirect URI as configured on Discord Developer Portal
+            var redirectUri = 'https://clue-me.ai.studio/auth/callback';
 
             // 3. Build OAuth URL
             var oauthUrl = 'https://discord.com/api/oauth2/authorize' +
@@ -390,8 +388,8 @@
       };
 
       window.handleNativeDiscordLogin = function() {
-        if (typeof window.handleFirebaseDiscordLogin === "function") {
-          window.handleFirebaseDiscordLogin();
+        if (typeof window.handleDiscordImplicitLogin === "function") {
+          window.handleDiscordImplicitLogin();
         }
       };
 
