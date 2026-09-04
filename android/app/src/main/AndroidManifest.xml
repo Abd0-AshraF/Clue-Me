@@ -36,6 +36,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="clueme" />
+                <data android:scheme="clue-me" />
             </intent-filter>
 
         </activity>

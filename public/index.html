@@ -150,9 +150,11 @@
           if (ses || isAuthDiscord) {
             if (ses) {
               try {
+                localStorage.setItem('discord_session', ses);
                 localStorage.setItem('clue-me:discord_session', ses);
                 localStorage.setItem('clue-me:pending_discord_session', ses);
               } catch(e) {}
+
               fetch('/api/auth/discord/exchange', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -171,37 +173,49 @@
                 }
               })
               .catch(function(){});
+
+              // Clean URL
+              var cleanUrl = window.location.pathname + (window.location.hash || '');
+              window.history.replaceState({}, document.title, cleanUrl);
+
+              var appDeepLink = 'clue-me://auth?discord_session=' + encodeURIComponent(ses);
+              var intentLink = 'intent://auth?discord_session=' + encodeURIComponent(ses) + '#Intent;scheme=clue-me;package=com.clueme.app;S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
+
+              var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var isNative = Boolean(
+                window.Capacitor ||
+                window.cordova ||
+                location.protocol === 'capacitor:' ||
+                document.documentElement.classList.contains('cm-native-app')
+              );
+
+              if (isMobile && !isNative) {
+                try {
+                  window.location.href = appDeepLink;
+                } catch(e) {}
+
+                function showReturnToAppUI() {
+                  if (document.getElementById('cm-return-app-banner')) return;
+                  var banner = document.createElement('div');
+                  banner.id = 'cm-return-app-banner';
+                  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1e1b4b;color:#ffffff;padding:20px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-bottom:4px solid #6366f1;font-family:sans-serif;direction:rtl;';
+                  banner.innerHTML =
+                    '<div style="font-weight:bold;font-size:18px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
+                    '<div style="font-size:14px;opacity:0.9;margin-bottom:16px;">اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب:</div>' +
+                    '<a href="' + appDeepLink + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:16px;box-shadow:0 3px 10px rgba(79,70,229,0.5);margin:4px;">اضغط هنا للعودة للتطبيق 📱</a>';
+                  if (document.body) document.body.appendChild(banner);
+                }
+
+                if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                  showReturnToAppUI();
+                } else {
+                  document.addEventListener('DOMContentLoaded', showReturnToAppUI);
+                }
+              }
+            } else {
+              var cleanUrl = window.location.pathname + (window.location.hash || '');
+              window.history.replaceState({}, document.title, cleanUrl);
             }
-
-            var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-            var isNative = Boolean(
-              window.Capacitor ||
-              window.cordova ||
-              location.protocol === 'capacitor:' ||
-              document.documentElement.classList.contains('cm-native-app')
-            );
-            var schemeUrl = 'clue-me://auth/discord' + (ses ? '?discord_session=' + encodeURIComponent(ses) : '');
-
-            if (isMobile && !isNative) {
-              try {
-                window.location.href = schemeUrl;
-              } catch(e) {}
-
-              document.addEventListener('DOMContentLoaded', function() {
-                if (document.getElementById('cm-return-app-banner')) return;
-                var banner = document.createElement('div');
-                banner.id = 'cm-return-app-banner';
-                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1e1b4b;color:#ffffff;padding:16px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.5);border-bottom:3px solid #6366f1;font-family:sans-serif;direction:rtl;';
-                banner.innerHTML =
-                  '<div style="font-weight:bold;font-size:16px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
-                  '<div style="font-size:13px;opacity:0.9;margin-bottom:12px;">يمكنك الآن العودة إلى التطبيق لإكمال اللعب.</div>' +
-                  '<a href="' + schemeUrl + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:10px 22px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:14px;box-shadow:0 2px 8px rgba(79,70,229,0.4);">اضغط للعودة إلى التطبيق 📱</a>';
-                document.body.appendChild(banner);
-              });
-            }
-
-            var cleanUrl = location.pathname + (location.hash || '');
-            window.history.replaceState({}, document.title, cleanUrl);
           }
         } catch (e) {
           /* storage unavailable — keep static defaults */
