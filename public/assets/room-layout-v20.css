@@ -5211,8 +5211,7 @@ html.cm-v20.mani-dark .cm-teambar-blue {
 body:has([role="dialog"]) .cm-home-android-dock,
 body:has([aria-modal="true"]) .cm-home-android-dock,
 body:has(#cm-app-dialog-backdrop) .cm-home-android-dock,
-body:has(.fixed.inset-0.z-50) .cm-home-android-dock,
-body:has(.fixed.inset-0) .cm-home-android-dock,
+body:has(.fixed.inset-0.z-50:not(.-z-10)) .cm-home-android-dock,
 body.cm-modal-open .cm-home-android-dock {
   display: none !important;
   opacity: 0 !important;

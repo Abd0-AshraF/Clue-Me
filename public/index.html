@@ -212,13 +212,6 @@
         }
 
         if (targetServer && isCapacitorNative) {
-          try {
-            Object.defineProperty(window.location, "origin", {
-              get: function() { return targetServer; },
-              configurable: true
-            });
-          } catch(e) {}
-
           var origAssign = window.location.assign;
           window.location.assign = function(url) {
             if (isDev) {
@@ -485,7 +478,11 @@
     <script src="/assets/useSafeArea.js?v=153"></script>
     <script defer src="/assets/game-room-v20.js?v=153"></script>
     <script defer src="/assets/game-ai-hud-v21.js?v=156"></script>
-  </head>
+  
+    
+
+    
+</head>
   <body>
     <div id="root"></div>
   </body>

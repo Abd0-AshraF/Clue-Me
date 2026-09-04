@@ -212,13 +212,6 @@
         }
 
         if (targetServer && isCapacitorNative) {
-          try {
-            Object.defineProperty(window.location, "origin", {
-              get: function() { return targetServer; },
-              configurable: true
-            });
-          } catch(e) {}
-
           var origAssign = window.location.assign;
           window.location.assign = function(url) {
             if (isDev) {

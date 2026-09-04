@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<script>
+  function isNativeAppEnvironment() {
+    try {
+      return Boolean(
+        (document.documentElement && document.documentElement.classList.contains('cm-native-app')) ||
+        (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+        (typeof window.Capacitor !== 'undefined') ||
+        (window.__CLUE_ME_SERVER_URL__ && window.__CLUE_ME_SERVER_URL__.length > 0) ||
+        location.protocol === 'capacitor:' ||
+        location.protocol === 'ionic:' ||
+        (location.hostname === 'localhost' && (!location.port || location.port === '80' || location.port === '443')) ||
+        (location.hostname === '127.0.0.1' && (!location.port || location.port === '80' || location.port === '443')) ||
+        (navigator.userAgent && (navigator.userAgent.indexOf('Capacitor') !== -1 || (navigator.userAgent.indexOf('Android') !== -1 && (navigator.userAgent.indexOf('; wv') !== -1 || navigator.userAgent.indexOf('Version/') !== -1))))
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+  console.log("isNative:", isNativeAppEnvironment());
+</script>
+</body>
+</html>

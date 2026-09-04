@@ -30,7 +30,7 @@
   function isAnyModalOpen() {
     return Boolean(
       document.querySelector(
-        '[role="dialog"], [aria-modal="true"], #cm-app-dialog-backdrop, .cm-ai-modal-backdrop, .fixed.inset-0.z-50'
+        '[role="dialog"], [aria-modal="true"], #cm-app-dialog-backdrop, .cm-ai-modal-backdrop, .fixed.inset-0.z-50, .fixed.inset-0'
       )
     );
   }
@@ -350,7 +350,10 @@
 
   function syncHomePageAndroidButtons() {
     var existingDock = document.getElementById('cm-home-android-dock');
-    
+    if (isNativeAppEnvironment()) {
+      if (existingDock) existingDock.remove();
+      return;
+    }
 
     var isHome = location.pathname === '/' || location.pathname === '';
 
