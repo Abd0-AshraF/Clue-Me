@@ -3372,6 +3372,30 @@ function mountDiscordRoutes(app2, authStore2, config) {
       fresh: entry.fresh
     });
   });
+  app2.post("/api/auth/firebase/discord", (req, res) => {
+    try {
+      const { discordId, name, email, avatar } = req.body;
+      if (!discordId) {
+        res.status(400).json({ error: { code: "INVALID_ARGUMENT", message: "discordId is required" } });
+        return;
+      }
+      const result = authStore2.discordUpsert({
+        discordId,
+        name: name || "Discord Player",
+        email: email || null,
+        avatar: avatar || null
+      });
+      res.json({
+        token: result.token,
+        user: result.user,
+        linked: result.linked,
+        fresh: result.fresh
+      });
+    } catch (err) {
+      console.error("[firebase/discord] auth failed:", err);
+      res.status(500).json({ error: { code: "INTERNAL", message: "Internal auth failed" } });
+    }
+  });
   app2.post("/api/auth/discord/activity/token", async (req, res) => {
     if (!config) {
       res.status(503).json({ error: { code: "DISCORD_DISABLED", message: "Discord is not configured" } });

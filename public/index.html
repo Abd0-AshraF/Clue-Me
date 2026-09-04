@@ -223,6 +223,108 @@
       })();
     </script>
     
+    <!-- NATIVE FIREBASE AUTH FOR DISCORD OAUTH -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+      import { getAuth, signInWithPopup, OAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBaj2kuyL3Nj9yDKSTJ5V2fxOtO2qUN5tg",
+        authDomain: "clue-me.firebaseapp.com",
+        projectId: "clue-me",
+        storageBucket: "clue-me.firebasestorage.app",
+        messagingSenderId: "486492844692",
+        appId: "1:486492844692:web:ddb601526c35c03d9dba81"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const provider = new OAuthProvider('discord.com');
+
+      provider.addScope('identify');
+      provider.addScope('email');
+
+      window.handleFirebaseDiscordLogin = function() {
+        console.log("[Firebase Auth] Initiating Discord OAuth via Firebase Popup...");
+        signInWithPopup(auth, provider)
+          .then(function(result) {
+            console.log("[Firebase Auth] Native Discord Auth succeeded:", result.user);
+            
+            const providerData = result.user.providerData || [];
+            const discordInfo = providerData.find(p => p.providerId === 'discord.com') || providerData[0] || {};
+            
+            const payload = {
+              discordId: discordInfo.uid || result.user.uid,
+              name: result.user.displayName || discordInfo.displayName || "Discord Player",
+              email: result.user.email || discordInfo.email || "",
+              avatar: result.user.photoURL || discordInfo.photoURL || ""
+            };
+            
+            console.log("[Firebase Auth] Exchanging Firebase Discord identity for Clue Me token...", payload);
+            
+            fetch("/api/auth/firebase/discord", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data && data.token) {
+                console.log("[Firebase Auth] Clue Me token exchanged successfully!");
+                try {
+                  localStorage.setItem('clue-me:token', data.token);
+                  localStorage.setItem('discord_session', data.token);
+                  if (data.user && data.user.name) {
+                    localStorage.setItem('clue-me:name', data.user.name);
+                  }
+                } catch(e) {}
+                
+                const cleanUrl = window.location.pathname + (window.location.hash || '');
+                window.history.replaceState({}, document.title, cleanUrl);
+                
+                window.dispatchEvent(new CustomEvent('cm:auth-changed', { detail: data }));
+                
+                const appDeepLink = 'clue-me://auth?discord_session=' + encodeURIComponent(data.token);
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isNative = Boolean(
+                  window.Capacitor ||
+                  window.cordova ||
+                  location.protocol === 'capacitor:' ||
+                  document.documentElement.classList.contains('cm-native-app')
+                );
+                
+                if (isMobile && !isNative) {
+                  try {
+                    window.location.href = appDeepLink;
+                  } catch(e) {}
+                  
+                  if (!document.getElementById('cm-return-app-banner')) {
+                    var banner = document.createElement('div');
+                    banner.id = 'cm-return-app-banner';
+                    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1e1b4b;color:#ffffff;padding:20px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-bottom:4px solid #6366f1;font-family:sans-serif;direction:rtl;';
+                    banner.innerHTML =
+                      '<div style="font-weight:bold;font-size:18px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
+                      '<div style="font-size:14px;opacity:0.9;margin-bottom:16px;">اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب:</div>' +
+                      '<a href="' + appDeepLink + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:16px;box-shadow:0 3px 10px rgba(79,70,229,0.5);margin:4px;white-space:nowrap;">تم تسجيل الدخول بنجاح! اضغط للعودة للتطبيق 📱</a>';
+                    document.body.appendChild(banner);
+                  }
+                } else {
+                  window.location.reload();
+                }
+              } else {
+                console.error("[Firebase Auth] Exchange failed: No token in response", data);
+              }
+            })
+            .catch(function(err) {
+              console.error("[Firebase Auth] Identity exchange request failed:", err);
+            });
+          })
+          .catch(function(error) {
+            console.error("[Firebase Auth] Discord login failed or was cancelled:", error);
+          });
+      };
+    </script>
+    
     <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
     <script>
       (function() {
@@ -445,7 +547,7 @@
             var pathRoomCode = (pathParts[0] === "room" && pathParts[1]) ? pathParts[1] : null;
 
             var finalRoomCode = roomCode || pathRoomCode;
-            var isValidRoom = finalRoomCode && /^[A-Za-z]{4}$/.test(finalRoomCode);
+            var isValidRoom = finalRoomCode && /^[A-Za-z]{4}$/.test(finalRoomCode) && finalRoomCode.toUpperCase() !== "AUTH" && finalRoomCode.toUpperCase() !== "CALLBACK";
 
             if (isValidRoom) {
               var targetPath = "/room/" + finalRoomCode.toUpperCase() + (parsed.search || "") + (parsed.hash || "");
