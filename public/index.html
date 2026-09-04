@@ -264,6 +264,9 @@
         // Safe External Browser Launcher for Discord OAuth & External Links
         function safeOpenExternal(url) {
           if (!url) return;
+          if (url.indexOf("/") === 0 && url.indexOf("//") !== 0) {
+            url = ((window.__CLUE_ME_SERVER_URL__ || window.location.origin) + url);
+          }
           try {
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
               window.Capacitor.Plugins.Browser.open({ url: url }).catch(function() {
