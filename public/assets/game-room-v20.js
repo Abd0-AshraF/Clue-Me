@@ -687,11 +687,62 @@
 
   function setHomeLang(lang) {
     var nextLang = lang === 'ar' ? 'ar' : 'en';
-    try { localStorage.setItem('clue-me:lang', nextLang); } catch (e) {}
+    try {
+      localStorage.setItem('ui_lang', nextLang);
+      localStorage.setItem('clue-me:lang', nextLang);
+    } catch (e) {}
     html.lang = nextLang;
     html.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+
+    if (typeof window.updateI18nElements === 'function') {
+      window.updateI18nElements(nextLang);
+    }
+
+    var btns = document.querySelectorAll('.cm-home-mobile-lang, [data-lang]');
+    for (var b = 0; b < btns.length; b++) {
+      var item = btns[b];
+      if (item.getAttribute('data-lang') === nextLang) {
+        item.classList.add('is-active');
+      } else {
+        item.classList.remove('is-active');
+      }
+    }
+
     window.dispatchEvent(new CustomEvent('cm:lang-changed', { detail: nextLang }));
+    window.dispatchEvent(new CustomEvent('cm:lang-change', { detail: nextLang }));
   }
+
+  // ISSUE 1 FIX: Global delegation for change, input, and click touch events on mobile browsers
+  document.addEventListener('change', function (e) {
+    var target = e.target;
+    if (target && (target.id === 'lang-select' || target.id === 'ui-lang-select' || (target.matches && target.matches('#lang-select, #ui-lang-select, [data-ui-lang]')))) {
+      var val = target.value;
+      if (val === 'ar' || val === 'en') {
+        setHomeLang(val);
+      }
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    var target = e.target;
+    if (target && (target.id === 'lang-select' || target.id === 'ui-lang-select' || (target.matches && target.matches('#lang-select, #ui-lang-select, [data-ui-lang]')))) {
+      var val = target.value;
+      if (val === 'ar' || val === 'en') {
+        setHomeLang(val);
+      }
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    var langBtn = e.target && e.target.closest ? e.target.closest('.cm-home-mobile-lang, [data-lang]') : null;
+    if (langBtn) {
+      var lVal = langBtn.getAttribute('data-lang');
+      if (lVal === 'ar' || lVal === 'en') {
+        setHomeMenuOpen(false);
+        setHomeLang(lVal);
+      }
+    }
+  });
 
   function setHomeMenuOpen(open) {
     var btn = document.querySelector('.cm-home-menu-btn');
