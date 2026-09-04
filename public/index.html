@@ -144,9 +144,123 @@
           document.documentElement.classList.toggle('mani-dark', theme === 'mani-dark');
           document.documentElement.classList.toggle('mot', mot);
 
+          // Handle Implicit OAuth Callback
+          if (window.location.pathname === '/auth/callback' || window.location.pathname === '/auth/callback/') {
+            console.log("[Implicit OAuth] Callback page loaded.");
+            
+            // Clear document entirely to prevent the React single page app script from running or rendering "الرمز غير موجود"
+            document.open();
+            document.write('<div style="background:#090d14;color:#fef2f2;font-family:sans-serif;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;direction:rtl;padding:20px;text-align:center;"><div style="font-size:24px;font-weight:bold;margin-bottom:12px;">جاري تسجيل الدخول... 🔄</div><div style="font-size:14px;color:#9ca3af;">يرجى الانتظار أثناء جلب بيانات الملف الشخصي من Discord...</div></div>');
+            document.close();
+            
+            var hashParams = new URLSearchParams(window.location.hash.slice(1));
+            var accessToken = hashParams.get('access_token');
+            if (accessToken) {
+              fetch('https://discord.com/api/v10/users/@me', {
+                headers: {
+                  'Authorization': 'Bearer ' + accessToken
+                }
+              })
+              .then(function(res) { return res.json(); })
+              .then(function(profile) {
+                if (profile && profile.id) {
+                  var avatarUrl = profile.avatar 
+                    ? 'https://cdn.discordapp.com/avatars/' + profile.id + '/' + profile.avatar + '.png'
+                    : '';
+                  var payload = {
+                    discordId: profile.id,
+                    name: profile.global_name || profile.username || "Discord Player",
+                    email: profile.email || "",
+                    avatar: avatarUrl
+                  };
+                  
+                  fetch('/api/auth/firebase/discord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  })
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    if (data && data.token) {
+                      try {
+                        localStorage.setItem('clue-me:token', data.token);
+                        localStorage.setItem('discord_session', data.token);
+                        if (data.user && data.user.name) {
+                          localStorage.setItem('clue-me:name', data.user.name);
+                        }
+                      } catch(e) {}
+                      
+                      if (window.opener) {
+                        try {
+                          window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', token: data.token, user: data.user }, '*');
+                        } catch(e) {}
+                        window.close();
+                      } else {
+                        window.location.href = '/';
+                      }
+                    } else {
+                      throw new Error("Invalid session token");
+                    }
+                  })
+                  .catch(function(e) {
+                    try {
+                      localStorage.setItem('discord_profile', JSON.stringify(profile));
+                      localStorage.setItem('clue-me:name', profile.global_name || profile.username);
+                    } catch(err) {}
+                    if (window.opener) {
+                      try {
+                        window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', profile: profile }, '*');
+                      } catch(err) {}
+                      window.close();
+                    } else {
+                      window.location.href = '/';
+                    }
+                  });
+                } else {
+                  throw new Error("Invalid Discord profile format");
+                }
+              })
+              .catch(function(err) {
+                console.error("Profile fetch error:", err);
+                document.open();
+                document.write('<div style="background:#090d14;color:#fef2f2;font-family:sans-serif;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;direction:rtl;padding:20px;text-align:center;"><div style="font-size:20px;font-weight:bold;color:#ef4444;margin-bottom:12px;">⚠️ فشل تسجيل الدخول</div><div style="font-size:14px;color:#9ca3af;">حدث خطأ أثناء جلب بيانات الملف الشخصي. يرجى إغلاق النافذة والمحاولة مجدداً.</div></div>');
+                document.close();
+                if (!window.opener) {
+                  setTimeout(function() {
+                    window.location.href = '/';
+                  }, 3000);
+                }
+              });
+            } else {
+              if (window.opener) {
+                window.close();
+              } else {
+                window.location.href = '/';
+              }
+            }
+            return;
+          }
+
           // Handle discord_session redirect in external browser / web app
           var ses = qs.get('discord_session');
           var isAuthDiscord = qs.get('auth') === 'discord' || qs.has('discord_session');
+          
+          if (window.opener && (ses || isAuthDiscord)) {
+            console.log("[Popup] Auth redirect detected inside popup window.");
+            if (ses) {
+              try {
+                localStorage.setItem('discord_session', ses);
+                localStorage.setItem('clue-me:discord_session', ses);
+                localStorage.setItem('clue-me:pending_discord_session', ses);
+              } catch(e) {}
+            }
+            try {
+              window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', session: ses }, window.location.origin);
+            } catch(e) {}
+            window.close();
+            return;
+          }
+
           if (ses || isAuthDiscord) {
             if (ses) {
               try {
@@ -223,106 +337,107 @@
       })();
     </script>
     
-    <!-- NATIVE FIREBASE AUTH FOR DISCORD OAUTH -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-      import { getAuth, signInWithPopup, OAuthProvider } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyBaj2kuyL3Nj9yDKSTJ5V2fxOtO2qUN5tg",
-        authDomain: "clue-me.firebaseapp.com",
-        projectId: "clue-me",
-        storageBucket: "clue-me.firebasestorage.app",
-        messagingSenderId: "486492844692",
-        appId: "1:486492844692:web:ddb601526c35c03d9dba81"
-      };
-
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      const provider = new OAuthProvider('discord.com');
-
-      provider.addScope('identify');
-      provider.addScope('email');
-
+    <!-- PURE CLIENT-SIDE DISCORD IMPLICIT OAUTH (NO FIREBASE AUTH) -->
+    <script>
       window.handleFirebaseDiscordLogin = function() {
-        console.log("[Firebase Auth] Initiating Discord OAuth via Firebase Popup...");
-        signInWithPopup(auth, provider)
-          .then(function(result) {
-            console.log("[Firebase Auth] Native Discord Auth succeeded:", result.user);
+        console.log("[Discord Auth] Initiating pure Client-Side Discord Implicit OAuth Flow...");
+        
+        // Clear any previous error banner
+        const existingBanner = document.getElementById('cm-auth-error-banner');
+        if (existingBanner) existingBanner.remove();
+
+        // 1. Fetch Discord Client Configuration
+        fetch("/api/auth/discord/config")
+          .then(function(res) { return res.json(); })
+          .then(function(config) {
+            var clientId = config.clientId;
+            if (!clientId) {
+              console.error("[Discord Auth] Discord Client ID is not configured on the server!");
+              showAuthError("خطأ: لم يتم ضبط معرف تطبيق Discord (Client ID) على خادم اللعبة بعد.");
+              return;
+            }
+
+            // 2. Compute Redirect URI
+            var redirectUri = window.location.origin.indexOf('clue-me.ai.studio') !== -1 
+              ? 'https://clue-me.ai.studio/auth/callback' 
+              : window.location.origin + '/auth/callback';
+
+            // 3. Build OAuth URL
+            var oauthUrl = 'https://discord.com/api/oauth2/authorize' +
+              '?client_id=' + encodeURIComponent(clientId) +
+              '&redirect_uri=' + encodeURIComponent(redirectUri) +
+              '&response_type=token' +
+              '&scope=identify%20email';
+
+            console.log("[Discord Auth] Opening browser popup to Discord OAuth...", oauthUrl);
+
+            // 4. Trigger Browser Popup
+            var width = 600;
+            var height = 750;
+            var left = (window.screen.width - width) / 2;
+            var top = (window.screen.height - height) / 2;
+            var popup = window.open(oauthUrl, "discord_login", "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top);
             
-            const providerData = result.user.providerData || [];
-            const discordInfo = providerData.find(p => p.providerId === 'discord.com') || providerData[0] || {};
-            
-            const payload = {
-              discordId: discordInfo.uid || result.user.uid,
-              name: result.user.displayName || discordInfo.displayName || "Discord Player",
-              email: result.user.email || discordInfo.email || "",
-              avatar: result.user.photoURL || discordInfo.photoURL || ""
-            };
-            
-            console.log("[Firebase Auth] Exchanging Firebase Discord identity for Clue Me token...", payload);
-            
-            fetch("/api/auth/firebase/discord", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-              if (data && data.token) {
-                console.log("[Firebase Auth] Clue Me token exchanged successfully!");
-                try {
-                  localStorage.setItem('clue-me:token', data.token);
-                  localStorage.setItem('discord_session', data.token);
-                  if (data.user && data.user.name) {
-                    localStorage.setItem('clue-me:name', data.user.name);
-                  }
-                } catch(e) {}
-                
-                const cleanUrl = window.location.pathname + (window.location.hash || '');
-                window.history.replaceState({}, document.title, cleanUrl);
-                
-                window.dispatchEvent(new CustomEvent('cm:auth-changed', { detail: data }));
-                
-                const appDeepLink = 'clue-me://auth?discord_session=' + encodeURIComponent(data.token);
-                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                const isNative = Boolean(
-                  window.Capacitor ||
-                  window.cordova ||
-                  location.protocol === 'capacitor:' ||
-                  document.documentElement.classList.contains('cm-native-app')
-                );
-                
-                if (isMobile && !isNative) {
-                  try {
-                    window.location.href = appDeepLink;
-                  } catch(e) {}
-                  
-                  if (!document.getElementById('cm-return-app-banner')) {
-                    var banner = document.createElement('div');
-                    banner.id = 'cm-return-app-banner';
-                    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1e1b4b;color:#ffffff;padding:20px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-bottom:4px solid #6366f1;font-family:sans-serif;direction:rtl;';
-                    banner.innerHTML =
-                      '<div style="font-weight:bold;font-size:18px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
-                      '<div style="font-size:14px;opacity:0.9;margin-bottom:16px;">اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب:</div>' +
-                      '<a href="' + appDeepLink + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:16px;box-shadow:0 3px 10px rgba(79,70,229,0.5);margin:4px;white-space:nowrap;">تم تسجيل الدخول بنجاح! اضغط للعودة للتطبيق 📱</a>';
-                    document.body.appendChild(banner);
-                  }
-                } else {
-                  window.location.reload();
-                }
-              } else {
-                console.error("[Firebase Auth] Exchange failed: No token in response", data);
-              }
-            })
-            .catch(function(err) {
-              console.error("[Firebase Auth] Identity exchange request failed:", err);
-            });
+            if (!popup || popup.closed || typeof popup.closed == "undefined") {
+              // Popup blocked - redirect the parent window directly as fallback
+              window.location.href = oauthUrl;
+            }
           })
-          .catch(function(error) {
-            console.error("[Firebase Auth] Discord login failed or was cancelled:", error);
+          .catch(function(err) {
+            console.error("[Discord Auth] Failed to fetch config:", err);
+            showAuthError("تعذر الاتصال بالخادم لجلب إعدادات Discord.");
           });
       };
+
+      window.handleNativeDiscordLogin = function() {
+        if (typeof window.handleFirebaseDiscordLogin === "function") {
+          window.handleFirebaseDiscordLogin();
+        }
+      };
+
+      // Listen for message from the popup
+      window.addEventListener("message", function(event) {
+        if (event.data && event.data.type === "DISCORD_AUTH_COMPLETE") {
+          console.log("[Main Window] Received auth notification from popup!");
+          window.location.reload();
+        }
+      });
+
+      function showAuthError(message, isInfo) {
+        // Clear previous error banner
+        const existingBanner = document.getElementById('cm-auth-error-banner');
+        if (existingBanner) existingBanner.remove();
+
+        var banner = document.createElement('div');
+        banner.id = 'cm-auth-error-banner';
+        
+        var bgColor = '#1e1b4b';
+        var borderColor = isInfo ? '#4f46e5' : '#ef4444';
+        var titleColor = isInfo ? '#818cf8' : '#f87171';
+        var titleText = isInfo ? 'ℹ️ جاري تسجيل الدخول...' : '⚠️ تنبيه تسجيل الدخول';
+
+        banner.style.cssText = 'position:fixed;bottom:24px;left:24px;right:24px;max-width:500px;margin:0 auto;z-index:999999;background:' + bgColor + ';color:#fef2f2;padding:20px;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.6);border:2px solid ' + borderColor + ';font-family:sans-serif;direction:rtl;display:flex;flex-direction:column;gap:12px;';
+        
+        banner.innerHTML = 
+          '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ' + (isInfo ? 'rgba(79,70,229,0.3)' : 'rgba(239,68,68,0.3)') + ';padding-bottom:8px;">' +
+            '<div style="font-weight:bold;font-size:16px;color:' + titleColor + ';display:flex;align-items:center;gap:6px;">' + titleText + '</div>' +
+            '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#9ca3af;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;margin:0;">&times;</button>' +
+          '</div>' +
+          '<div style="font-size:14px;line-height:1.6;color:#e5e7eb;opacity:0.95;">' + message + '</div>' +
+          (!isInfo ? 
+          '<div style="display:flex;justify-content:end;gap:8px;margin-top:4px;">' +
+            '<button onclick="this.parentElement.parentElement.remove()" style="background:#dc2626;color:#ffffff;border:none;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 3px 10px rgba(220,38,38,0.4);transition:all 0.2s;">موافق</button>' +
+          '</div>' : '');
+          
+        document.body.appendChild(banner);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(function() {
+          if (banner && banner.parentElement) {
+            banner.remove();
+          }
+        }, 10000);
+      }
     </script>
     
     <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
