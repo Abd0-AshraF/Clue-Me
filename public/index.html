@@ -143,6 +143,66 @@
           document.documentElement.classList.toggle('mani', mani);
           document.documentElement.classList.toggle('mani-dark', theme === 'mani-dark');
           document.documentElement.classList.toggle('mot', mot);
+
+          // Handle discord_session redirect in external browser / web app
+          var ses = qs.get('discord_session');
+          var isAuthDiscord = qs.get('auth') === 'discord' || qs.has('discord_session');
+          if (ses || isAuthDiscord) {
+            if (ses) {
+              try {
+                localStorage.setItem('clue-me:discord_session', ses);
+                localStorage.setItem('clue-me:pending_discord_session', ses);
+              } catch(e) {}
+              fetch('/api/auth/discord/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session: ses })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  try {
+                    localStorage.setItem('clue-me:token', data.token);
+                    if (data.user && data.user.name) {
+                      localStorage.setItem('clue-me:name', data.user.name);
+                    }
+                  } catch(e) {}
+                  window.dispatchEvent(new CustomEvent('cm:auth-changed', { detail: data }));
+                }
+              })
+              .catch(function(){});
+            }
+
+            var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            var isNative = Boolean(
+              window.Capacitor ||
+              window.cordova ||
+              location.protocol === 'capacitor:' ||
+              document.documentElement.classList.contains('cm-native-app')
+            );
+            var schemeUrl = 'clue-me://auth/discord' + (ses ? '?discord_session=' + encodeURIComponent(ses) : '');
+
+            if (isMobile && !isNative) {
+              try {
+                window.location.href = schemeUrl;
+              } catch(e) {}
+
+              document.addEventListener('DOMContentLoaded', function() {
+                if (document.getElementById('cm-return-app-banner')) return;
+                var banner = document.createElement('div');
+                banner.id = 'cm-return-app-banner';
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1e1b4b;color:#ffffff;padding:16px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.5);border-bottom:3px solid #6366f1;font-family:sans-serif;direction:rtl;';
+                banner.innerHTML =
+                  '<div style="font-weight:bold;font-size:16px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
+                  '<div style="font-size:13px;opacity:0.9;margin-bottom:12px;">يمكنك الآن العودة إلى التطبيق لإكمال اللعب.</div>' +
+                  '<a href="' + schemeUrl + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:10px 22px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:14px;box-shadow:0 2px 8px rgba(79,70,229,0.4);">اضغط للعودة إلى التطبيق 📱</a>';
+                document.body.appendChild(banner);
+              });
+            }
+
+            var cleanUrl = location.pathname + (location.hash || '');
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
         } catch (e) {
           /* storage unavailable — keep static defaults */
         }
@@ -285,27 +345,66 @@
         }
         window.safeOpenExternal = safeOpenExternal;
 
+        function handleDiscordCallback(url) {
+          if (!url) return;
+          try {
+            var rawUrl = String(url);
+            var normUrl = rawUrl.replace(/^(clue-me|clueme):\/\//i, "https://clueme.wisp.uno/");
+            var parsed = new URL(normUrl);
+            var searchParams = new URLSearchParams(parsed.search || "");
+            var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
+            var ses = searchParams.get("discord_session") || searchParams.get("code") || hashParams.get("access_token");
+            if (ses) {
+              try {
+                localStorage.setItem("clue-me:discord_session", ses);
+                localStorage.setItem("clue-me:pending_discord_session", ses);
+              } catch(e) {}
+              fetch("/api/auth/discord/exchange", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ session: ses })
+              })
+              .then(function(res) { return res.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  try {
+                    localStorage.setItem("clue-me:token", data.token);
+                    if (data.user && data.user.name) {
+                      localStorage.setItem("clue-me:name", data.user.name);
+                    }
+                  } catch(e) {}
+                  window.dispatchEvent(new CustomEvent("cm:auth-changed", { detail: data }));
+                }
+              })
+              .catch(function(){});
+            }
+          } catch(e) {}
+        }
+        window.handleDiscordCallback = handleDiscordCallback;
+
         // Initialize Native Device Features (Status Bar & Haptics & Deep Links)
         function handleDeepLink(url) {
           if (!url) return;
           try {
-            var parsed = new URL(url);
+            var rawUrl = String(url);
+            var normUrl = rawUrl.replace(/^(clue-me|clueme):\/\//i, "https://clueme.wisp.uno/");
+            var parsed = new URL(normUrl);
             var searchParams = new URLSearchParams(parsed.search || "");
             var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
 
-            // ISSUE 2 FIX: Check if URL contains Discord OAuth parameters (code, access_token, state, auth)
+            // Check if URL contains Discord OAuth parameters or session
             var isDiscordOAuth =
               searchParams.has("code") ||
               searchParams.has("access_token") ||
               hashParams.has("access_token") ||
               searchParams.has("state") ||
-              searchParams.get("auth") === "discord";
+              searchParams.has("discord_session") ||
+              searchParams.get("auth") === "discord" ||
+              rawUrl.indexOf("auth/discord") !== -1;
 
             if (isDiscordOAuth) {
-              if (typeof window.handleDiscordCallback === "function") {
-                window.handleDiscordCallback(url);
-              }
-              var cleanUrl = parsed.pathname || "/";
+              window.handleDiscordCallback(normUrl);
+              var cleanUrl = "/";
               window.history.replaceState({}, document.title, cleanUrl);
               window.dispatchEvent(new PopStateEvent("popstate"));
               // RETURN EARLY / STOP EXECUTING so it does NOT try to look up a room code!
