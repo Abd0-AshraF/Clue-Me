@@ -393,6 +393,13 @@
         }
       };
 
+      // Compatibility alias for the prebuilt index-discord-v30.js client asset
+      window.handleFirebaseDiscordLogin = function() {
+        if (typeof window.handleDiscordImplicitLogin === "function") {
+          window.handleDiscordImplicitLogin();
+        }
+      };
+
       // Listen for message from the popup
       window.addEventListener("message", function(event) {
         if (event.data && event.data.type === "DISCORD_AUTH_COMPLETE") {
