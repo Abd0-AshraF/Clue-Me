@@ -6063,7 +6063,7 @@ body.cm-modal-open .cm-home-android-dock {
   100% { transform: rotate(360deg); }
 }
 
-/* Native App APK Download Pill & CTA Suppression */
+/* Native App & Discord Activity APK Download Pill & CTA Suppression */
 html.cm-native-app #cm-home-android-dock,
 html.cm-native-app .cm-home-android-dock,
 html.cm-native-app #cm-room-android-cta,
@@ -6075,7 +6075,19 @@ html.cm-native-app .cm-app-dialog-backdrop,
 body.cm-native-app #cm-home-android-dock,
 body.cm-native-app .cm-home-android-dock,
 body.cm-native-app #cm-room-android-cta,
-body.cm-native-app .cm-room-android-banner {
+body.cm-native-app .cm-room-android-banner,
+html.cm-discord-activity #cm-home-android-dock,
+html.cm-discord-activity .cm-home-android-dock,
+html.cm-discord-activity #cm-room-android-cta,
+html.cm-discord-activity .cm-room-android-banner,
+html.cm-discord-activity #cm-android-header-btn,
+html.cm-discord-activity .cm-android-header-btn,
+html.cm-discord-activity #cm-app-dialog-backdrop,
+html.cm-discord-activity .cm-app-dialog-backdrop,
+body.cm-discord-activity #cm-home-android-dock,
+body.cm-discord-activity .cm-home-android-dock,
+body.cm-discord-activity #cm-room-android-cta,
+body.cm-discord-activity .cm-room-android-banner {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;

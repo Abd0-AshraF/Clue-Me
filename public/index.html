@@ -278,12 +278,10 @@
             // Construct Deep Link target URL for mobile app
             var deepLinkUrl = 'clue-me://auth' + (window.location.hash || (accessToken ? '#access_token=' + encodeURIComponent(accessToken) : (ses ? '?discord_session=' + encodeURIComponent(ses) : '')));
 
-            // Save access token if present
+            // Save raw access token
             if (accessToken) {
               try {
                 localStorage.setItem('discord_access_token', accessToken);
-                localStorage.setItem('clue-me:token', accessToken);
-                localStorage.setItem('discord_session', accessToken);
               } catch(e) {}
             }
 
@@ -308,33 +306,48 @@
                 '</div>';
             };
 
-            // On Mobile Browser (External Chrome / Samsung Internet)
-            if (isMobile && !isNative) {
-              document.title = 'تم تسجيل الدخول بنجاح! 🎉';
-              if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', renderCallbackDOM);
-              } else {
-                renderCallbackDOM();
-              }
-              // Trigger automatic Deep Link redirect
-              try {
-                window.location.href = deepLinkUrl;
-              } catch(e) {}
-              return;
-            }
-
-            // If desktop popup
-            if (window.opener) {
-              if (accessToken) {
+            var finishAuth = function(token, user) {
+              if (token) {
                 try {
-                  window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', token: accessToken }, '*');
+                  localStorage.setItem('clue-me:token', token);
+                  localStorage.setItem('discord_session', token);
+                  if (user && user.name) {
+                    localStorage.setItem('clue-me:name', user.name);
+                  }
                 } catch(e) {}
               }
-              window.close();
-              return;
-            }
 
-            // If profile exchange is needed on web
+              // If desktop popup, notify opener then close safely
+              if (window.opener) {
+                try {
+                  window.opener.postMessage({
+                    type: 'DISCORD_AUTH_COMPLETE',
+                    token: token,
+                    user: user
+                  }, '*');
+                } catch(e) {}
+                setTimeout(function() { window.close(); }, 150);
+                return;
+              }
+
+              // On Mobile Browser (External Chrome / Samsung Internet)
+              if (isMobile && !isNative) {
+                document.title = 'تم تسجيل الدخول بنجاح! 🎉';
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', renderCallbackDOM);
+                } else {
+                  renderCallbackDOM();
+                }
+                try {
+                  window.location.href = deepLinkUrl;
+                } catch(e) {}
+                return;
+              }
+
+              window.location.href = '/';
+            };
+
+            // Exchange Discord access token for Clue Me user session
             if (accessToken) {
               fetch('https://discord.com/api/v10/users/@me', {
                 headers: { 'Authorization': 'Bearer ' + accessToken }
@@ -352,39 +365,31 @@
                     avatar: avatarUrl
                   };
                   
-                  fetch('/api/auth/discord/implicit-callback', {
+                  return fetch('/api/auth/discord/implicit-callback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                  })
-                  .then(function(r) { return r.json(); })
-                  .then(function(data) {
-                    if (data && data.token) {
-                      try {
-                        localStorage.setItem('clue-me:token', data.token);
-                        localStorage.setItem('discord_session', data.token);
-                        if (data.user && data.user.name) {
-                          localStorage.setItem('clue-me:name', data.user.name);
-                        }
-                      } catch(e) {}
-                      window.location.href = '/';
-                    } else {
-                      window.location.href = '/';
-                    }
-                  })
-                  .catch(function() {
-                    window.location.href = '/';
                   });
+                }
+                throw new Error('Invalid profile response');
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  finishAuth(data.token, data.user);
                 } else {
-                  window.location.href = '/';
+                  finishAuth(null, null);
                 }
               })
-              .catch(function() {
-                window.location.href = '/';
+              .catch(function(err) {
+                console.error('[Discord OAuth] Profile exchange failed:', err);
+                finishAuth(null, null);
               });
-            } else {
-              window.location.href = '/';
+              return;
             }
+
+            // If no accessToken, return to home
+            finishAuth(null, null);
             return;
           }
 
@@ -395,15 +400,35 @@
           if (window.opener && (ses || isAuthDiscord)) {
             console.log("[Popup] Auth redirect detected inside popup window.");
             if (ses) {
-              try {
-                localStorage.setItem('discord_session', ses);
-                localStorage.setItem('clue-me:discord_session', ses);
-                localStorage.setItem('clue-me:pending_discord_session', ses);
-              } catch(e) {}
+              fetch('/api/auth/discord/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session: ses })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  try {
+                    localStorage.setItem('clue-me:token', data.token);
+                    localStorage.setItem('discord_session', data.token);
+                    if (data.user && data.user.name) {
+                      localStorage.setItem('clue-me:name', data.user.name);
+                    }
+                  } catch(e) {}
+                }
+                try {
+                  window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', token: data ? data.token : null, user: data ? data.user : null, session: ses }, '*');
+                } catch(e) {}
+                setTimeout(function() { window.close(); }, 150);
+              })
+              .catch(function() {
+                try {
+                  window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', session: ses }, '*');
+                } catch(e) {}
+                setTimeout(function() { window.close(); }, 150);
+              });
+              return;
             }
-            try {
-              window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', session: ses }, window.location.origin);
-            } catch(e) {}
             window.close();
             return;
           }
@@ -506,7 +531,24 @@
             if (!popup || popup.closed || typeof popup.closed == "undefined") {
               // Popup blocked - redirect the parent window directly as fallback
               window.location.href = oauthUrl;
+              return;
             }
+
+            var pollInterval = setInterval(function() {
+              if (localStorage.getItem('clue-me:token')) {
+                clearInterval(pollInterval);
+                window.location.reload();
+                return;
+              }
+              if (popup.closed) {
+                clearInterval(pollInterval);
+                setTimeout(function() {
+                  if (localStorage.getItem('clue-me:token')) {
+                    window.location.reload();
+                  }
+                }, 300);
+              }
+            }, 500);
           })
           .catch(function(err) {
             console.error("[Discord Auth] Failed to fetch config:", err);
@@ -530,7 +572,17 @@
       // Listen for message from the popup
       window.addEventListener("message", function(event) {
         if (event.data && event.data.type === "DISCORD_AUTH_COMPLETE") {
-          console.log("[Main Window] Received auth notification from popup!");
+          console.log("[Main Window] Received auth notification from popup!", event.data);
+          var token = event.data.token || event.data.session;
+          if (token) {
+            try {
+              localStorage.setItem('clue-me:token', token);
+              localStorage.setItem('discord_session', token);
+              if (event.data.user && event.data.user.name) {
+                localStorage.setItem('clue-me:name', event.data.user.name);
+              }
+            } catch(e) {}
+          }
           window.location.reload();
         }
       });

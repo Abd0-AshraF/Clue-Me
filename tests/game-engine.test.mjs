@@ -187,3 +187,19 @@ test('AI service and native Android home and room link integration are configure
   const indexHtml = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
   assert.match(indexHtml, /game-ai-hud-v21\.js/);
 });
+
+test('Discord Activity environment suppresses native app banners and handles popup auth properly', () => {
+  const aiHudCode = fs.readFileSync(new URL('../public/assets/game-ai-hud-v21.js', import.meta.url), 'utf8');
+  assert.match(aiHudCode, /isDiscordEnvironment/);
+  assert.match(aiHudCode, /cm-discord-activity/);
+
+  const roomLayoutCss = fs.readFileSync(new URL('../public/assets/room-layout-v20.css', import.meta.url), 'utf8');
+  assert.match(roomLayoutCss, /html\.cm-discord-activity #cm-home-android-dock/);
+  assert.match(roomLayoutCss, /html\.cm-discord-activity #cm-room-android-cta/);
+
+  const indexHtml = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  assert.match(indexHtml, /DISCORD_AUTH_COMPLETE/);
+  assert.match(indexHtml, /implicit-callback/);
+  assert.match(indexHtml, /clue-me:token/);
+});
+

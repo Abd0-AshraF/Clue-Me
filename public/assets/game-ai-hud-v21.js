@@ -267,6 +267,22 @@
   /* --------------------------------------------------------------------------
      Official Android App Integration & Modal
      -------------------------------------------------------------------------- */
+  function isDiscordEnvironment() {
+    try {
+      return Boolean(
+        (document.documentElement && document.documentElement.classList.contains('cm-discord-activity')) ||
+        (document.body && document.body.classList.contains('cm-discord-activity')) ||
+        location.search.indexOf('frame_id') !== -1 ||
+        location.search.indexOf('instance_id') !== -1 ||
+        location.search.indexOf('activity=discord') !== -1 ||
+        (window.name && window.name.indexOf('discord') !== -1) ||
+        (window.parent && window.parent !== window && location.search.indexOf('discord') !== -1)
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
   function isNativeAppEnvironment() {
     try {
       return Boolean(
@@ -286,7 +302,7 @@
   }
 
   function openAppDialog() {
-    if (isNativeAppEnvironment()) return;
+    if (isNativeAppEnvironment() || isDiscordEnvironment()) return;
     var existing = document.getElementById('cm-app-dialog-backdrop');
     if (existing) existing.remove();
 
@@ -350,7 +366,10 @@
 
   function syncHomePageAndroidButtons() {
     var existingDock = document.getElementById('cm-home-android-dock');
-    
+    if (isNativeAppEnvironment() || isDiscordEnvironment()) {
+      if (existingDock) existingDock.remove();
+      return;
+    }
 
     var isHome = location.pathname === '/' || location.pathname === '';
 
@@ -405,7 +424,7 @@
 
   function syncRoomUrlAndroidBanner() {
     var existingBanner = document.getElementById('cm-room-android-cta');
-    if (isNativeAppEnvironment()) {
+    if (isNativeAppEnvironment() || isDiscordEnvironment()) {
       if (existingBanner) existingBanner.remove();
       return;
     }
