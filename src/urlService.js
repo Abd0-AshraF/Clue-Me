@@ -26,30 +26,35 @@ export const URLService = {
       ? customPath
       : (typeof window !== 'undefined' ? window.location.pathname : '/');
 
-    // A. Reserved: Download
-    if (path === '/download' || path === '/download/') {
-      return { type: 'DOWNLOAD' };
-    }
+    // A. Reserved Routes
+    if (path === '/download' || path === '/download/') return { type: 'DOWNLOAD' };
+    if (path.startsWith('/auth/')) return { type: 'AUTH_CALLBACK' };
 
-    // B. Reserved: Auth Callback
-    if (path.startsWith('/auth/callback')) {
-      return { type: 'AUTH_CALLBACK' };
-    }
-
-    // C. Multi-Game Match
+    // B. Multi-Game Room Pattern (Preserve URL)
     const multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
     if (multiMatch) {
-      return { type: 'ROOM', gameId: multiMatch[1].toLowerCase(), roomId: multiMatch[2].toUpperCase() };
+      return { 
+        type: 'ROOM', 
+        gameId: multiMatch[1].toLowerCase(), 
+        roomId: multiMatch[2].toUpperCase() 
+      };
     }
 
-    // D. Direct Legacy Match
+    // C. Legacy Direct Room Pattern
     const directMatch = path.match(/^\/room\/([A-Za-z]{4})$/i);
     if (directMatch) {
-      return { type: 'ROOM', gameId: 'clue-me', roomId: directMatch[1].toUpperCase() };
+      return { 
+        type: 'ROOM', 
+        gameId: 'clue-me', 
+        roomId: directMatch[1].toUpperCase() 
+      };
     }
 
-    // E. Fallback for Unknown Routes
-    return { type: 'HOME' };
+    // D. Root Path
+    if (path === '/' || path === '') return { type: 'HOME' };
+
+    // E. Truly Unknown / Invalid Routes
+    return { type: 'UNKNOWN' };
   },
 
   // Deep Link Parser (Custom Schemes & Web URLs)

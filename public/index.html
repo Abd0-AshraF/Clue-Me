@@ -152,17 +152,11 @@
           parseCurrentRoute: function(customPath) {
             var path = typeof customPath === 'string' ? customPath : window.location.pathname;
 
-            // A. Reserved: Download
-            if (path === '/download' || path === '/download/') {
-              return { type: 'DOWNLOAD' };
-            }
+            // A. Reserved Routes
+            if (path === '/download' || path === '/download/') return { type: 'DOWNLOAD' };
+            if (path.indexOf('/auth/') === 0) return { type: 'AUTH_CALLBACK' };
 
-            // B. Reserved: Auth Callback
-            if (path.indexOf('/auth/callback') === 0) {
-              return { type: 'AUTH_CALLBACK' };
-            }
-
-            // C. Multi-Game Match: /:gameId/room/:roomId
+            // B. Multi-Game Room Pattern (Preserve URL)
             var multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
             if (multiMatch) {
               return {
@@ -172,7 +166,7 @@
               };
             }
 
-            // D. Direct Legacy Match: /room/:roomId
+            // C. Legacy Direct Room Pattern
             var directMatch = path.match(/^\/room\/([A-Za-z]{4})$/i);
             if (directMatch) {
               return {
@@ -182,8 +176,11 @@
               };
             }
 
-            // E. Fallback for Unknown Routes
-            return { type: 'HOME' };
+            // D. Root Path
+            if (path === '/' || path === '') return { type: 'HOME' };
+
+            // E. Truly Unknown / Invalid Routes
+            return { type: 'UNKNOWN' };
           },
 
           parseDeepLink: function(url) {
@@ -256,58 +253,9 @@
 
           var activeRoute = window.URLService.parseCurrentRoute();
 
-          // If on unknown / arbitrary path, normalize immediately to Home (/) to prevent false room errors
-          if (activeRoute.type === 'HOME' && window.location.pathname !== '/') {
+          // If on unknown / invalid route, silently normalize to Home (/) to prevent false room errors
+          if (activeRoute.type === 'UNKNOWN') {
             window.history.replaceState({}, document.title, '/');
-          }
-
-          // If on /download route, prepare Download Landing Page
-          if (activeRoute.type === 'DOWNLOAD') {
-            document.title = 'تحميل تطبيق Clue Me للأندرويد (APK)';
-            var renderDownloadPage = function() {
-              var root = document.getElementById('root');
-              if (!root) return;
-              root.innerHTML = [
-                '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0d1117;color:#f3f4f6;font-family:sans-serif;direction:rtl;">',
-                '  <div style="width:100%;max-width:480px;background:#161b22;border:1px solid #30363d;border-radius:24px;padding:32px 24px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.5);">',
-                '    <div style="width:72px;height:72px;background:linear-gradient(135deg,#b83a3a,#e04d4d);border-radius:20px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(184,58,58,0.4);">',
-                '      <span style="font-size:36px;">🕵️‍♂️</span>',
-                '    </div>',
-                '    <div style="display:inline-block;background:rgba(184,58,58,0.2);color:#ff7b72;font-size:12px;font-weight:bold;padding:4px 12px;border-radius:999px;margin-bottom:12px;border:1px solid rgba(255,123,114,0.3);">النسخة الرسمية • Android APK</div>',
-                '    <h1 style="font-size:24px;font-weight:bold;margin:0 0 8px;color:#ffffff;">Clue Me — كلو مي</h1>',
-                '    <p style="font-size:14px;color:#8b949e;margin:0 0 24px;line-height:1.6;">حمّل التطبيق الرسمي واستمتع باللعب الجماعي المباشر وتجربة سلسة مع أصدقائك مع كامل ميزات الربط العميق.</p>',
-                '    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">',
-                '      <a href="/clue-me-latest.apk" download style="display:flex;align-items:center;justify-content:center;gap:10px;background:#b83a3a;color:#ffffff;font-weight:bold;font-size:16px;padding:14px 20px;border-radius:14px;text-decoration:none;box-shadow:0 4px 16px rgba(184,58,58,0.4);transition:all 0.2s;">',
-                '        <span>📥</span><span>تحميل ملف APK مباشرة (v0.3.7)</span>',
-                '      </a>',
-                '      <a href="clue-me://download" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#21262d;color:#c9d1d9;font-weight:600;font-size:14px;padding:12px 18px;border-radius:14px;text-decoration:none;border:1px solid #30363d;">',
-                '        <span>📱</span><span>فتح داخل التطبيق (clue-me://download)</span>',
-                '      </a>',
-                '      <a href="/" style="display:flex;align-items:center;justify-content:center;gap:8px;color:#8b949e;font-size:14px;padding:10px;text-decoration:none;">',
-                '        <span>🌐</span><span>أو المتابعة واللعب عبر المتصفح (Web Hub)</span>',
-                '      </a>',
-                '    </div>',
-                '    <div style="background:#0d1117;border-radius:16px;padding:16px;border:1px solid #21262d;text-align:right;font-size:12px;color:#8b949e;line-height:1.8;">',
-                '      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#3fb950;">✔</span> اللعب الجماعي أونلاين ومشاركة روابط الغرف</div>',
-                '      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#3fb950;">✔</span> دعم الاهتزازات اللمسية وشريط الحالة الأصلي</div>',
-                '      <div style="display:flex;align-items:center;gap:8px;"><span style="color:#3fb950;">✔</span> دعم كامل لغرف 4 أحرف والربط المباشر السريع</div>',
-                '    </div>',
-                '  </div>',
-                '</div>'
-              ].join('\n');
-            };
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', renderDownloadPage);
-            } else {
-              renderDownloadPage();
-            }
-          }
-
-          // If on multi-game room pattern /:gameId/room/:roomId, normalize for client SPA router
-          if (activeRoute.type === 'ROOM') {
-            if (window.location.pathname !== '/room/' + activeRoute.roomId) {
-              window.history.replaceState({}, document.title, '/room/' + activeRoute.roomId + window.location.search + window.location.hash);
-            }
           }
 
           // Handle Discord OAuth Callback (/auth/callback)
