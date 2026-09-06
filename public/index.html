@@ -246,40 +246,47 @@
           var isDiscord = false;
           try {
             var qs = new URLSearchParams(location.search);
-            var storedFid = sessionStorage.getItem('cm_discord_frame_id');
-            var storedIid = sessionStorage.getItem('cm_discord_instance_id');
-
-            if (
-              qs.has('frame_id') ||
-              qs.has('instance_id') ||
-              Boolean(storedFid) ||
-              qs.get('activity') === 'mock' ||
-              qs.get('activity') === 'discord' ||
-              sessionStorage.getItem('cm_is_discord') === '1' ||
+            var isDiscordHost = Boolean(
               (window.name && window.name.indexOf('discord') !== -1) ||
               (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
               (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1))
-            ) {
+            );
+            var hasDiscordParams = Boolean(
+              qs.has('frame_id') ||
+              qs.has('instance_id') ||
+              qs.get('activity') === 'mock' ||
+              qs.get('activity') === 'discord'
+            );
+
+            if (hasDiscordParams || isDiscordHost) {
               isDiscord = true;
               sessionStorage.setItem('cm_is_discord', '1');
 
-              // Persist query parameters in sessionStorage
-              if (qs.get('frame_id')) sessionStorage.setItem('cm_discord_frame_id', qs.get('frame_id'));
-              if (qs.get('instance_id')) sessionStorage.setItem('cm_discord_instance_id', qs.get('instance_id'));
-              if (qs.get('platform')) sessionStorage.setItem('cm_discord_platform', qs.get('platform'));
+              // Persist query parameters in sessionStorage in both key formats
+              ['frame_id', 'instance_id', 'platform', 'channel_id', 'guild_id'].forEach(function(k) {
+                var v = qs.get(k) || sessionStorage.getItem('cm_discord_' + k) || sessionStorage.getItem('cm:discord:' + k);
+                if (v) {
+                  sessionStorage.setItem('cm_discord_' + k, v);
+                  sessionStorage.setItem('cm:discord:' + k, v);
+                }
+              });
 
               // Ensure valid platform ('mobile' vs 'desktop') required by Discord Embedded SDK
-              var rawPlat = qs.get('platform') || sessionStorage.getItem('cm_discord_platform');
-              var isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var rawPlat = qs.get('platform') || sessionStorage.getItem('cm_discord_platform') || sessionStorage.getItem('cm:discord:platform');
+              var isMobileDevice = /Android|iPhone|iPad|iPod|mobile/i.test(navigator.userAgent);
               var validPlatform = (rawPlat === 'mobile' || rawPlat === 'desktop') ? rawPlat : (isMobileDevice ? 'mobile' : 'desktop');
 
               var paramModified = false;
-              if (!qs.get('frame_id') && sessionStorage.getItem('cm_discord_frame_id')) {
-                qs.set('frame_id', sessionStorage.getItem('cm_discord_frame_id'));
+              var storedFid = sessionStorage.getItem('cm_discord_frame_id') || sessionStorage.getItem('cm:discord:frame_id');
+              var fidVal = qs.get('frame_id') || storedFid;
+              if (fidVal && !qs.get('frame_id')) {
+                qs.set('frame_id', fidVal);
                 paramModified = true;
               }
-              if (!qs.get('instance_id') && sessionStorage.getItem('cm_discord_instance_id')) {
-                qs.set('instance_id', sessionStorage.getItem('cm_discord_instance_id'));
+              var storedIid = sessionStorage.getItem('cm_discord_instance_id') || sessionStorage.getItem('cm:discord:instance_id');
+              var iidVal = qs.get('instance_id') || storedIid;
+              if (iidVal && !qs.get('instance_id')) {
+                qs.set('instance_id', iidVal);
                 paramModified = true;
               }
               if (qs.get('platform') !== validPlatform) {
@@ -291,6 +298,13 @@
                 var newSearch = '?' + qs.toString();
                 window.history.replaceState({}, document.title, window.location.pathname + newSearch + window.location.hash);
               }
+            } else {
+              // Not in Discord activity context — clear any stale sessionStorage overrides
+              sessionStorage.removeItem('cm_is_discord');
+              ['frame_id', 'instance_id', 'platform', 'channel_id', 'guild_id'].forEach(function(k) {
+                sessionStorage.removeItem('cm_discord_' + k);
+                sessionStorage.removeItem('cm:discord:' + k);
+              });
             }
           } catch(e) {}
           if (isDiscord) {
@@ -1241,7 +1255,7 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v30.js?v=158"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v32.js?v=165"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=158">
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=158">
     <link rel="stylesheet" href="/assets/room-layout-v20.css?v=158">

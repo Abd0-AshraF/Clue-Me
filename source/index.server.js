@@ -1328,10 +1328,10 @@ var joinRoomSchema = z.object({
   accountToken: z.string().max(128).optional()
 });
 var activityRoomSchema = z.object({
-  instanceId: z.string().trim().min(1).max(160).regex(/^[A-Za-z0-9:_-]+$/),
-  channelId: z.string().trim().max(40).optional().nullable(),
-  guildId: z.string().trim().max(40).optional().nullable(),
-  playerName: nameSchema,
+  instanceId: z.string().trim().min(1).max(256),
+  channelId: z.string().trim().max(100).optional().nullable(),
+  guildId: z.string().trim().max(100).optional().nullable(),
+  playerName: z.string().trim().min(1).max(128).transform(v => v.slice(0, 24)),
   accountToken: z.string().max(128).optional().nullable(),
   language: z.enum(["ar", "en"]).default("ar"),
   packId: z.string().max(64).optional()
@@ -1486,26 +1486,38 @@ var RoomStore = class {
     return { room, playerId, reused: false, playerName: canonicalName };
   }
   joinActivity(input) {
+    const rawName = (input.playerName || "Player").trim().slice(0, 24) || "Player";
     const existingCode = this.activityRooms.get(input.instanceId);
     if (existingCode && this.rooms.has(existingCode)) {
-      const joined = this.join(existingCode, input.playerName, input.accountToken);
-      return { ...joined, created: false };
+      try {
+        const joined = this.join(existingCode, rawName, input.accountToken);
+        return { ...joined, created: false };
+      } catch (err) {
+        console.warn(`[discord] Failed to join existing activity room ${existingCode}, creating new room:`, err);
+      }
     }
-    const language = input.language;
+    const language = input.language === "en" ? "en" : "ar";
     const defaultPack = language === "ar" ? "ar-general" : "en-general";
+    let packId = input.packId ?? defaultPack;
+    try {
+      const pack = getPack(packId);
+      if (pack.language !== language) packId = defaultPack;
+    } catch {
+      packId = defaultPack;
+    }
     const created = this.create({
       name: "Discord Activity",
-      playerName: input.playerName,
+      playerName: rawName,
       accountToken: input.accountToken,
       language,
-      packId: input.packId ?? defaultPack
+      packId
     });
     this.activityRooms.set(input.instanceId, created.room.code);
     return {
       ...created,
       reused: false,
       created: true,
-      playerName: created.room.players[0]?.name ?? input.playerName
+      playerName: created.room.players[0]?.name ?? rawName
     };
   }
   get(code) {
