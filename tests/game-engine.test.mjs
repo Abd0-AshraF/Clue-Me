@@ -201,5 +201,15 @@ test('Discord Activity environment suppresses native app banners and handles pop
   assert.match(indexHtml, /DISCORD_AUTH_COMPLETE/);
   assert.match(indexHtml, /implicit-callback/);
   assert.match(indexHtml, /clue-me:token/);
+
+  const serverJs = fs.readFileSync(new URL('../source/index.server.js', import.meta.url), 'utf8');
+  assert.match(serverJs, /accountToken:\s*z\.string\(\)\.max\(128\)\.optional\(\)\.nullable\(\)/);
+
+  const indexJs = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
+  assert.match(indexJs, /accountToken:S\.string\(\)\.max\(128\)\.optional\(\)\.nullable\(\)/);
+
+  const discordBundle = fs.readFileSync(new URL('../public/assets/index-discord-v30.js', import.meta.url), 'utf8');
+  assert.match(discordBundle, /const jw=\["identify","guilds","applications\.commands","email"\]/);
+  assert.match(discordBundle, /interactive authorize/);
 });
 

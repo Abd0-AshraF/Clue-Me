@@ -1332,7 +1332,7 @@ var activityRoomSchema = z.object({
   channelId: z.string().trim().max(40).optional().nullable(),
   guildId: z.string().trim().max(40).optional().nullable(),
   playerName: nameSchema,
-  accountToken: z.string().min(1).max(128),
+  accountToken: z.string().max(128).optional().nullable(),
   language: z.enum(["ar", "en"]).default("ar"),
   packId: z.string().max(64).optional()
 });
@@ -2475,6 +2475,8 @@ var AuthStore = class {
       stats: { ...EMPTY_STATS },
       admin: isAdmin,
       discordId: input.discordId,
+      discordAccessToken: input.discordAccessToken,
+      lastDiscordSyncAt: input.lastDiscordSyncAt ?? (input.discordAccessToken ? Date.now() : void 0),
       salt: input.salt,
       hash: input.hash
     };
@@ -2504,8 +2506,16 @@ var AuthStore = class {
   discordUpsert(identity) {
     const existing = this.findUserByDiscordId(identity.discordId);
     if (existing) {
+      if (identity.discordAccessToken) {
+        existing.discordAccessToken = identity.discordAccessToken;
+        existing.lastDiscordSyncAt = Date.now();
+      }
       if (identity.name && identity.name.trim()) {
-        existing.name = this.uniqueName(identity.name);
+        const trimmed = identity.name.trim().slice(0, 24);
+        if (existing.name !== trimmed) {
+          const conflict = [...this.users.values()].some((u) => u.id !== existing.id && u.name === trimmed);
+          existing.name = conflict ? this.uniqueName(trimmed) : trimmed;
+        }
       }
       if (identity.avatar !== void 0 && identity.avatar !== null) {
         existing.avatar = identity.avatar;
@@ -2518,11 +2528,19 @@ var AuthStore = class {
     const byEmail = email ? this.users.get(email) : void 0;
     if (byEmail) {
       byEmail.discordId = identity.discordId;
+      if (identity.discordAccessToken) {
+        byEmail.discordAccessToken = identity.discordAccessToken;
+        byEmail.lastDiscordSyncAt = Date.now();
+      }
       if (identity.avatar !== void 0 && identity.avatar !== null) {
         byEmail.avatar = identity.avatar;
       }
       if (identity.name && identity.name.trim()) {
-        byEmail.name = this.uniqueName(identity.name);
+        const trimmed = identity.name.trim().slice(0, 24);
+        if (byEmail.name !== trimmed) {
+          const conflict = [...this.users.values()].some((u) => u.id !== byEmail.id && u.name === trimmed);
+          byEmail.name = conflict ? this.uniqueName(trimmed) : trimmed;
+        }
       }
       const token2 = this.createSession(byEmail.id);
       return { token: token2, user: this.publicUser(byEmail), linked: true, fresh: false };
@@ -2537,7 +2555,9 @@ var AuthStore = class {
       // password — sign-in is only possible through Discord.
       hash: randomBytes(64).toString("hex"),
       avatar: identity.avatar,
-      discordId: identity.discordId
+      discordId: identity.discordId,
+      discordAccessToken: identity.discordAccessToken,
+      lastDiscordSyncAt: identity.discordAccessToken ? Date.now() : void 0
     });
     this.users.set(user.email, user);
     const token = this.createSession(user.id);
@@ -2547,12 +2567,16 @@ var AuthStore = class {
    * Attach a Discord identity to an already-signed-in account.
    * Returns 'linked', or a conflict code when the Discord id is taken.
    */
-  linkDiscord(userId, discordId) {
+  linkDiscord(userId, discordId, token) {
     const user = this.findUser(userId);
     if (!user) return "missing";
     const holder = this.findUserByDiscordId(discordId);
     if (holder && holder.id !== userId) return "conflict";
     user.discordId = discordId;
+    if (token) {
+      user.discordAccessToken = token;
+      user.lastDiscordSyncAt = Date.now();
+    }
     return "linked";
   }
   /** Open a fresh session for an account (used by the Discord link flow). */
@@ -2663,6 +2687,65 @@ var AuthStore = class {
   isAdminAccount(accountId) {
     return this.findUser(accountId)?.admin === true;
   }
+  /**
+   * Automatically refresh Discord profile info (name, avatar) if user has linked Discord
+   * and access token is present. Throttled to avoid Discord rate limits.
+   */
+  async syncDiscordUser(user) {
+    if (!user || !user.discordAccessToken) return user;
+    if (typeof mockMode === "function" && mockMode()) return user;
+    const now = Date.now();
+    const interval = 60 * 1000;
+    if (user.lastDiscordSyncAt && (now - user.lastDiscordSyncAt) < interval) {
+      return user;
+    }
+    user.lastDiscordSyncAt = now;
+    try {
+      const res = await fetch("https://discord.com/api/v10/users/@me", {
+        headers: { Authorization: `Bearer ${user.discordAccessToken}` },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (res.status === 401 || res.status === 403) {
+        console.warn(`[discord-sync] Access token revoked/expired for user ${user.id}`);
+        user.discordAccessToken = void 0;
+        return user;
+      }
+      if (!res.ok) {
+        console.warn(`[discord-sync] Discord API status ${res.status} for user ${user.id}`);
+        return user;
+      }
+      const me = await res.json();
+      if (!me.id) return user;
+
+      const newName = (me.global_name || me.username || "").trim().slice(0, 24);
+      if (newName && newName !== user.name) {
+        const conflict = [...this.users.values()].some((u) => u.id !== user.id && u.name === newName);
+        user.name = conflict ? this.uniqueName(newName) : newName;
+      }
+
+      const avatarUrl = me.avatar ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=128` : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(me.id) >> 22n) % 6n)}.png`;
+      try {
+        const imgRes = await fetch(avatarUrl, { signal: AbortSignal.timeout(5000) });
+        if (imgRes.ok) {
+          const contentType = imgRes.headers.get("content-type") ?? "";
+          if (contentType.startsWith("image/")) {
+            const bytes = Buffer.from(await imgRes.arrayBuffer());
+            if (bytes.byteLength > 0 && bytes.byteLength <= 200000) {
+              const dataUrl = `data:${contentType};base64,${bytes.toString("base64")}`;
+              if (dataUrl !== user.avatar) {
+                user.avatar = dataUrl;
+              }
+            }
+          }
+        }
+      } catch {
+        // Retain current avatar on fetch timeout/error
+      }
+    } catch (err) {
+      console.warn(`[discord-sync] Silent sync error for user ${user.id}:`, err?.message || err);
+    }
+    return user;
+  }
 };
 function bearerToken(req) {
   const header = req.headers.authorization;
@@ -2708,14 +2791,15 @@ function mountAuthRoutes(app2, store = new AuthStore()) {
     if (token) store.logout(token);
     res.json({ ok: true });
   });
-  app2.get("/api/auth/me", (req, res) => {
+  app2.get("/api/auth/me", async (req, res) => {
     const token = bearerToken(req);
-    const user = token ? store.me(token) : null;
+    const user = token ? store.findUserByToken(token) : null;
     if (!user) {
       res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Not signed in" } });
       return;
     }
-    res.json({ user });
+    await store.syncDiscordUser(user);
+    res.json({ user: store.publicUser(user) });
   });
   app2.get("/api/auth/profile", (req, res) => {
     const token = bearerToken(req);
@@ -3153,7 +3237,9 @@ async function exchangeCode(config, code, redirectUri) {
   if (!tokenRes.ok) throw new Error(`discord token exchange failed: ${tokenRes.status}`);
   const tokenBody = await tokenRes.json();
   if (!tokenBody.access_token) throw new Error("discord token exchange returned no token");
-  return fetchIdentity(tokenBody.access_token);
+  const identity = await fetchIdentity(tokenBody.access_token);
+  identity.accessToken = tokenBody.access_token;
+  return identity;
 }
 async function exchangeActivityCode(config, code) {
   if (mockMode()) return `mock-activity-token:${code}`;
@@ -3310,7 +3396,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
       const displayName = identity.globalName ?? identity.username;
       let result;
       if (entry.linkUserId) {
-        const linkResult = authStore2.linkDiscord(entry.linkUserId, identity.id);
+        const linkResult = authStore2.linkDiscord(entry.linkUserId, identity.id, identity.accessToken);
         if (linkResult !== "linked") {
           redirectWithError(res, entry.origin, entry.returnTo, "conflict");
           return;
@@ -3326,7 +3412,8 @@ function mountDiscordRoutes(app2, authStore2, config) {
           discordId: identity.id,
           name: displayName,
           email: identity.email,
-          avatar
+          avatar,
+          discordAccessToken: identity.accessToken
         });
       }
       sweep();
@@ -3383,7 +3470,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
   });
   app2.post("/api/auth/discord/implicit-callback", (req, res) => {
     try {
-      const { discordId, name, email, avatar } = req.body;
+      const { discordId, name, email, avatar, accessToken } = req.body;
       if (!discordId) {
         res.status(400).json({ error: { code: "INVALID_ARGUMENT", message: "discordId is required" } });
         return;
@@ -3392,7 +3479,8 @@ function mountDiscordRoutes(app2, authStore2, config) {
         discordId,
         name: name || "Discord Player",
         email: email || null,
-        avatar: avatar || null
+        avatar: avatar || null,
+        discordAccessToken: accessToken || void 0
       });
       res.json({
         token: result.token,
@@ -3424,6 +3512,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
         name: identity.globalName ?? identity.username,
         email: identity.email,
         avatar,
+        discordAccessToken: accessToken,
         guestName: typeof req.body?.guestName === "string" ? req.body.guestName : null
       });
       res.json({
@@ -3456,6 +3545,7 @@ function mountDiscordRoutes(app2, authStore2, config) {
         name: identity.globalName ?? identity.username,
         email: identity.email,
         avatar,
+        discordAccessToken: accessToken,
         guestName: typeof req.body?.guestName === "string" ? req.body.guestName : null
       });
       res.json({
