@@ -168,6 +168,7 @@
             // A. Reserved Routes
             if (path === '/download' || path === '/download/') return { type: 'DOWNLOAD' };
             if (path.indexOf('/auth/') === 0) return { type: 'AUTH_CALLBACK' };
+            if (path.indexOf('/.proxy/') === 0 || path === '/index.html') return { type: 'HOME' };
 
             // B. Multi-Game Room Pattern (Preserve URL)
             var multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
@@ -245,9 +246,13 @@
           var isDiscord = false;
           try {
             var qs = new URLSearchParams(location.search);
+            var storedFid = sessionStorage.getItem('cm_discord_frame_id');
+            var storedIid = sessionStorage.getItem('cm_discord_instance_id');
+
             if (
               qs.has('frame_id') ||
               qs.has('instance_id') ||
+              Boolean(storedFid) ||
               qs.get('activity') === 'mock' ||
               qs.get('activity') === 'discord' ||
               sessionStorage.getItem('cm_is_discord') === '1' ||
@@ -257,6 +262,35 @@
             ) {
               isDiscord = true;
               sessionStorage.setItem('cm_is_discord', '1');
+
+              // Persist query parameters in sessionStorage
+              if (qs.get('frame_id')) sessionStorage.setItem('cm_discord_frame_id', qs.get('frame_id'));
+              if (qs.get('instance_id')) sessionStorage.setItem('cm_discord_instance_id', qs.get('instance_id'));
+              if (qs.get('platform')) sessionStorage.setItem('cm_discord_platform', qs.get('platform'));
+
+              // Ensure valid platform ('mobile' vs 'desktop') required by Discord Embedded SDK
+              var rawPlat = qs.get('platform') || sessionStorage.getItem('cm_discord_platform');
+              var isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var validPlatform = (rawPlat === 'mobile' || rawPlat === 'desktop') ? rawPlat : (isMobileDevice ? 'mobile' : 'desktop');
+
+              var paramModified = false;
+              if (!qs.get('frame_id') && sessionStorage.getItem('cm_discord_frame_id')) {
+                qs.set('frame_id', sessionStorage.getItem('cm_discord_frame_id'));
+                paramModified = true;
+              }
+              if (!qs.get('instance_id') && sessionStorage.getItem('cm_discord_instance_id')) {
+                qs.set('instance_id', sessionStorage.getItem('cm_discord_instance_id'));
+                paramModified = true;
+              }
+              if (qs.get('platform') !== validPlatform) {
+                qs.set('platform', validPlatform);
+                paramModified = true;
+              }
+
+              if (paramModified) {
+                var newSearch = '?' + qs.toString();
+                window.history.replaceState({}, document.title, window.location.pathname + newSearch + window.location.hash);
+              }
             }
           } catch(e) {}
           if (isDiscord) {
@@ -282,9 +316,9 @@
 
           var activeRoute = window.URLService.parseCurrentRoute();
 
-          // If on unknown / invalid route, silently normalize to Home (/) to prevent false room errors
-          if (activeRoute.type === 'UNKNOWN') {
-            window.history.replaceState({}, document.title, '/');
+          // If on unknown / invalid route and NOT in Discord, normalize preserving query & hash
+          if (activeRoute.type === 'UNKNOWN' && !isDiscord) {
+            window.history.replaceState({}, document.title, '/' + (window.location.search || '') + (window.location.hash || ''));
           }
 
           // Handle Discord OAuth Callback (/auth/callback)
@@ -362,6 +396,9 @@
                   if (user && user.name) {
                     localStorage.setItem('clue-me:name', user.name);
                   }
+                  if (user && user.avatar) {
+                    localStorage.setItem('clue-me:avatar', user.avatar);
+                  }
                 } catch(e) {}
               }
 
@@ -402,9 +439,12 @@
               .then(function(res) { return res.json(); })
               .then(function(profile) {
                 if (profile && profile.id) {
+                  var defaultIndex = (profile.discriminator && profile.discriminator !== '0')
+                    ? (Number(profile.discriminator) % 5)
+                    : Number((BigInt(profile.id) >> 22n) % 6n);
                   var avatarUrl = profile.avatar 
-                    ? 'https://cdn.discordapp.com/avatars/' + profile.id + '/' + profile.avatar + '.png'
-                    : '';
+                    ? 'https://cdn.discordapp.com/avatars/' + profile.id + '/' + profile.avatar + '.png?size=128'
+                    : 'https://cdn.discordapp.com/embed/avatars/' + defaultIndex + '.png';
                   var payload = {
                     discordId: profile.id,
                     name: profile.global_name || profile.username || "Discord Player",

@@ -2375,8 +2375,8 @@ var profileSchema = z2.object({
   name: nameSchema2.optional(),
   bio: z2.string().trim().max(200).optional(),
   avatar: z2.string().max(15e4).refine(
-    (value) => /^emoji:.{1,16}$/u.test(value) || /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value),
-    { message: "avatar must be an emoji token or an image data URL" }
+    (value) => /^emoji:.{1,16}$/u.test(value) || /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value) || /^https?:\/\//.test(value),
+    { message: "avatar must be an emoji token, an image data URL, or an HTTP URL" }
   ).nullable().optional()
 });
 var statsDeltaSchema = z2.object({
@@ -2504,7 +2504,12 @@ var AuthStore = class {
   discordUpsert(identity) {
     const existing = this.findUserByDiscordId(identity.discordId);
     if (existing) {
-      if (identity.avatar) existing.avatar = identity.avatar;
+      if (identity.name && identity.name.trim()) {
+        existing.name = this.uniqueName(identity.name);
+      }
+      if (identity.avatar !== void 0 && identity.avatar !== null) {
+        existing.avatar = identity.avatar;
+      }
       if (identity.email) existing.email = identity.email.toLowerCase();
       const token2 = this.createSession(existing.id);
       return { token: token2, user: this.publicUser(existing), linked: false, fresh: false };
@@ -2513,8 +2518,12 @@ var AuthStore = class {
     const byEmail = email ? this.users.get(email) : void 0;
     if (byEmail) {
       byEmail.discordId = identity.discordId;
-      if (!byEmail.avatar && identity.avatar) byEmail.avatar = identity.avatar;
-      if (!byEmail.name.trim()) byEmail.name = this.uniqueName(identity.name);
+      if (identity.avatar !== void 0 && identity.avatar !== null) {
+        byEmail.avatar = identity.avatar;
+      }
+      if (identity.name && identity.name.trim()) {
+        byEmail.name = this.uniqueName(identity.name);
+      }
       const token2 = this.createSession(byEmail.id);
       return { token: token2, user: this.publicUser(byEmail), linked: true, fresh: false };
     }
@@ -3182,17 +3191,17 @@ async function fetchIdentity(accessToken) {
 }
 async function fetchAvatarDataUrl(identity) {
   if (mockMode()) return MOCK_AVATAR;
+  const avatarUrl = identity.avatarHash ? `https://cdn.discordapp.com/avatars/${identity.id}/${identity.avatarHash}.png?size=${AVATAR_SIZE}` : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(identity.id) >> 22n) % 6n)}.png`;
   try {
-    const avatarUrl = identity.avatarHash ? `https://cdn.discordapp.com/avatars/${identity.id}/${identity.avatarHash}.png?size=${AVATAR_SIZE}` : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(identity.id) >> 22n) % 6n)}.png`;
     const res = await fetch(avatarUrl, { signal: AbortSignal.timeout(5e3) });
-    if (!res.ok) return null;
+    if (!res.ok) return avatarUrl;
     const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.startsWith("image/")) return null;
+    if (!contentType.startsWith("image/")) return avatarUrl;
     const bytes = Buffer.from(await res.arrayBuffer());
-    if (bytes.byteLength === 0 || bytes.byteLength > MAX_AVATAR_BYTES) return null;
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_AVATAR_BYTES) return avatarUrl;
     return `data:${contentType};base64,${bytes.toString("base64")}`;
   } catch {
-    return null;
+    return avatarUrl;
   }
 }
 function redirectWithError(res, origin, returnTo, code) {

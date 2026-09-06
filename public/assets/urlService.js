@@ -29,6 +29,7 @@ export const URLService = {
     // A. Reserved Routes
     if (path === '/download' || path === '/download/') return { type: 'DOWNLOAD' };
     if (path.startsWith('/auth/')) return { type: 'AUTH_CALLBACK' };
+    if (path.startsWith('/.proxy/') || path === '/index.html') return { type: 'HOME' };
 
     // B. Multi-Game Room Pattern (Preserve URL)
     const multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
