@@ -113,6 +113,19 @@
         padding-top: 0;
         padding-bottom: 0;
       }
+      /* Suppress native Android APK / app prompts inside Discord Activity & Desktop */
+      html.cm-discord-activity #cm-room-android-cta,
+      html.cm-discord-activity .cm-room-android-banner,
+      html.cm-discord-activity #cm-home-android-dock,
+      html.cm-discord-activity .cm-home-android-dock,
+      html.cm-discord-activity #cm-app-dialog-backdrop,
+      html.cm-discord-activity .cm-app-dialog-backdrop,
+      body.cm-discord-activity #cm-room-android-cta,
+      body.cm-discord-activity .cm-room-android-banner {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
       /* Professional Game Touch Polish */
       button, a, [role="button"], .cm-card {
         touch-action: manipulation;
@@ -121,12 +134,135 @@
     <!-- Apply stored language/direction/theme before first paint to avoid a flash. -->
     <script>
       (function () {
+        // Global URL & Routing Architecture Service (Multi-game ready & Deep link support)
+        window.URLService = {
+          BASE_URL: 'https://clue-me.ai.studio',
+          BASE_WEB_URL: 'https://clue-me.ai.studio',
+          CUSTOM_SCHEME: 'clue-me',
+
+          getMultiGameRoomUrl: function(roomId, gameId) {
+            gameId = gameId || 'clue-me';
+            return window.URLService.BASE_URL + '/' + gameId + '/room/' + String(roomId || '').toUpperCase();
+          },
+
+          getDirectRoomUrl: function(roomId) {
+            return window.URLService.BASE_URL + '/room/' + String(roomId || '').toUpperCase();
+          },
+
+          getDownloadUrl: function() { 
+            return window.URLService.BASE_URL + '/download'; 
+          },
+
+          getWebRoomUrl: function(roomId, gameId) {
+            return window.URLService.getMultiGameRoomUrl(roomId, gameId);
+          },
+
+          getDeepRoomUrl: function(roomId, gameId) {
+            gameId = gameId || 'clue-me';
+            return (window.URLService.CUSTOM_SCHEME || 'clue-me') + '://' + gameId + '/room/' + String(roomId || '').toUpperCase();
+          },
+
+          parseCurrentRoute: function(customPath) {
+            var path = typeof customPath === 'string' ? customPath : window.location.pathname;
+
+            // A. Reserved Routes
+            if (path === '/download' || path === '/download/') return { type: 'DOWNLOAD' };
+            if (path.indexOf('/auth/') === 0) return { type: 'AUTH_CALLBACK' };
+
+            // B. Multi-Game Room Pattern (Preserve URL)
+            var multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
+            if (multiMatch) {
+              return {
+                type: 'ROOM',
+                gameId: multiMatch[1].toLowerCase(),
+                roomId: multiMatch[2].toUpperCase()
+              };
+            }
+
+            // C. Legacy Direct Room Pattern
+            var directMatch = path.match(/^\/room\/([A-Za-z]{4})$/i);
+            if (directMatch) {
+              return {
+                type: 'ROOM',
+                gameId: 'clue-me',
+                roomId: directMatch[1].toUpperCase()
+              };
+            }
+
+            // D. Root Path
+            if (path === '/' || path === '') return { type: 'HOME' };
+
+            // E. Truly Unknown / Invalid Routes
+            return { type: 'UNKNOWN' };
+          },
+
+          parseDeepLink: function(url) {
+            if (!url) return { type: 'UNKNOWN' };
+            try {
+              var rawUrl = String(url).trim();
+
+              // 1. Download Custom Scheme
+              if (/^(clue-me|clueme|intent):\/\/download(\/.*)?$/i.test(rawUrl)) {
+                return { type: 'DOWNLOAD' };
+              }
+
+              // 2. Auth Custom Scheme: clue-me://auth or intent://auth
+              if (/^(clue-me|clueme|intent):\/\/auth/i.test(rawUrl)) {
+                return { type: 'AUTH_CALLBACK', url: rawUrl };
+              }
+
+              // 3. Multi-Game Room Custom Scheme: clue-me://:gameId/room/:roomId
+              var schemeMultiMatch = rawUrl.match(/^(?:clue-me|clueme|intent):\/\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
+              if (schemeMultiMatch && schemeMultiMatch[1].toLowerCase() !== 'intent') {
+                return {
+                  type: 'ROOM',
+                  gameId: schemeMultiMatch[1].toLowerCase(),
+                  roomId: schemeMultiMatch[2].toUpperCase()
+                };
+              }
+
+              // Legacy Room Custom Scheme: clue-me://room/:roomId or intent://room/:roomId
+              var schemeLegacyMatch = rawUrl.match(/^(?:clue-me|clueme|intent):\/\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
+              if (schemeLegacyMatch) {
+                return {
+                  type: 'ROOM',
+                  gameId: 'clue-me',
+                  roomId: schemeLegacyMatch[1].toUpperCase()
+                };
+              }
+
+              // 4. Standard HTTP / HTTPS URL
+              var normUrl = rawUrl.replace(/^(clue-me|clueme):\/\//i, 'https://clue-me.ai.studio/');
+              var parsed = new URL(normUrl, window.location.origin);
+              return window.URLService.parseCurrentRoute(parsed.pathname);
+            } catch (e) {
+              return { type: 'UNKNOWN' };
+            }
+          }
+        };
+
         try {
-          var qs = new URLSearchParams(location.search);
-          if (qs.has('frame_id') || qs.has('instance_id') || qs.get('activity') === 'mock') {
+          var isDiscord = false;
+          try {
+            var qs = new URLSearchParams(location.search);
+            if (
+              qs.has('frame_id') ||
+              qs.has('instance_id') ||
+              qs.get('activity') === 'mock' ||
+              qs.get('activity') === 'discord' ||
+              sessionStorage.getItem('cm_is_discord') === '1' ||
+              (window.name && window.name.indexOf('discord') !== -1) ||
+              (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
+              (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1))
+            ) {
+              isDiscord = true;
+              sessionStorage.setItem('cm_is_discord', '1');
+            }
+          } catch(e) {}
+          if (isDiscord) {
             document.documentElement.classList.add('cm-discord-activity');
           }
-          var lang = localStorage.getItem('clue-me:lang');
+          var lang = localStorage.getItem('ui_lang') || localStorage.getItem('clue-me:lang');
           if (lang !== 'ar' && lang !== 'en') lang = 'en';
           document.documentElement.lang = lang;
           document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -143,10 +279,407 @@
           document.documentElement.classList.toggle('mani', mani);
           document.documentElement.classList.toggle('mani-dark', theme === 'mani-dark');
           document.documentElement.classList.toggle('mot', mot);
+
+          var activeRoute = window.URLService.parseCurrentRoute();
+
+          // If on unknown / invalid route, silently normalize to Home (/) to prevent false room errors
+          if (activeRoute.type === 'UNKNOWN') {
+            window.history.replaceState({}, document.title, '/');
+          }
+
+          // Handle Discord OAuth Callback (/auth/callback)
+          if (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname.indexOf('/auth/callback') === 0) {
+            console.log("[Discord OAuth] /auth/callback route reached.");
+
+            var hashParams = new URLSearchParams(window.location.hash.slice(1));
+            var searchParams = new URLSearchParams(window.location.search);
+            var accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+            var ses = searchParams.get('discord_session');
+
+            var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            var isNative = Boolean(
+              window.Capacitor ||
+              window.cordova ||
+              location.protocol === 'capacitor:' ||
+              document.documentElement.classList.contains('cm-native-app')
+            );
+
+            // Save raw access token
+            if (accessToken) {
+              try {
+                localStorage.setItem('discord_access_token', accessToken);
+              } catch(e) {}
+            }
+
+            // Safe DOM renderer for callback UI
+            var renderCallbackDOM = function(finalToken, finalUser) {
+              var container = document.getElementById('root') || document.body;
+              if (!container) return;
+              var userName = (finalUser && finalUser.name) ? finalUser.name : 'اللاعب';
+              var tParam = encodeURIComponent(finalToken || '');
+              var nParam = encodeURIComponent((finalUser && finalUser.name) || '');
+              var intentUri = 'intent://auth?token=' + tParam + '&name=' + nParam + '#Intent;scheme=clue-me;package=com.clueme.game;S.browser_fallback_url=' + encodeURIComponent(window.location.origin + '/?auth=success') + ';end';
+              var customUri = 'clue-me://auth?token=' + tParam + '&name=' + nParam;
+
+              window.__openClueMeApp = function() {
+                try {
+                  window.location.href = intentUri;
+                } catch(e) {}
+                setTimeout(function() {
+                  try {
+                    window.location.href = customUri;
+                  } catch(e) {}
+                }, 500);
+              };
+
+              container.innerHTML = 
+                '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0d1117;color:#f3f4f6;font-family:sans-serif;direction:rtl;">' +
+                '  <div style="width:100%;max-width:440px;background:#161b22;border:1px solid #30363d;border-radius:24px;padding:32px 24px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.6);">' +
+                '    <div style="width:68px;height:68px;background:linear-gradient(135deg,#238636,#2ea043);border-radius:20px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(46,160,67,0.4);font-size:32px;">🎉</div>' +
+                '    <div style="display:inline-block;background:rgba(46,160,67,0.2);color:#3fb950;font-size:12px;font-weight:bold;padding:4px 12px;border-radius:999px;margin-bottom:12px;border:1px solid rgba(63,185,80,0.3);">تم التحقق بنجاح • مرحباً بك يا ' + userName + '</div>' +
+                '    <h1 style="font-size:22px;font-weight:bold;margin:0 0 8px;color:#ffffff;">تم تسجيل الدخول بنجاح! 🎉</h1>' +
+                '    <p style="font-size:14px;color:#8b949e;margin:0 0 24px;line-height:1.6;">تم ربط حسابك بتطبيق Clue Me بنجاح. اضغط على الزر أدناه للعودة للتطبيق فوراً ومتابعة اللعب.</p>' +
+                '    <button onclick="window.__openClueMeApp()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;background:#238636;color:#ffffff;font-weight:bold;font-size:16px;padding:16px 20px;border-radius:14px;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(35,134,54,0.4);margin-bottom:12px;font-family:inherit;">' +
+                '      <span>📱 فتح تطبيق Clue Me واللعب فوراً 🚀</span>' +
+                '    </button>' +
+                '    <a href="/" style="display:flex;align-items:center;justify-content:center;gap:8px;color:#8b949e;font-size:14px;padding:10px;text-decoration:none;">' +
+                '      <span>🌐</span><span>أو المتابعة واللعب عبر المتصفح (Web Hub)</span>' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+
+              // Automatically trigger opening the app on mobile
+              setTimeout(function() {
+                window.__openClueMeApp();
+              }, 400);
+            };
+
+            var finishAuth = function(token, user) {
+              if (token) {
+                try {
+                  localStorage.setItem('clue-me:token', token);
+                  localStorage.setItem('discord_session', token);
+                  if (user && user.name) {
+                    localStorage.setItem('clue-me:name', user.name);
+                  }
+                } catch(e) {}
+              }
+
+              // If desktop popup, notify opener then close safely
+              if (window.opener) {
+                try {
+                  window.opener.postMessage({
+                    type: 'DISCORD_AUTH_COMPLETE',
+                    token: token,
+                    user: user
+                  }, '*');
+                } catch(e) {}
+                setTimeout(function() { window.close(); }, 150);
+                return;
+              }
+
+              // On Mobile Browser (External Chrome / Samsung Internet)
+              if (isMobile && !isNative) {
+                document.title = 'تم تسجيل الدخول بنجاح! 🎉';
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', function() {
+                    renderCallbackDOM(token, user);
+                  });
+                } else {
+                  renderCallbackDOM(token, user);
+                }
+                return;
+              }
+
+              window.location.href = '/';
+            };
+
+            // Exchange Discord access token for Clue Me user session
+            if (accessToken) {
+              fetch('https://discord.com/api/v10/users/@me', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+              })
+              .then(function(res) { return res.json(); })
+              .then(function(profile) {
+                if (profile && profile.id) {
+                  var avatarUrl = profile.avatar 
+                    ? 'https://cdn.discordapp.com/avatars/' + profile.id + '/' + profile.avatar + '.png'
+                    : '';
+                  var payload = {
+                    discordId: profile.id,
+                    name: profile.global_name || profile.username || "Discord Player",
+                    email: profile.email || "",
+                    avatar: avatarUrl
+                  };
+                  
+                  return fetch('/api/auth/discord/implicit-callback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  });
+                }
+                throw new Error('Invalid profile response');
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  finishAuth(data.token, data.user);
+                } else {
+                  finishAuth(null, null);
+                }
+              })
+              .catch(function(err) {
+                console.error('[Discord OAuth] Profile exchange failed:', err);
+                finishAuth(null, null);
+              });
+              return;
+            }
+
+            // If no accessToken, return to home
+            finishAuth(null, null);
+            return;
+          }
+
+          // Handle discord_session redirect in external browser / web app
+          var ses = qs.get('discord_session');
+          var isAuthDiscord = qs.get('auth') === 'discord' || qs.has('discord_session');
+          
+          if (window.opener && (ses || isAuthDiscord)) {
+            console.log("[Popup] Auth redirect detected inside popup window.");
+            if (ses) {
+              fetch('/api/auth/discord/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session: ses })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  try {
+                    localStorage.setItem('clue-me:token', data.token);
+                    localStorage.setItem('discord_session', data.token);
+                    if (data.user && data.user.name) {
+                      localStorage.setItem('clue-me:name', data.user.name);
+                    }
+                  } catch(e) {}
+                }
+                try {
+                  window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', token: data ? data.token : null, user: data ? data.user : null, session: ses }, '*');
+                } catch(e) {}
+                setTimeout(function() { window.close(); }, 150);
+              })
+              .catch(function() {
+                try {
+                  window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', session: ses }, '*');
+                } catch(e) {}
+                setTimeout(function() { window.close(); }, 150);
+              });
+              return;
+            }
+            window.close();
+            return;
+          }
+
+          if (ses || isAuthDiscord) {
+            if (ses) {
+              try {
+                localStorage.setItem('discord_session', ses);
+                localStorage.setItem('clue-me:discord_session', ses);
+                localStorage.setItem('clue-me:pending_discord_session', ses);
+              } catch(e) {}
+
+              fetch('/api/auth/discord/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session: ses })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  try {
+                    localStorage.setItem('clue-me:token', data.token);
+                    if (data.user && data.user.name) {
+                      localStorage.setItem('clue-me:name', data.user.name);
+                    }
+                  } catch(e) {}
+                  window.dispatchEvent(new CustomEvent('cm:auth-changed', { detail: data }));
+                }
+              })
+              .catch(function(){});
+
+              // Clean URL
+              var cleanUrl = window.location.pathname + (window.location.hash || '');
+              window.history.replaceState({}, document.title, cleanUrl);
+
+              var appDeepLink = 'clue-me://auth?discord_session=' + encodeURIComponent(ses);
+              var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var isNative = Boolean(
+                window.Capacitor ||
+                window.cordova ||
+                location.protocol === 'capacitor:' ||
+                document.documentElement.classList.contains('cm-native-app')
+              );
+
+              if (isMobile && !isNative) {
+                try {
+                  window.location.href = appDeepLink;
+                } catch(e) {}
+              }
+            } else {
+              var cleanUrl = window.location.pathname + (window.location.hash || '');
+              window.history.replaceState({}, document.title, cleanUrl);
+            }
+          }
         } catch (e) {
           /* storage unavailable — keep static defaults */
         }
       })();
+    </script>
+    
+    <!-- PURE CLIENT-SIDE DISCORD IMPLICIT OAUTH FLOW -->
+    <script>
+      window.handleDiscordImplicitLogin = function() {
+        console.log("[Discord Auth] Initiating pure Client-Side Discord Implicit OAuth Flow...");
+        
+        // Clear any previous error banner
+        const existingBanner = document.getElementById('cm-auth-error-banner');
+        if (existingBanner) existingBanner.remove();
+
+        // 1. Fetch Discord Client Configuration
+        fetch("/api/auth/discord/config")
+          .then(function(res) { return res.json(); })
+          .then(function(config) {
+            var clientId = config.clientId;
+            if (!clientId) {
+              console.error("[Discord Auth] Discord Client ID is not configured on the server!");
+              showAuthError("خطأ: لم يتم ضبط معرف تطبيق Discord (Client ID) على خادم اللعبة بعد.");
+              return;
+            }
+
+            // 2. Explicit Redirect URI as configured on Discord Developer Portal
+            var redirectUri = 'https://clue-me.ai.studio/auth/callback';
+
+            // 3. Build OAuth URL
+            var oauthUrl = 'https://discord.com/api/oauth2/authorize' +
+              '?client_id=' + encodeURIComponent(clientId) +
+              '&redirect_uri=' + encodeURIComponent(redirectUri) +
+              '&response_type=token' +
+              '&scope=identify%20email';
+
+            console.log("[Discord Auth] Opening browser popup to Discord OAuth...", oauthUrl);
+
+            // 4. Trigger Browser or Popup
+            var isNativeApp = Boolean(
+              (document.documentElement && document.documentElement.classList.contains("cm-native-app")) ||
+              (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) ||
+              typeof window.Capacitor !== "undefined"
+            );
+
+            if (isNativeApp && typeof window.safeOpenExternal === "function") {
+              window.safeOpenExternal(oauthUrl);
+              return;
+            }
+
+            var width = 600;
+            var height = 750;
+            var left = (window.screen.width - width) / 2;
+            var top = (window.screen.height - height) / 2;
+            var popup = window.open(oauthUrl, "discord_login", "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top);
+            
+            if (!popup || popup.closed || typeof popup.closed == "undefined") {
+              // Popup blocked - redirect the parent window directly as fallback
+              window.location.href = oauthUrl;
+              return;
+            }
+
+            var pollInterval = setInterval(function() {
+              if (localStorage.getItem('clue-me:token')) {
+                clearInterval(pollInterval);
+                window.location.reload();
+                return;
+              }
+              if (popup.closed) {
+                clearInterval(pollInterval);
+                setTimeout(function() {
+                  if (localStorage.getItem('clue-me:token')) {
+                    window.location.reload();
+                  }
+                }, 300);
+              }
+            }, 500);
+          })
+          .catch(function(err) {
+            console.error("[Discord Auth] Failed to fetch config:", err);
+            showAuthError("تعذر الاتصال بالخادم لجلب إعدادات Discord.");
+          });
+      };
+
+      window.handleNativeDiscordLogin = function() {
+        if (typeof window.handleDiscordImplicitLogin === "function") {
+          window.handleDiscordImplicitLogin();
+        }
+      };
+
+      // Compatibility alias for the prebuilt index-discord-v30.js client asset
+      window.handleFirebaseDiscordLogin = function() {
+        if (typeof window.handleDiscordImplicitLogin === "function") {
+          window.handleDiscordImplicitLogin();
+        }
+      };
+
+      // Listen for message from the popup
+      window.addEventListener("message", function(event) {
+        if (event.data && event.data.type === "DISCORD_AUTH_COMPLETE") {
+          console.log("[Main Window] Received auth notification from popup!", event.data);
+          var token = event.data.token || event.data.session;
+          if (token) {
+            try {
+              localStorage.setItem('clue-me:token', token);
+              localStorage.setItem('discord_session', token);
+              if (event.data.user && event.data.user.name) {
+                localStorage.setItem('clue-me:name', event.data.user.name);
+              }
+            } catch(e) {}
+          }
+          window.location.reload();
+        }
+      });
+
+      function showAuthError(message, isInfo) {
+        // Clear previous error banner
+        const existingBanner = document.getElementById('cm-auth-error-banner');
+        if (existingBanner) existingBanner.remove();
+
+        var banner = document.createElement('div');
+        banner.id = 'cm-auth-error-banner';
+        
+        var bgColor = '#1e1b4b';
+        var borderColor = isInfo ? '#4f46e5' : '#ef4444';
+        var titleColor = isInfo ? '#818cf8' : '#f87171';
+        var titleText = isInfo ? 'ℹ️ جاري تسجيل الدخول...' : '⚠️ تنبيه تسجيل الدخول';
+
+        banner.style.cssText = 'position:fixed;bottom:24px;left:24px;right:24px;max-width:500px;margin:0 auto;z-index:999999;background:' + bgColor + ';color:#fef2f2;padding:20px;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.6);border:2px solid ' + borderColor + ';font-family:sans-serif;direction:rtl;display:flex;flex-direction:column;gap:12px;';
+        
+        banner.innerHTML = 
+          '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ' + (isInfo ? 'rgba(79,70,229,0.3)' : 'rgba(239,68,68,0.3)') + ';padding-bottom:8px;">' +
+            '<div style="font-weight:bold;font-size:16px;color:' + titleColor + ';display:flex;align-items:center;gap:6px;">' + titleText + '</div>' +
+            '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#9ca3af;font-size:24px;cursor:pointer;line-height:1;padding:0 4px;margin:0;">&times;</button>' +
+          '</div>' +
+          '<div style="font-size:14px;line-height:1.6;color:#e5e7eb;opacity:0.95;">' + message + '</div>' +
+          (!isInfo ? 
+          '<div style="display:flex;justify-content:end;gap:8px;margin-top:4px;">' +
+            '<button onclick="this.parentElement.parentElement.remove()" style="background:#dc2626;color:#ffffff;border:none;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 3px 10px rgba(220,38,38,0.4);transition:all 0.2s;">موافق</button>' +
+          '</div>' : '');
+          
+        document.body.appendChild(banner);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(function() {
+          if (banner && banner.parentElement) {
+            banner.remove();
+          }
+        }, 10000);
+      }
     </script>
     
     <!-- CLUE ME NATIVE APP AUTO-CONNECT BRIDGE -->
@@ -261,25 +794,208 @@
           };
         }
 
+        // Safe External Browser Launcher for Discord OAuth & External Links
+        function safeOpenExternal(url) {
+          if (!url) return;
+          if (url.indexOf("/") === 0 && url.indexOf("//") !== 0) {
+            url = ((window.__CLUE_ME_SERVER_URL__ || window.location.origin) + url);
+          }
+          try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+              window.Capacitor.Plugins.Browser.open({ url: url }).catch(function() {
+                window.open(url, "_system");
+              });
+            } else if (window.cordova && window.cordova.InAppBrowser) {
+              window.cordova.InAppBrowser.open(url, "_system", "location=yes");
+            } else if (window.discordSdk && window.discordSdk.commands && window.discordSdk.commands.openExternalLink) {
+              window.discordSdk.commands.openExternalLink({ url: url }).catch(function(){});
+            } else {
+              window.open(url, "_system") || (window.location.href = url);
+            }
+          } catch(e) {
+            window.location.href = url;
+          }
+        }
+        window.safeOpenExternal = safeOpenExternal;
+
+        function handleDiscordCallback(url) {
+          if (!url) return;
+          try {
+            var rawUrl = String(url);
+            var normUrl = rawUrl.replace(/^(clue-me|clueme|intent):\/\//i, "https://clueme.wisp.uno/");
+            var parsed = new URL(normUrl);
+            var searchParams = new URLSearchParams(parsed.search || "");
+            var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
+
+            // 1. Check for direct JWT session token passed from browser callback
+            var directToken = searchParams.get("token") || hashParams.get("token");
+            var directName = searchParams.get("name") || hashParams.get("name");
+
+            if (directToken) {
+              console.log("[Native Auth] Direct session token received via Deep Link!");
+              try {
+                localStorage.setItem("clue-me:token", directToken);
+                localStorage.setItem("discord_session", directToken);
+                if (directName) {
+                  localStorage.setItem("clue-me:name", decodeURIComponent(directName));
+                }
+              } catch(e) {}
+              window.dispatchEvent(new CustomEvent("cm:auth-changed", { detail: { token: directToken } }));
+              setTimeout(function() {
+                window.location.reload();
+              }, 150);
+              return;
+            }
+
+            var code = searchParams.get("code");
+            var accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+            var ses = searchParams.get("discord_session") || accessToken;
+
+            if (accessToken) {
+              try {
+                localStorage.setItem("discord_access_token", accessToken);
+                localStorage.setItem("clue-me:token", accessToken);
+                localStorage.setItem("discord_session", accessToken);
+              } catch(e) {}
+            }
+
+            var payload = {};
+            if (code) {
+              payload = { code: code, redirectUri: "clue-me://auth" };
+            } else if (ses) {
+              payload = { session: ses };
+              try {
+                localStorage.setItem("discord_session", ses);
+                localStorage.setItem("clue-me:discord_session", ses);
+                localStorage.setItem("clue-me:pending_discord_session", ses);
+              } catch(e) {}
+            }
+
+            if (code || ses) {
+              fetch("/api/auth/discord/exchange", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+              })
+              .then(function(res) { return res.json(); })
+              .then(function(data) {
+                if (data && data.token) {
+                  try {
+                    localStorage.setItem("clue-me:token", data.token);
+                    localStorage.setItem("discord_session", data.token);
+                    if (data.user && data.user.name) {
+                      localStorage.setItem("clue-me:name", data.user.name);
+                    }
+                  } catch(e) {}
+                  window.dispatchEvent(new CustomEvent("cm:auth-changed", { detail: data }));
+                  setTimeout(function() {
+                    window.location.reload();
+                  }, 150);
+                }
+              })
+              .catch(function(){});
+            }
+
+            // Clean URL in browser history
+            try {
+              window.history.replaceState({}, document.title, "/");
+            } catch(e) {}
+          } catch(e) {}
+        }
+        window.handleDiscordCallback = handleDiscordCallback;
+
         // Initialize Native Device Features (Status Bar & Haptics & Deep Links)
         function handleDeepLink(url) {
           if (!url) return;
           try {
-            var parsed = new URL(url);
+            var rawUrl = String(url);
+            var route = window.URLService ? window.URLService.parseDeepLink(rawUrl) : null;
+
+            if (route) {
+              if (route.type === "AUTH_CALLBACK" || rawUrl.indexOf("auth") !== -1) {
+                window.handleDiscordCallback(route.url || rawUrl);
+                var cleanUrl = "/";
+                window.history.replaceState({}, document.title, cleanUrl);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                return;
+              }
+
+              if (route.type === "DOWNLOAD") {
+                var targetPath = "/download";
+                if (window.location.pathname !== targetPath) {
+                  window.history.pushState({}, "", targetPath);
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                }
+                return;
+              }
+
+              if (route.type === "ROOM" && route.roomId) {
+                var targetPath = "/room/" + route.roomId;
+                window.history.pushState({}, "", targetPath);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                return;
+              }
+
+              if (route.type === "HOME") {
+                window.history.pushState({}, "", "/");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                return;
+              }
+            }
+
+            // Fallback parsing if URLService was unavailable
+            var normUrl = rawUrl.replace(/^(clue-me|clueme):\/\//i, "https://clue-me.ai.studio/");
+            var parsed = new URL(normUrl, window.location.origin);
+            var searchParams = new URLSearchParams(parsed.search || "");
+            var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
+
+            var isDiscordOAuth =
+              searchParams.has("code") ||
+              searchParams.has("access_token") ||
+              hashParams.has("access_token") ||
+              searchParams.has("state") ||
+              searchParams.has("discord_session") ||
+              searchParams.get("auth") === "discord" ||
+              rawUrl.indexOf("clue-me://auth") !== -1 ||
+              rawUrl.indexOf("clueme://auth") !== -1 ||
+              rawUrl.indexOf("auth/discord") !== -1;
+
+            if (isDiscordOAuth) {
+              window.handleDiscordCallback(rawUrl);
+              var cleanUrl = "/";
+              window.history.replaceState({}, document.title, cleanUrl);
+              window.dispatchEvent(new PopStateEvent("popstate"));
+              return;
+            }
+
+            var roomCode = searchParams.get("room") || searchParams.get("roomId");
             var pathname = parsed.pathname || "/";
-            var search = parsed.search || "";
-            var hash = parsed.hash || "";
-            // If URL is pointing to clue-me.ai.studio domain or custom scheme
-            var targetPath = pathname + search + hash;
-            if (targetPath && targetPath !== "/" && targetPath !== location.pathname + location.search) {
+            var pathParts = pathname.split("/").filter(Boolean);
+            var pathRoomCode = (pathParts[0] === "room" && pathParts[1]) ? pathParts[1] : null;
+
+            var finalRoomCode = roomCode || pathRoomCode;
+            var isValidRoom = finalRoomCode && /^[A-Za-z]{4}$/.test(finalRoomCode) && finalRoomCode.toUpperCase() !== "AUTH" && finalRoomCode.toUpperCase() !== "CALLBACK";
+
+            if (isValidRoom) {
+              var targetPath = "/room/" + finalRoomCode.toUpperCase() + (parsed.search || "") + (parsed.hash || "");
               window.history.pushState({}, "", targetPath);
               window.dispatchEvent(new PopStateEvent("popstate"));
+              return;
             }
+
+            // If not a valid room, cleanly navigate home without triggering room errors
+            window.history.pushState({}, "", "/");
+            window.dispatchEvent(new PopStateEvent("popstate"));
           } catch(e) {}
         }
 
         document.addEventListener("DOMContentLoaded", function() {
           try {
+            var activeRoute = window.URLService ? window.URLService.parseCurrentRoute() : null;
+            if (activeRoute && activeRoute.type === "HOME" && window.location.pathname !== "/") {
+              window.history.replaceState({}, document.title, "/");
+            }
+
             if (checkNative()) {
               document.documentElement.classList.add("cm-native-app");
             }
@@ -363,6 +1079,19 @@
                   return;
                 }
                 if (href.indexOf("/") === 0) {
+                  if (href.indexOf("/api/") === 0) {
+                    if (typeof isCapacitorNative !== "undefined" && isCapacitorNative) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      var fullUrl = ((window.__CLUE_ME_SERVER_URL__ || "") + href);
+                      if (href.indexOf("auth/discord") !== -1) {
+                        safeOpenExternal(fullUrl);
+                      } else {
+                        window.location.assign(fullUrl);
+                      }
+                    }
+                    return;
+                  }
                   e.preventDefault();
                   e.stopPropagation();
                   window.history.pushState({}, "", href);
@@ -478,7 +1207,11 @@
     <script src="/assets/useSafeArea.js?v=153"></script>
     <script defer src="/assets/game-room-v20.js?v=153"></script>
     <script defer src="/assets/game-ai-hud-v21.js?v=156"></script>
-  </head>
+  
+    
+
+    
+</head>
   <body>
     <div id="root"></div>
   </body>

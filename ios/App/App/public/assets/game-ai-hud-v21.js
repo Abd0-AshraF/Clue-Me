@@ -269,15 +269,34 @@
      -------------------------------------------------------------------------- */
   function isDiscordEnvironment() {
     try {
-      return Boolean(
+      if (typeof window === 'undefined') return false;
+      if (sessionStorage.getItem('cm_is_discord') === '1') return true;
+      if (
         (document.documentElement && document.documentElement.classList.contains('cm-discord-activity')) ||
         (document.body && document.body.classList.contains('cm-discord-activity')) ||
         location.search.indexOf('frame_id') !== -1 ||
         location.search.indexOf('instance_id') !== -1 ||
         location.search.indexOf('activity=discord') !== -1 ||
+        location.search.indexOf('activity=mock') !== -1 ||
         (window.name && window.name.indexOf('discord') !== -1) ||
-        (window.parent && window.parent !== window && location.search.indexOf('discord') !== -1)
-      );
+        (window.parent && window.parent !== window && (location.search.indexOf('discord') !== -1 || (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1)))) ||
+        (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
+        (typeof window.discordSdk !== 'undefined')
+      ) {
+        try { sessionStorage.setItem('cm_is_discord', '1'); } catch(e) {}
+        if (document.documentElement) document.documentElement.classList.add('cm-discord-activity');
+        if (document.body) document.body.classList.add('cm-discord-activity');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isAndroidDevice() {
+    try {
+      return /Android/i.test(navigator.userAgent || '');
     } catch (e) {
       return false;
     }
@@ -302,12 +321,15 @@
   }
 
   function openAppDialog() {
-    if (isNativeAppEnvironment() || isDiscordEnvironment()) return;
+    if (isNativeAppEnvironment() || isDiscordEnvironment() || !isAndroidDevice()) return;
     var existing = document.getElementById('cm-app-dialog-backdrop');
     if (existing) existing.remove();
 
     var roomCode = getRoomCodeFromUrl();
-    var deepLinkUrl = roomCode ? ('clueme://room/' + roomCode) : 'clueme://home';
+    var intentUrl = roomCode 
+      ? ('intent://room/' + encodeURIComponent(roomCode) + '#Intent;scheme=clue-me;package=com.clueme.game;end')
+      : 'intent://home#Intent;scheme=clue-me;package=com.clueme.game;end';
+    var deepLinkUrl = roomCode ? ('clue-me://room/' + roomCode) : 'clue-me://home';
 
     var backdrop = document.createElement('div');
     backdrop.id = 'cm-app-dialog-backdrop';
@@ -347,7 +369,7 @@
           '</div>' +
           '<div style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.25rem;">' +
             (roomCode ?
-              '<a href="' + deepLinkUrl + '" class="cm-btn-native-deep-link" style="padding:0.7rem 1rem; font-size:0.9rem;">' +
+              '<a href="' + intentUrl + '" class="cm-btn-native-deep-link" id="cm-dialog-open-app-btn" style="padding:0.7rem 1rem; font-size:0.9rem;">' +
                 '<span>🚀</span><span>' + (isArabic ? 'فتح الغرفة ' + roomCode + ' في التطبيق' : 'Open Room in Android App') + '</span>' +
               '</a>' : '') +
             '<a href="/clue-me-latest.apk" download="clue-me-latest.apk" class="cm-btn-native-apk-dl" style="padding:0.7rem 1rem; font-size:0.9rem; justify-content:center;">' +
@@ -359,6 +381,17 @@
 
     document.body.appendChild(backdrop);
 
+    var dialogOpenBtn = backdrop.querySelector('#cm-dialog-open-app-btn');
+    if (dialogOpenBtn) {
+      dialogOpenBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.location.href = intentUrl;
+        setTimeout(function() {
+          window.location.href = deepLinkUrl;
+        }, 600);
+      });
+    }
+
     var closeBtn = backdrop.querySelector('#cm-app-dialog-close-btn');
     if (closeBtn) closeBtn.addEventListener('click', function () { backdrop.remove(); });
     backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
@@ -366,7 +399,7 @@
 
   function syncHomePageAndroidButtons() {
     var existingDock = document.getElementById('cm-home-android-dock');
-    if (isNativeAppEnvironment() || isDiscordEnvironment()) {
+    if (!isAndroidDevice() || isNativeAppEnvironment() || isDiscordEnvironment()) {
       if (existingDock) existingDock.remove();
       return;
     }
@@ -424,7 +457,7 @@
 
   function syncRoomUrlAndroidBanner() {
     var existingBanner = document.getElementById('cm-room-android-cta');
-    if (isNativeAppEnvironment() || isDiscordEnvironment()) {
+    if (!isAndroidDevice() || isNativeAppEnvironment() || isDiscordEnvironment()) {
       if (existingBanner) existingBanner.remove();
       return;
     }
@@ -453,6 +486,9 @@
       var banner = document.createElement('div');
       banner.id = 'cm-room-android-cta';
       banner.className = 'cm-room-android-banner cm-room-link-android-banner';
+      var intentUrl = 'intent://room/' + encodeURIComponent(roomCode) + '#Intent;scheme=clue-me;package=com.clueme.game;end';
+      var deepLinkUrl = 'clue-me://room/' + encodeURIComponent(roomCode);
+
       banner.innerHTML =
         '<div class="cm-room-android-banner-inner">' +
           '<div class="cm-room-android-top-row">' +
@@ -470,7 +506,7 @@
             '<button type="button" class="cm-room-android-dismiss" id="cm-room-banner-close-btn" aria-label="Dismiss">✕</button>' +
           '</div>' +
           '<div class="cm-room-android-actions">' +
-            '<a href="clueme://room/' + roomCode + '" class="cm-btn-native-deep-link" id="cm-room-open-app-btn">' +
+            '<a href="' + intentUrl + '" data-fallback="' + deepLinkUrl + '" class="cm-btn-native-deep-link" id="cm-room-open-app-btn">' +
               '<span>📱</span><span>' + (isArabic ? 'افتح في التطبيق' : 'Open in App') + '</span>' +
             '</a>' +
             '<a href="/clue-me-latest.apk" download="clue-me-latest.apk" class="cm-btn-native-apk-dl">' +
@@ -478,6 +514,17 @@
             '</a>' +
           '</div>' +
         '</div>';
+
+      var openBtn = banner.querySelector('#cm-room-open-app-btn');
+      if (openBtn) {
+        openBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.location.href = intentUrl;
+          setTimeout(function() {
+            window.location.href = deepLinkUrl;
+          }, 600);
+        });
+      }
 
       var closeBtn = banner.querySelector('#cm-room-banner-close-btn');
       if (closeBtn) {

@@ -113,6 +113,19 @@
         padding-top: 0;
         padding-bottom: 0;
       }
+      /* Suppress native Android APK / app prompts inside Discord Activity & Desktop */
+      html.cm-discord-activity #cm-room-android-cta,
+      html.cm-discord-activity .cm-room-android-banner,
+      html.cm-discord-activity #cm-home-android-dock,
+      html.cm-discord-activity .cm-home-android-dock,
+      html.cm-discord-activity #cm-app-dialog-backdrop,
+      html.cm-discord-activity .cm-app-dialog-backdrop,
+      body.cm-discord-activity #cm-room-android-cta,
+      body.cm-discord-activity .cm-room-android-banner {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
       /* Professional Game Touch Polish */
       button, a, [role="button"], .cm-card {
         touch-action: manipulation;
@@ -189,18 +202,18 @@
               var rawUrl = String(url).trim();
 
               // 1. Download Custom Scheme
-              if (/^(clue-me|clueme):\/\/download(\/.*)?$/i.test(rawUrl)) {
+              if (/^(clue-me|clueme|intent):\/\/download(\/.*)?$/i.test(rawUrl)) {
                 return { type: 'DOWNLOAD' };
               }
 
-              // 2. Auth Custom Scheme: clue-me://auth
-              if (/^(clue-me|clueme):\/\/auth/i.test(rawUrl)) {
+              // 2. Auth Custom Scheme: clue-me://auth or intent://auth
+              if (/^(clue-me|clueme|intent):\/\/auth/i.test(rawUrl)) {
                 return { type: 'AUTH_CALLBACK', url: rawUrl };
               }
 
               // 3. Multi-Game Room Custom Scheme: clue-me://:gameId/room/:roomId
-              var schemeMultiMatch = rawUrl.match(/^(?:clue-me|clueme):\/\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
-              if (schemeMultiMatch) {
+              var schemeMultiMatch = rawUrl.match(/^(?:clue-me|clueme|intent):\/\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
+              if (schemeMultiMatch && schemeMultiMatch[1].toLowerCase() !== 'intent') {
                 return {
                   type: 'ROOM',
                   gameId: schemeMultiMatch[1].toLowerCase(),
@@ -208,8 +221,8 @@
                 };
               }
 
-              // Legacy Room Custom Scheme: clue-me://room/:roomId
-              var schemeLegacyMatch = rawUrl.match(/^(?:clue-me|clueme):\/\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
+              // Legacy Room Custom Scheme: clue-me://room/:roomId or intent://room/:roomId
+              var schemeLegacyMatch = rawUrl.match(/^(?:clue-me|clueme|intent):\/\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
               if (schemeLegacyMatch) {
                 return {
                   type: 'ROOM',
@@ -229,8 +242,24 @@
         };
 
         try {
-          var qs = new URLSearchParams(location.search);
-          if (qs.has('frame_id') || qs.has('instance_id') || qs.get('activity') === 'mock') {
+          var isDiscord = false;
+          try {
+            var qs = new URLSearchParams(location.search);
+            if (
+              qs.has('frame_id') ||
+              qs.has('instance_id') ||
+              qs.get('activity') === 'mock' ||
+              qs.get('activity') === 'discord' ||
+              sessionStorage.getItem('cm_is_discord') === '1' ||
+              (window.name && window.name.indexOf('discord') !== -1) ||
+              (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
+              (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1))
+            ) {
+              isDiscord = true;
+              sessionStorage.setItem('cm_is_discord', '1');
+            }
+          } catch(e) {}
+          if (isDiscord) {
             document.documentElement.classList.add('cm-discord-activity');
           }
           var lang = localStorage.getItem('ui_lang') || localStorage.getItem('clue-me:lang');
@@ -275,9 +304,6 @@
               document.documentElement.classList.contains('cm-native-app')
             );
 
-            // Construct Deep Link target URL for mobile app
-            var deepLinkUrl = 'clue-me://auth' + (window.location.hash || (accessToken ? '#access_token=' + encodeURIComponent(accessToken) : (ses ? '?discord_session=' + encodeURIComponent(ses) : '')));
-
             // Save raw access token
             if (accessToken) {
               try {
@@ -285,25 +311,47 @@
               } catch(e) {}
             }
 
-            // Safe DOM renderer for callback UI without document.write or unescaped HTML tags
-            var renderCallbackDOM = function() {
+            // Safe DOM renderer for callback UI
+            var renderCallbackDOM = function(finalToken, finalUser) {
               var container = document.getElementById('root') || document.body;
               if (!container) return;
+              var userName = (finalUser && finalUser.name) ? finalUser.name : 'اللاعب';
+              var tParam = encodeURIComponent(finalToken || '');
+              var nParam = encodeURIComponent((finalUser && finalUser.name) || '');
+              var intentUri = 'intent://auth?token=' + tParam + '&name=' + nParam + '#Intent;scheme=clue-me;package=com.clueme.game;S.browser_fallback_url=' + encodeURIComponent(window.location.origin + '/?auth=success') + ';end';
+              var customUri = 'clue-me://auth?token=' + tParam + '&name=' + nParam;
+
+              window.__openClueMeApp = function() {
+                try {
+                  window.location.href = intentUri;
+                } catch(e) {}
+                setTimeout(function() {
+                  try {
+                    window.location.href = customUri;
+                  } catch(e) {}
+                }, 500);
+              };
+
               container.innerHTML = 
                 '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0d1117;color:#f3f4f6;font-family:sans-serif;direction:rtl;">' +
                 '  <div style="width:100%;max-width:440px;background:#161b22;border:1px solid #30363d;border-radius:24px;padding:32px 24px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.6);">' +
                 '    <div style="width:68px;height:68px;background:linear-gradient(135deg,#238636,#2ea043);border-radius:20px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(46,160,67,0.4);font-size:32px;">🎉</div>' +
-                '    <div style="display:inline-block;background:rgba(46,160,67,0.2);color:#3fb950;font-size:12px;font-weight:bold;padding:4px 12px;border-radius:999px;margin-bottom:12px;border:1px solid rgba(63,185,80,0.3);">تم التحقق بنجاح • Discord OAuth</div>' +
+                '    <div style="display:inline-block;background:rgba(46,160,67,0.2);color:#3fb950;font-size:12px;font-weight:bold;padding:4px 12px;border-radius:999px;margin-bottom:12px;border:1px solid rgba(63,185,80,0.3);">تم التحقق بنجاح • مرحباً بك يا ' + userName + '</div>' +
                 '    <h1 style="font-size:22px;font-weight:bold;margin:0 0 8px;color:#ffffff;">تم تسجيل الدخول بنجاح! 🎉</h1>' +
-                '    <p style="font-size:14px;color:#8b949e;margin:0 0 24px;line-height:1.6;">تم التحقق من حساب Discord بنجاح. اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب.</p>' +
-                '    <a href="' + deepLinkUrl + '" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;background:#238636;color:#ffffff;font-weight:bold;font-size:16px;padding:15px 20px;border-radius:14px;text-decoration:none;box-shadow:0 4px 16px rgba(35,134,54,0.4);margin-bottom:12px;">' +
-                '      <span>🎉 اضغط للعودة إلى التطبيق ومتابعة اللعب 📱</span>' +
-                '    </a>' +
+                '    <p style="font-size:14px;color:#8b949e;margin:0 0 24px;line-height:1.6;">تم ربط حسابك بتطبيق Clue Me بنجاح. اضغط على الزر أدناه للعودة للتطبيق فوراً ومتابعة اللعب.</p>' +
+                '    <button onclick="window.__openClueMeApp()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;background:#238636;color:#ffffff;font-weight:bold;font-size:16px;padding:16px 20px;border-radius:14px;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(35,134,54,0.4);margin-bottom:12px;font-family:inherit;">' +
+                '      <span>📱 فتح تطبيق Clue Me واللعب فوراً 🚀</span>' +
+                '    </button>' +
                 '    <a href="/" style="display:flex;align-items:center;justify-content:center;gap:8px;color:#8b949e;font-size:14px;padding:10px;text-decoration:none;">' +
                 '      <span>🌐</span><span>أو المتابعة واللعب عبر المتصفح (Web Hub)</span>' +
                 '    </a>' +
                 '  </div>' +
                 '</div>';
+
+              // Automatically trigger opening the app on mobile
+              setTimeout(function() {
+                window.__openClueMeApp();
+              }, 400);
             };
 
             var finishAuth = function(token, user) {
@@ -334,13 +382,12 @@
               if (isMobile && !isNative) {
                 document.title = 'تم تسجيل الدخول بنجاح! 🎉';
                 if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', renderCallbackDOM);
+                  document.addEventListener('DOMContentLoaded', function() {
+                    renderCallbackDOM(token, user);
+                  });
                 } else {
-                  renderCallbackDOM();
+                  renderCallbackDOM(token, user);
                 }
-                try {
-                  window.location.href = deepLinkUrl;
-                } catch(e) {}
                 return;
               }
 
@@ -521,7 +568,18 @@
 
             console.log("[Discord Auth] Opening browser popup to Discord OAuth...", oauthUrl);
 
-            // 4. Trigger Browser Popup
+            // 4. Trigger Browser or Popup
+            var isNativeApp = Boolean(
+              (document.documentElement && document.documentElement.classList.contains("cm-native-app")) ||
+              (window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) ||
+              typeof window.Capacitor !== "undefined"
+            );
+
+            if (isNativeApp && typeof window.safeOpenExternal === "function") {
+              window.safeOpenExternal(oauthUrl);
+              return;
+            }
+
             var width = 600;
             var height = 750;
             var left = (window.screen.width - width) / 2;
@@ -764,10 +822,31 @@
           if (!url) return;
           try {
             var rawUrl = String(url);
-            var normUrl = rawUrl.replace(/^(clue-me|clueme):\/\//i, "https://clueme.wisp.uno/");
+            var normUrl = rawUrl.replace(/^(clue-me|clueme|intent):\/\//i, "https://clueme.wisp.uno/");
             var parsed = new URL(normUrl);
             var searchParams = new URLSearchParams(parsed.search || "");
             var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
+
+            // 1. Check for direct JWT session token passed from browser callback
+            var directToken = searchParams.get("token") || hashParams.get("token");
+            var directName = searchParams.get("name") || hashParams.get("name");
+
+            if (directToken) {
+              console.log("[Native Auth] Direct session token received via Deep Link!");
+              try {
+                localStorage.setItem("clue-me:token", directToken);
+                localStorage.setItem("discord_session", directToken);
+                if (directName) {
+                  localStorage.setItem("clue-me:name", decodeURIComponent(directName));
+                }
+              } catch(e) {}
+              window.dispatchEvent(new CustomEvent("cm:auth-changed", { detail: { token: directToken } }));
+              setTimeout(function() {
+                window.location.reload();
+              }, 150);
+              return;
+            }
+
             var code = searchParams.get("code");
             var accessToken = hashParams.get("access_token") || searchParams.get("access_token");
             var ses = searchParams.get("discord_session") || accessToken;
@@ -809,6 +888,9 @@
                     }
                   } catch(e) {}
                   window.dispatchEvent(new CustomEvent("cm:auth-changed", { detail: data }));
+                  setTimeout(function() {
+                    window.location.reload();
+                  }, 150);
                 }
               })
               .catch(function(){});
