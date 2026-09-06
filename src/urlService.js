@@ -2,56 +2,53 @@
  * Unified Routing Architecture & Deep Linking Service for Clue Me & Multi-Game Expansion
  */
 export const URLService = {
-  // Base URLs
+  BASE_URL: 'https://clue-me.ai.studio',
   BASE_WEB_URL: 'https://clue-me.ai.studio',
   CUSTOM_SCHEME: 'clue-me',
 
-  // App Download Links
-  getDownloadUrl: () => 'https://clue-me.ai.studio/download',
+  getMultiGameRoomUrl: (roomId, gameId = 'clue-me') => 
+    `${URLService.BASE_URL}/${gameId}/room/${roomId.toUpperCase()}`,
 
-  // Room Links (Supports Current & Future Games)
-  getWebRoomUrl: (roomId, gameId = 'clue-me') =>
-    `https://clue-me.ai.studio/${gameId}/room/${roomId.toUpperCase()}`,
+  getDirectRoomUrl: (roomId) => 
+    `${URLService.BASE_URL}/room/${roomId.toUpperCase()}`,
 
-  getDeepRoomUrl: (roomId, gameId = 'clue-me') =>
+  getWebRoomUrl: (roomId, gameId = 'clue-me') => 
+    `${URLService.BASE_URL}/${gameId}/room/${roomId.toUpperCase()}`,
+
+  getDeepRoomUrl: (roomId, gameId = 'clue-me') => 
     `${URLService.CUSTOM_SCHEME}://${gameId}/room/${roomId.toUpperCase()}`,
 
-  // Safe Route Parser
+  getDownloadUrl: () => 
+    `${URLService.BASE_URL}/download`,
+
   parseCurrentRoute: (customPath) => {
     const path = typeof customPath === 'string'
       ? customPath
       : (typeof window !== 'undefined' ? window.location.pathname : '/');
 
-    // 1. Check Download Route
-    if (path === '/download' || path === '/download/' || path.startsWith('/download')) {
+    // A. Reserved: Download
+    if (path === '/download' || path === '/download/') {
       return { type: 'DOWNLOAD' };
     }
 
-    // 2. Check Multi-game Room Match: /:gameId/room/:roomId OR /room/:roomId
-    const multiGameMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/);
-    if (multiGameMatch) {
-      return {
-        type: 'ROOM',
-        gameId: multiGameMatch[1].toLowerCase(),
-        roomId: multiGameMatch[2].toUpperCase()
-      };
-    }
-
-    const legacyRoomMatch = path.match(/^\/room\/([A-Za-z]{4})$/);
-    if (legacyRoomMatch) {
-      return {
-        type: 'ROOM',
-        gameId: 'clue-me',
-        roomId: legacyRoomMatch[1].toUpperCase()
-      };
-    }
-
-    // 3. Check Auth Callback
+    // B. Reserved: Auth Callback
     if (path.startsWith('/auth/callback')) {
       return { type: 'AUTH_CALLBACK' };
     }
 
-    // 4. Default / Hub
+    // C. Multi-Game Match
+    const multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
+    if (multiMatch) {
+      return { type: 'ROOM', gameId: multiMatch[1].toLowerCase(), roomId: multiMatch[2].toUpperCase() };
+    }
+
+    // D. Direct Legacy Match
+    const directMatch = path.match(/^\/room\/([A-Za-z]{4})$/i);
+    if (directMatch) {
+      return { type: 'ROOM', gameId: 'clue-me', roomId: directMatch[1].toUpperCase() };
+    }
+
+    // E. Fallback for Unknown Routes
     return { type: 'HOME' };
   },
 
@@ -66,7 +63,12 @@ export const URLService = {
         return { type: 'DOWNLOAD' };
       }
 
-      // 2. Check Custom Scheme Multi-Game Room: clue-me://:gameId/room/:roomId
+      // 2. Check Custom Scheme Auth: clue-me://auth
+      if (/^(clue-me|clueme):\/\/auth/i.test(rawUrl)) {
+        return { type: 'AUTH_CALLBACK', url: rawUrl };
+      }
+
+      // 3. Check Custom Scheme Multi-Game Room: clue-me://:gameId/room/:roomId
       const schemeMultiMatch = rawUrl.match(/^(?:clue-me|clueme):\/\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
       if (schemeMultiMatch) {
         return {
@@ -86,11 +88,6 @@ export const URLService = {
         };
       }
 
-      // 3. Check Custom Scheme Auth: clue-me://auth
-      if (/^(clue-me|clueme):\/\/auth/i.test(rawUrl)) {
-        return { type: 'AUTH_CALLBACK', url: rawUrl };
-      }
-
       // 4. Standard HTTP/HTTPS Deep Link
       const normUrl = rawUrl.replace(/^(clue-me|clueme):\/\//i, 'https://clue-me.ai.studio/');
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://clue-me.ai.studio';
@@ -103,7 +100,7 @@ export const URLService = {
   }
 };
 
-// Expose globally for browser environments, Capacitor webviews, and prebuilt bundles
+// Expose globally
 if (typeof window !== 'undefined') {
   window.URLService = URLService;
 }

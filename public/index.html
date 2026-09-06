@@ -123,16 +123,25 @@
       (function () {
         // Global URL & Routing Architecture Service (Multi-game ready & Deep link support)
         window.URLService = {
+          BASE_URL: 'https://clue-me.ai.studio',
           BASE_WEB_URL: 'https://clue-me.ai.studio',
           CUSTOM_SCHEME: 'clue-me',
 
+          getMultiGameRoomUrl: function(roomId, gameId) {
+            gameId = gameId || 'clue-me';
+            return window.URLService.BASE_URL + '/' + gameId + '/room/' + String(roomId || '').toUpperCase();
+          },
+
+          getDirectRoomUrl: function(roomId) {
+            return window.URLService.BASE_URL + '/room/' + String(roomId || '').toUpperCase();
+          },
+
           getDownloadUrl: function() { 
-            return 'https://clue-me.ai.studio/download'; 
+            return window.URLService.BASE_URL + '/download'; 
           },
 
           getWebRoomUrl: function(roomId, gameId) {
-            gameId = gameId || 'clue-me';
-            return 'https://clue-me.ai.studio/' + gameId + '/room/' + String(roomId || '').toUpperCase();
+            return window.URLService.getMultiGameRoomUrl(roomId, gameId);
           },
 
           getDeepRoomUrl: function(roomId, gameId) {
@@ -143,37 +152,37 @@
           parseCurrentRoute: function(customPath) {
             var path = typeof customPath === 'string' ? customPath : window.location.pathname;
 
-            // 1. Download Route
-            if (path === '/download' || path === '/download/' || path.indexOf('/download') === 0) {
+            // A. Reserved: Download
+            if (path === '/download' || path === '/download/') {
               return { type: 'DOWNLOAD' };
             }
 
-            // 2. Multi-game Room Match: /:gameId/room/:roomId
-            var multiGameMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/);
-            if (multiGameMatch) {
-              return {
-                type: 'ROOM',
-                gameId: multiGameMatch[1].toLowerCase(),
-                roomId: multiGameMatch[2].toUpperCase()
-              };
-            }
-
-            // Legacy Room Match: /room/:roomId
-            var legacyRoomMatch = path.match(/^\/room\/([A-Za-z]{4})$/);
-            if (legacyRoomMatch) {
-              return {
-                type: 'ROOM',
-                gameId: 'clue-me',
-                roomId: legacyRoomMatch[1].toUpperCase()
-              };
-            }
-
-            // 3. Auth Callback
+            // B. Reserved: Auth Callback
             if (path.indexOf('/auth/callback') === 0) {
               return { type: 'AUTH_CALLBACK' };
             }
 
-            // 4. Hub / Home
+            // C. Multi-Game Match: /:gameId/room/:roomId
+            var multiMatch = path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})$/i);
+            if (multiMatch) {
+              return {
+                type: 'ROOM',
+                gameId: multiMatch[1].toLowerCase(),
+                roomId: multiMatch[2].toUpperCase()
+              };
+            }
+
+            // D. Direct Legacy Match: /room/:roomId
+            var directMatch = path.match(/^\/room\/([A-Za-z]{4})$/i);
+            if (directMatch) {
+              return {
+                type: 'ROOM',
+                gameId: 'clue-me',
+                roomId: directMatch[1].toUpperCase()
+              };
+            }
+
+            // E. Fallback for Unknown Routes
             return { type: 'HOME' };
           },
 
@@ -187,7 +196,12 @@
                 return { type: 'DOWNLOAD' };
               }
 
-              // 2. Multi-Game Room Custom Scheme: clue-me://:gameId/room/:roomId
+              // 2. Auth Custom Scheme: clue-me://auth
+              if (/^(clue-me|clueme):\/\/auth/i.test(rawUrl)) {
+                return { type: 'AUTH_CALLBACK', url: rawUrl };
+              }
+
+              // 3. Multi-Game Room Custom Scheme: clue-me://:gameId/room/:roomId
               var schemeMultiMatch = rawUrl.match(/^(?:clue-me|clueme):\/\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})(?:[/?#]|$)/i);
               if (schemeMultiMatch) {
                 return {
@@ -205,11 +219,6 @@
                   gameId: 'clue-me',
                   roomId: schemeLegacyMatch[1].toUpperCase()
                 };
-              }
-
-              // 3. Auth Custom Scheme: clue-me://auth
-              if (/^(clue-me|clueme):\/\/auth/i.test(rawUrl)) {
-                return { type: 'AUTH_CALLBACK', url: rawUrl };
               }
 
               // 4. Standard HTTP / HTTPS URL
@@ -246,6 +255,11 @@
           document.documentElement.classList.toggle('mot', mot);
 
           var activeRoute = window.URLService.parseCurrentRoute();
+
+          // If on unknown / arbitrary path, normalize immediately to Home (/) to prevent false room errors
+          if (activeRoute.type === 'HOME' && window.location.pathname !== '/') {
+            window.history.replaceState({}, document.title, '/');
+          }
 
           // If on /download route, prepare Download Landing Page
           if (activeRoute.type === 'DOWNLOAD') {
@@ -296,22 +310,86 @@
             }
           }
 
-          // Handle Implicit OAuth Callback
-          if (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname === '/auth/callback' || window.location.pathname === '/auth/callback/') {
-            console.log("[Implicit OAuth] Callback page loaded.");
-            
-            // Clear document entirely to prevent the React single page app script from running or rendering "الرمز غير موجود"
-            document.open();
-            document.write('<div style="background:#090d14;color:#fef2f2;font-family:sans-serif;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;direction:rtl;padding:20px;text-align:center;"><div style="font-size:24px;font-weight:bold;margin-bottom:12px;">جاري تسجيل الدخول... 🔄</div><div style="font-size:14px;color:#9ca3af;">يرجى الانتظار أثناء جلب بيانات الملف الشخصي من Discord...</div></div>');
-            document.close();
-            
+          // Handle Discord OAuth Callback (/auth/callback)
+          if (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname.indexOf('/auth/callback') === 0) {
+            console.log("[Discord OAuth] /auth/callback route reached.");
+
             var hashParams = new URLSearchParams(window.location.hash.slice(1));
-            var accessToken = hashParams.get('access_token');
+            var searchParams = new URLSearchParams(window.location.search);
+            var accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+            var ses = searchParams.get('discord_session');
+
+            var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            var isNative = Boolean(
+              window.Capacitor ||
+              window.cordova ||
+              location.protocol === 'capacitor:' ||
+              document.documentElement.classList.contains('cm-native-app')
+            );
+
+            // Construct Deep Link target URL for mobile app
+            var deepLinkUrl = 'clue-me://auth' + (window.location.hash || (accessToken ? '#access_token=' + encodeURIComponent(accessToken) : (ses ? '?discord_session=' + encodeURIComponent(ses) : '')));
+
+            // Save access token if present
+            if (accessToken) {
+              try {
+                localStorage.setItem('discord_access_token', accessToken);
+                localStorage.setItem('clue-me:token', accessToken);
+                localStorage.setItem('discord_session', accessToken);
+              } catch(e) {}
+            }
+
+            // Safe DOM renderer for callback UI without document.write or unescaped HTML tags
+            var renderCallbackDOM = function() {
+              var container = document.getElementById('root') || document.body;
+              if (!container) return;
+              container.innerHTML = 
+                '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0d1117;color:#f3f4f6;font-family:sans-serif;direction:rtl;">' +
+                '  <div style="width:100%;max-width:440px;background:#161b22;border:1px solid #30363d;border-radius:24px;padding:32px 24px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.6);">' +
+                '    <div style="width:68px;height:68px;background:linear-gradient(135deg,#238636,#2ea043);border-radius:20px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(46,160,67,0.4);font-size:32px;">🎉</div>' +
+                '    <div style="display:inline-block;background:rgba(46,160,67,0.2);color:#3fb950;font-size:12px;font-weight:bold;padding:4px 12px;border-radius:999px;margin-bottom:12px;border:1px solid rgba(63,185,80,0.3);">تم التحقق بنجاح • Discord OAuth</div>' +
+                '    <h1 style="font-size:22px;font-weight:bold;margin:0 0 8px;color:#ffffff;">تم تسجيل الدخول بنجاح! 🎉</h1>' +
+                '    <p style="font-size:14px;color:#8b949e;margin:0 0 24px;line-height:1.6;">تم التحقق من حساب Discord بنجاح. اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب.</p>' +
+                '    <a href="' + deepLinkUrl + '" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;background:#238636;color:#ffffff;font-weight:bold;font-size:16px;padding:15px 20px;border-radius:14px;text-decoration:none;box-shadow:0 4px 16px rgba(35,134,54,0.4);margin-bottom:12px;">' +
+                '      <span>🎉 اضغط للعودة إلى التطبيق ومتابعة اللعب 📱</span>' +
+                '    </a>' +
+                '    <a href="/" style="display:flex;align-items:center;justify-content:center;gap:8px;color:#8b949e;font-size:14px;padding:10px;text-decoration:none;">' +
+                '      <span>🌐</span><span>أو المتابعة واللعب عبر المتصفح (Web Hub)</span>' +
+                '    </a>' +
+                '  </div>' +
+                '</div>';
+            };
+
+            // On Mobile Browser (External Chrome / Samsung Internet)
+            if (isMobile && !isNative) {
+              document.title = 'تم تسجيل الدخول بنجاح! 🎉';
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', renderCallbackDOM);
+              } else {
+                renderCallbackDOM();
+              }
+              // Trigger automatic Deep Link redirect
+              try {
+                window.location.href = deepLinkUrl;
+              } catch(e) {}
+              return;
+            }
+
+            // If desktop popup
+            if (window.opener) {
+              if (accessToken) {
+                try {
+                  window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', token: accessToken }, '*');
+                } catch(e) {}
+              }
+              window.close();
+              return;
+            }
+
+            // If profile exchange is needed on web
             if (accessToken) {
               fetch('https://discord.com/api/v10/users/@me', {
-                headers: {
-                  'Authorization': 'Bearer ' + accessToken
-                }
+                headers: { 'Authorization': 'Bearer ' + accessToken }
               })
               .then(function(res) { return res.json(); })
               .then(function(profile) {
@@ -341,54 +419,23 @@
                           localStorage.setItem('clue-me:name', data.user.name);
                         }
                       } catch(e) {}
-                      
-                      if (window.opener) {
-                        try {
-                          window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', token: data.token, user: data.user }, '*');
-                        } catch(e) {}
-                        window.close();
-                      } else {
-                        window.location.href = '/';
-                      }
-                    } else {
-                      throw new Error("Invalid session token");
-                    }
-                  })
-                  .catch(function(e) {
-                    try {
-                      localStorage.setItem('discord_profile', JSON.stringify(profile));
-                      localStorage.setItem('clue-me:name', profile.global_name || profile.username);
-                    } catch(err) {}
-                    if (window.opener) {
-                      try {
-                        window.opener.postMessage({ type: 'DISCORD_AUTH_COMPLETE', profile: profile }, '*');
-                      } catch(err) {}
-                      window.close();
+                      window.location.href = '/';
                     } else {
                       window.location.href = '/';
                     }
+                  })
+                  .catch(function() {
+                    window.location.href = '/';
                   });
                 } else {
-                  throw new Error("Invalid Discord profile format");
+                  window.location.href = '/';
                 }
               })
-              .catch(function(err) {
-                console.error("Profile fetch error:", err);
-                document.open();
-                document.write('<div style="background:#090d14;color:#fef2f2;font-family:sans-serif;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;direction:rtl;padding:20px;text-align:center;"><div style="font-size:20px;font-weight:bold;color:#ef4444;margin-bottom:12px;">⚠️ فشل تسجيل الدخول</div><div style="font-size:14px;color:#9ca3af;">حدث خطأ أثناء جلب بيانات الملف الشخصي. يرجى إغلاق النافذة والمحاولة مجدداً.</div></div>');
-                document.close();
-                if (!window.opener) {
-                  setTimeout(function() {
-                    window.location.href = '/';
-                  }, 3000);
-                }
+              .catch(function() {
+                window.location.href = '/';
               });
             } else {
-              if (window.opener) {
-                window.close();
-              } else {
-                window.location.href = '/';
-              }
+              window.location.href = '/';
             }
             return;
           }
@@ -445,8 +492,6 @@
               window.history.replaceState({}, document.title, cleanUrl);
 
               var appDeepLink = 'clue-me://auth?discord_session=' + encodeURIComponent(ses);
-              var intentLink = 'intent://auth?discord_session=' + encodeURIComponent(ses) + '#Intent;scheme=clue-me;package=com.clueme.app;S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
-
               var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
               var isNative = Boolean(
                 window.Capacitor ||
@@ -459,24 +504,6 @@
                 try {
                   window.location.href = appDeepLink;
                 } catch(e) {}
-
-                function showReturnToAppUI() {
-                  if (document.getElementById('cm-return-app-banner')) return;
-                  var banner = document.createElement('div');
-                  banner.id = 'cm-return-app-banner';
-                  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#1e1b4b;color:#ffffff;padding:20px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-bottom:4px solid #6366f1;font-family:sans-serif;direction:rtl;';
-                  banner.innerHTML =
-                    '<div style="font-weight:bold;font-size:18px;margin-bottom:8px;">تم تسجيل الدخول بنجاح! 🎉</div>' +
-                    '<div style="font-size:14px;opacity:0.9;margin-bottom:16px;">اضغط على الزر أدناه للعودة إلى التطبيق ومتابعة اللعب:</div>' +
-                    '<a href="' + appDeepLink + '" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:16px;box-shadow:0 3px 10px rgba(79,70,229,0.5);margin:4px;white-space:nowrap;">تم تسجيل الدخول بنجاح! اضغط للعودة للتطبيق 📱</a>';
-                  if (document.body) document.body.appendChild(banner);
-                }
-
-                if (document.readyState === 'interactive' || document.readyState === 'complete') {
-                  showReturnToAppUI();
-                } else {
-                  document.addEventListener('DOMContentLoaded', showReturnToAppUI);
-                }
               }
             } else {
               var cleanUrl = window.location.pathname + (window.location.hash || '');
@@ -742,7 +769,16 @@
             var searchParams = new URLSearchParams(parsed.search || "");
             var hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
             var code = searchParams.get("code");
-            var ses = searchParams.get("discord_session") || hashParams.get("access_token");
+            var accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+            var ses = searchParams.get("discord_session") || accessToken;
+
+            if (accessToken) {
+              try {
+                localStorage.setItem("discord_access_token", accessToken);
+                localStorage.setItem("clue-me:token", accessToken);
+                localStorage.setItem("discord_session", accessToken);
+              } catch(e) {}
+            }
 
             var payload = {};
             if (code) {
@@ -777,6 +813,11 @@
               })
               .catch(function(){});
             }
+
+            // Clean URL in browser history
+            try {
+              window.history.replaceState({}, document.title, "/");
+            } catch(e) {}
           } catch(e) {}
         }
         window.handleDiscordCallback = handleDiscordCallback;
@@ -860,20 +901,19 @@
               return;
             }
 
-            if (pathname.indexOf("/room/") === 0) {
-              return;
-            }
-
-            var targetPath = pathname + (parsed.search || "") + (parsed.hash || "");
-            if (targetPath && targetPath !== "/" && targetPath !== location.pathname + location.search) {
-              window.history.pushState({}, "", targetPath);
-              window.dispatchEvent(new PopStateEvent("popstate"));
-            }
+            // If not a valid room, cleanly navigate home without triggering room errors
+            window.history.pushState({}, "", "/");
+            window.dispatchEvent(new PopStateEvent("popstate"));
           } catch(e) {}
         }
 
         document.addEventListener("DOMContentLoaded", function() {
           try {
+            var activeRoute = window.URLService ? window.URLService.parseCurrentRoute() : null;
+            if (activeRoute && activeRoute.type === "HOME" && window.location.pathname !== "/") {
+              window.history.replaceState({}, document.title, "/");
+            }
+
             if (checkNative()) {
               document.documentElement.classList.add("cm-native-app");
             }
