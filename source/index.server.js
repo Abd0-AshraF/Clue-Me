@@ -3490,9 +3490,15 @@ function escapeSocialMeta(value) {
 }
 function renderSocialIndex(template, req, roomStore) {
   const configuredOrigin = process.env.PUBLIC_URL?.trim().replace(/\/$/, "");
-  const origin = configuredOrigin || "https://clueme.wisp.uno";
-  const roomMatch = req.path.match(/^\/(?:room|game)\/([A-Z]{4})\/?$/i);
-  const roomCode = roomMatch?.[1]?.toUpperCase() ?? null;
+  const origin = configuredOrigin || "https://clue-me.ai.studio";
+  
+  // Multi-game routing: /:gameId/room/:roomId or legacy /room/:roomId or /game/:roomId
+  const multiGameMatch = req.path.match(/^\/([A-Za-z0-9_-]+)\/room\/([A-Za-z]{4})\/?$/i);
+  const legacyMatch = req.path.match(/^\/(?:room|game)\/([A-Za-z]{4})\/?$/i);
+  const roomCode = (multiGameMatch?.[2] || legacyMatch?.[1])?.toUpperCase() ?? null;
+  const gameId = multiGameMatch?.[1]?.toLowerCase() ?? "clue-me";
+  const isDownloadRoute = req.path === "/download" || req.path === "/download/" || req.path.startsWith("/download");
+
   let room = null;
   if (roomCode) {
     try {
@@ -3500,19 +3506,26 @@ function renderSocialIndex(template, req, roomStore) {
     } catch {
     }
   }
-  const canonicalPath = roomCode ? `/room/${roomCode}` : req.path === "/" ? "/" : req.path;
+
+  let canonicalPath = roomCode ? `/${gameId}/room/${roomCode}` : req.path === "/" ? "/" : req.path;
+  let imageUrl = `${origin}/discord-embed-v1.png`;
+  let title = "Clue Me — كلمة واحدة… تصنع الفوز";
+  let description = "لعبة تخمين كلمات عربية جماعية للأصدقاء — أنشئ غرفة وابدأ اللعب مباشرة.";
+  let imageAlt = "Clue Me — Arabic-first multiplayer word game";
+
+  if (isDownloadRoute) {
+    title = "Clue Me — تحميل تطبيق الأندرويد الرسمي (APK)";
+    description = "حمّل تطبيق Clue Me للأندرويد واستمتع بتجربة لعب سلسة وتنبيهات واهتزازات لمسية وربط مباشر للغرف.";
+    canonicalPath = "/download";
+    imageAlt = "Clue Me Android App Download";
+  } else if (roomCode) {
+    const roomState = room?.status === "playing" ? "اللعبة جارية الآن" : "في انتظار اللاعبين";
+    title = `Clue Me — انضم إلى غرفة ${roomCode}`;
+    description = `${room?.name ? `غرفة ${room.name} • ` : ""}${roomState} • ${room?.players?.length ?? 0}/${room?.maxPlayers ?? 12} لاعبًا • افتح الرابط وانضم مباشرة.`;
+    imageAlt = `Clue Me room ${roomCode} — Arabic-first multiplayer word game`;
+  }
+
   const canonicalUrl = `${origin}${canonicalPath}`;
-  const imageUrl = `${origin}/discord-embed-v1.png`;
-  const roomState = room?.status === "playing" ? "اللعبة جارية الآن" : "في انتظار اللاعبين";
-  const title = roomCode
-    ? `Clue Me — انضم إلى غرفة ${roomCode}`
-    : "Clue Me — كلمة واحدة… تصنع الفوز";
-  const description = roomCode
-    ? `${room?.name ? `غرفة ${room.name} • ` : ""}${roomState} • ${room?.players.length ?? 0}/${room?.maxPlayers ?? 12} لاعبًا • افتح الرابط وانضم مباشرة.`
-    : "لعبة تخمين كلمات عربية جماعية للأصدقاء — أنشئ غرفة وابدأ اللعب مباشرة.";
-  const imageAlt = roomCode
-    ? `Clue Me room ${roomCode} — Arabic-first multiplayer word game`
-    : "Clue Me — Arabic-first multiplayer word game";
   const meta = `<!-- SOCIAL_META_START -->
     <meta name="theme-color" content="#B83A3A" />
     <meta name="robots" content="index,follow,max-image-preview:large" />
