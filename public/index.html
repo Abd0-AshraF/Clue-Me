@@ -39,20 +39,36 @@
 
         if (inDiscord) {
           try {
-            var currentSearch = window.location.search;
+            function fixDiscordUrl(url) {
+              if (typeof url !== "string") return url;
+              try {
+                var base = window.location.origin;
+                var target = new URL(url, base);
+                if (target.origin === base) {
+                  var pathname = target.pathname;
+                  if (!pathname.startsWith("/.proxy")) {
+                    pathname = "/.proxy" + (pathname.startsWith("/") ? pathname : "/" + pathname);
+                  }
+                  target.pathname = pathname;
+                  var currentParams = new URLSearchParams(window.location.search);
+                  currentParams.forEach(function(val, key) {
+                    if (!target.searchParams.has(key)) {
+                      target.searchParams.set(key, val);
+                    }
+                  });
+                  return target.pathname + target.search + target.hash;
+                }
+              } catch(e) {}
+              return url;
+            }
+
             var origReplace = window.location.replace;
             var origAssign = window.location.assign;
             window.location.replace = function(url) {
-              if (typeof url === "string" && url.startsWith("/") && currentSearch && !url.includes("?")) {
-                url += currentSearch;
-              }
-              return origReplace.call(window.location, url);
+              return origReplace.call(window.location, fixDiscordUrl(url));
             };
             window.location.assign = function(url) {
-              if (typeof url === "string" && url.startsWith("/") && currentSearch && !url.includes("?")) {
-                url += currentSearch;
-              }
-              return origAssign.call(window.location, url);
+              return origAssign.call(window.location, fixDiscordUrl(url));
             };
           } catch(e) {}
         }
