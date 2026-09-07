@@ -3,42 +3,68 @@
   <head>
     <script>
       (function() {
+        function createStoragePolyfill() {
+          var mem = {};
+          return {
+            getItem: function(k) { return mem[k] !== undefined ? mem[k] : null; },
+            setItem: function(k, v) { mem[k] = String(v); },
+            removeItem: function(k) { delete mem[k]; },
+            clear: function() { mem = {}; },
+            key: function(i) { return Object.keys(mem)[i] || null; },
+            get length() { return Object.keys(mem).length; }
+          };
+        }
         try {
           var testKey = "__cm_test__";
           window.localStorage.setItem(testKey, testKey);
           window.localStorage.removeItem(testKey);
         } catch(e) {
-          var mem = {};
-          try {
-            window.localStorage = {
-              getItem: function(k) { return mem[k] !== undefined ? mem[k] : null; },
-              setItem: function(k, v) { mem[k] = String(v); },
-              removeItem: function(k) { delete mem[k]; },
-              clear: function() { mem = {}; }
-            };
-          } catch(err) {}
+          try { window.localStorage = createStoragePolyfill(); } catch(err) {}
+        }
+        try {
+          var testSession = "__cm_session_test__";
+          window.sessionStorage.setItem(testSession, testSession);
+          window.sessionStorage.removeItem(testSession);
+        } catch(e) {
+          try { window.sessionStorage = createStoragePolyfill(); } catch(err) {}
         }
 
         function isDiscordEnv() {
           try {
             var hn = window.location.hostname || "";
-            var pn = window.location.pathname || "";
             var qs = window.location.search || "";
             var sp = new URLSearchParams(qs);
-            return hn.indexOf("discordsays.com") !== -1 ||
-                   pn.indexOf("/.proxy") === 0 ||
-                   sp.has("frame_id") ||
-                   sp.has("instance_id") ||
-                   sp.get("activity") === "discord" ||
-                   sp.get("activity") === "mock";
+            if (hn.indexOf("discordsays.com") !== -1 || hn.indexOf("discord.co") !== -1) {
+              return true;
+            }
+            if (sp.has("frame_id") && sp.has("instance_id")) {
+              return true;
+            }
+            if (sp.get("activity") === "discord" || sp.get("activity") === "mock") {
+              return true;
+            }
+            return false;
           } catch(e) { return false; }
         }
 
         var inDiscord = isDiscordEnv();
         window.__IS_DISCORD_ACTIVITY__ = inDiscord;
 
+        if (!inDiscord) {
+          try {
+            var pn = window.location.pathname || "";
+            if (pn.indexOf("/.proxy") === 0) {
+              var cleanPn = pn.replace(/^\/\.proxy\/?/, "/") || "/";
+              window.location.replace(cleanPn + (window.location.search || "") + (window.location.hash || ""));
+              return;
+            }
+          } catch(e) {}
+        }
+
         if (inDiscord) {
           try {
+            document.documentElement.classList.add("cm-discord-activity");
+
             function fixDiscordUrl(url) {
               if (typeof url !== "string") return url;
               try {
@@ -71,14 +97,14 @@
               return origAssign.call(window.location, fixDiscordUrl(url));
             };
           } catch(e) {}
-        }
 
-        if (inDiscord && window.location.pathname.indexOf('/.proxy') !== 0) {
-          if (window.location.hostname.indexOf('discordsays.com') !== -1 || window.location.hostname.indexOf('discord.co') !== -1) {
-            var target = '/.proxy/' + (window.location.search || '');
-            if (window.location.hash) target += window.location.hash;
-            window.location.replace(target);
-            return;
+          if (window.location.pathname.indexOf('/.proxy') !== 0) {
+            if (window.location.hostname.indexOf('discordsays.com') !== -1 || window.location.hostname.indexOf('discord.co') !== -1) {
+              var target = '/.proxy/' + (window.location.search || '');
+              if (window.location.hash) target += window.location.hash;
+              window.location.replace(target);
+              return;
+            }
           }
         }
 
@@ -86,7 +112,7 @@
         if (origFetch) {
           window.fetch = function(input, init) {
             try {
-              if (window.__IS_DISCORD_ACTIVITY__ || isDiscordEnv()) {
+              if (window.__IS_DISCORD_ACTIVITY__) {
                 if (typeof input === 'string') {
                   if (input.charAt(0) === '/' && input.indexOf('/.proxy') !== 0) {
                     input = '/.proxy' + input;
@@ -106,7 +132,7 @@
         if (origXhrOpen) {
           XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
             try {
-              if ((window.__IS_DISCORD_ACTIVITY__ || isDiscordEnv()) && typeof url === 'string') {
+              if (window.__IS_DISCORD_ACTIVITY__ && typeof url === 'string') {
                 if (url.charAt(0) === '/' && url.indexOf('/.proxy') !== 0) {
                   url = '/.proxy' + url;
                 }

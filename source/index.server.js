@@ -4496,6 +4496,18 @@ var app = createApp({
 });
 var server = createServer(app);
 var live = initLive(server, roomStore, gameStore, authStore, adminStore);
+function normalizeDiscordProxy(req) {
+  if (req && req.url) {
+    if (req.url.startsWith("/.proxy/")) {
+      req.url = req.url.substring(7);
+      if (!req.url.startsWith("/")) req.url = "/" + req.url;
+    } else if (req.url === "/.proxy") {
+      req.url = "/";
+    }
+  }
+}
+server.prependListener("request", normalizeDiscordProxy);
+server.prependListener("upgrade", normalizeDiscordProxy);
 notify = live.notify;
 broadcastEvents = live.broadcastEvents;
 broadcastKick = live.broadcastKick;
