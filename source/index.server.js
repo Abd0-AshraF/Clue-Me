@@ -1374,6 +1374,7 @@ var RoomStore = class {
   accountIds = /* @__PURE__ */ new Map();
   // Discord Activity instance id → Clue Me room code.
   activityRooms = /* @__PURE__ */ new Map();
+  activityChannelRooms = /* @__PURE__ */ new Map();
   setAccountId(playerId, accountId) {
     if (accountId) this.accountIds.set(playerId, accountId);
   }
@@ -1387,6 +1388,9 @@ var RoomStore = class {
     }
     for (const [instanceId, code] of this.activityRooms) {
       if (!this.rooms.has(code)) this.activityRooms.delete(instanceId);
+    }
+    for (const [channelId, code] of this.activityChannelRooms) {
+      if (!this.rooms.has(code)) this.activityChannelRooms.delete(channelId);
     }
   }
   create(input) {
@@ -1487,10 +1491,15 @@ var RoomStore = class {
   }
   joinActivity(input) {
     const rawName = (input.playerName || "Player").trim().slice(0, 24) || "Player";
-    const existingCode = this.activityRooms.get(input.instanceId);
+    let existingCode = this.activityRooms.get(input.instanceId);
+    if (!existingCode && input.channelId) {
+      existingCode = this.activityChannelRooms.get(input.channelId);
+    }
     if (existingCode && this.rooms.has(existingCode)) {
       try {
         const joined = this.join(existingCode, rawName, input.accountToken);
+        if (input.channelId) this.activityChannelRooms.set(input.channelId, existingCode);
+        this.activityRooms.set(input.instanceId, existingCode);
         return { ...joined, created: false };
       } catch (err) {
         console.warn(`[discord] Failed to join existing activity room ${existingCode}, creating new room:`, err);
@@ -1513,6 +1522,9 @@ var RoomStore = class {
       packId
     });
     this.activityRooms.set(input.instanceId, created.room.code);
+    if (input.channelId) {
+      this.activityChannelRooms.set(input.channelId, created.room.code);
+    }
     return {
       ...created,
       reused: false,

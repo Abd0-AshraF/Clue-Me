@@ -3,9 +3,9 @@
   <head>
     <script>
       (function() {
-        function createStoragePolyfill() {
+        function installStoragePolyfill(prop) {
           var mem = {};
-          return {
+          var polyfill = {
             getItem: function(k) { return mem[k] !== undefined ? mem[k] : null; },
             setItem: function(k, v) { mem[k] = String(v); },
             removeItem: function(k) { delete mem[k]; },
@@ -13,20 +13,36 @@
             key: function(i) { return Object.keys(mem)[i] || null; },
             get length() { return Object.keys(mem).length; }
           };
+          try {
+            Object.defineProperty(window, prop, {
+              value: polyfill,
+              configurable: true,
+              writable: true
+            });
+          } catch(e) {}
+          try {
+            if (window.Window && window.Window.prototype) {
+              Object.defineProperty(window.Window.prototype, prop, {
+                get: function() { return polyfill; },
+                configurable: true
+              });
+            }
+          } catch(e) {}
         }
+
         try {
           var testKey = "__cm_test__";
           window.localStorage.setItem(testKey, testKey);
           window.localStorage.removeItem(testKey);
         } catch(e) {
-          try { window.localStorage = createStoragePolyfill(); } catch(err) {}
+          installStoragePolyfill("localStorage");
         }
         try {
           var testSession = "__cm_session_test__";
           window.sessionStorage.setItem(testSession, testSession);
           window.sessionStorage.removeItem(testSession);
         } catch(e) {
-          try { window.sessionStorage = createStoragePolyfill(); } catch(err) {}
+          installStoragePolyfill("sessionStorage");
         }
 
         function isDiscordEnv() {
@@ -39,6 +55,11 @@
             }
             if (sp.has("frame_id") && sp.has("instance_id")) {
               return true;
+            }
+            if (sp.has("frame_id") || sp.has("instance_id")) {
+              if (sp.has("channel_id") || sp.has("guild_id") || sp.get("platform") === "mobile" || sp.get("platform") === "desktop") {
+                return true;
+              }
             }
             if (sp.get("activity") === "discord" || sp.get("activity") === "mock") {
               return true;
@@ -64,6 +85,24 @@
         if (inDiscord) {
           try {
             document.documentElement.classList.add("cm-discord-activity");
+
+            // Persist parameters immediately in both storages
+            var allParams = new URLSearchParams(window.location.search || "");
+            if (window.location.hash && window.location.hash.indexOf("?") !== -1) {
+              var hashQuery = window.location.hash.slice(window.location.hash.indexOf("?"));
+              new URLSearchParams(hashQuery).forEach(function(val, key) {
+                if (!allParams.has(key)) allParams.set(key, val);
+              });
+            }
+            ["frame_id", "instance_id", "channel_id", "guild_id", "platform", "location_id", "mobile_app_version"].forEach(function(k) {
+              var val = allParams.get(k);
+              if (val) {
+                try { localStorage.setItem("cm:discord:" + k, val); } catch(e) {}
+                try { sessionStorage.setItem("cm:discord:" + k, val); } catch(e) {}
+                try { localStorage.setItem("cm_discord_" + k, val); } catch(e) {}
+                try { sessionStorage.setItem("cm_discord_" + k, val); } catch(e) {}
+              }
+            });
 
             function fixDiscordUrl(url) {
               if (typeof url !== "string") return url;
@@ -96,6 +135,21 @@
             window.location.assign = function(url) {
               return origAssign.call(window.location, fixDiscordUrl(url));
             };
+
+            if (window.history) {
+              var origPush = window.history.pushState;
+              var origRep = window.history.replaceState;
+              if (origPush) {
+                window.history.pushState = function(state, unused, url) {
+                  return origPush.call(window.history, state, unused, url ? fixDiscordUrl(url) : url);
+                };
+              }
+              if (origRep) {
+                window.history.replaceState = function(state, unused, url) {
+                  return origRep.call(window.history, state, unused, url ? fixDiscordUrl(url) : url);
+                };
+              }
+            }
           } catch(e) {}
 
           if (window.location.pathname.indexOf('/.proxy') !== 0) {
