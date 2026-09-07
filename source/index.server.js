@@ -1956,6 +1956,25 @@ function mountRoomRoutes(app2, store = new RoomStore(), options = {}) {
       handleError(res, err);
     }
   });
+  app2.get("/api/rooms/:code/game", (req, res) => {
+    try {
+      const code = codeParam(req.params.code);
+      const room = store.get(code);
+      const playerId = typeof req.query.playerId === "string" ? req.query.playerId : "";
+      const player = room.players.find((p) => p.id === playerId);
+      let game = gameStore2?.get(code);
+      if (!game && room.status === "playing" && gameStore2) {
+        try { game = gameStore2.start(room); } catch {}
+      }
+      if (!player || !game) {
+        res.status(404).json({ error: { code: "GAME_NOT_FOUND", message: "Game or player not found" } });
+        return;
+      }
+      res.json({ view: getView(game, viewerFor(player)) });
+    } catch (err) {
+      handleError(res, err);
+    }
+  });
   app2.patch("/api/rooms/:code/players/:playerId", (req, res) => {
     try {
       const patch = updatePlayerSchema.parse(req.body);
@@ -3858,8 +3877,15 @@ function initLive(httpServer, roomStore2, gameStore2, authStore2, adminStore2) {
   };
   const emitGameView = (socket, code, knownPlayer, sync = false) => {
     const room = roomStore2.get(code);
-    const player = knownPlayer ?? room.players.find((candidate) => candidate.id === socket.data.playerId);
-    const game = gameStore2.get(code);
+    const player = knownPlayer ?? room?.players.find((candidate) => candidate.id === socket.data.playerId);
+    let game = gameStore2.get(code);
+    if (!game && room?.status === "playing") {
+      try {
+        game = gameStore2.start(room);
+      } catch (err) {
+        console.error("[server] Auto-starting game in emitGameView failed:", err);
+      }
+    }
     if (!player || !game) return false;
     socket.emit("game:view", { view: getView(game, viewerFor(player)), sync });
     return true;
@@ -3982,6 +4008,7 @@ function initLive(httpServer, roomStore2, gameStore2, authStore2, adminStore2) {
         const room = roomStore2.get(code);
         const player = room.players.find((candidate) => candidate.id === parsed.data.playerId);
         if (!player || room.status !== "playing") return;
+        socket.join(channel(code));
         registerPresence(socket, code, player.id);
         sendAuthoritativeSnapshot(socket, code, player);
       } catch {

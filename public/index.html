@@ -8,19 +8,38 @@
             var hn = window.location.hostname || "";
             var pn = window.location.pathname || "";
             var qs = window.location.search || "";
+            var sp = new URLSearchParams(qs);
             return hn.indexOf("discordsays.com") !== -1 ||
-                   hn.indexOf("discord.co") !== -1 ||
                    pn.indexOf("/.proxy") === 0 ||
-                   qs.indexOf("frame_id=") !== -1 ||
-                   qs.indexOf("instance_id=") !== -1 ||
-                   qs.indexOf("channel_id=") !== -1 ||
-                   !!window.DiscordNative ||
-                   (window.name && window.name.indexOf("discord") !== -1);
+                   sp.has("frame_id") ||
+                   sp.has("instance_id") ||
+                   sp.get("activity") === "discord" ||
+                   sp.get("activity") === "mock";
           } catch(e) { return false; }
         }
 
         var inDiscord = isDiscordEnv();
         window.__IS_DISCORD_ACTIVITY__ = inDiscord;
+
+        if (inDiscord) {
+          try {
+            var currentSearch = window.location.search;
+            var origReplace = window.location.replace;
+            var origAssign = window.location.assign;
+            window.location.replace = function(url) {
+              if (typeof url === "string" && url.startsWith("/") && currentSearch && !url.includes("?")) {
+                url += currentSearch;
+              }
+              return origReplace.call(window.location, url);
+            };
+            window.location.assign = function(url) {
+              if (typeof url === "string" && url.startsWith("/") && currentSearch && !url.includes("?")) {
+                url += currentSearch;
+              }
+              return origAssign.call(window.location, url);
+            };
+          } catch(e) {}
+        }
 
         if (inDiscord && window.location.pathname.indexOf('/.proxy') !== 0) {
           if (window.location.hostname.indexOf('discordsays.com') !== -1 || window.location.hostname.indexOf('discord.co') !== -1) {
@@ -1243,6 +1262,8 @@
 
         // Online-Only Gatekeeper for Clue Me
         (function() {
+          var isDiscordEnv = window.location.search.includes("frame_id") || window.location.search.includes("instance_id") || window.location.hostname.includes("discordsays.com") || window.location.pathname.includes("/.proxy");
+          if (isDiscordEnv) return; // Skip offline blocker in Discord activity to prevent freeze/reconnect screen
           var isAr = document.documentElement.lang !== "en";
           function showOfflineScreen() {
             var existing = document.getElementById("cm-offline-blocker");
@@ -1320,13 +1341,13 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="assets/index-discord-v32.js?v=166"></script>
-    <link rel="stylesheet" crossorigin href="assets/index-o-tR5boG.css?v=158">
-    <link rel="stylesheet" href="assets/responsive-layout-v19.css?v=158">
-    <link rel="stylesheet" href="assets/room-layout-v20.css?v=158">
-    <script src="assets/useSafeArea.js?v=158"></script>
-    <script defer src="assets/game-room-v20.js?v=158"></script>
-    <script defer src="assets/game-ai-hud-v21.js?v=158"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v32.js?v=166"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=158">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=158">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=158">
+    <script src="/assets/useSafeArea.js?v=158"></script>
+    <script defer src="/assets/game-room-v20.js?v=158"></script>
+    <script defer src="/assets/game-ai-hud-v21.js?v=158"></script>
   
     
 

@@ -45,8 +45,8 @@
 
     /* Enforce safe top padding for Discord and Native Android App */
     if (isDiscord) {
-      if (top < 48) top = 48;
-      if (bottom < 12) bottom = 12;
+      top = 0;
+      if (bottom < 8) bottom = 8;
     } else if (isNative) {
       root.classList.add('cm-native-app');
       if (top < 36) top = 36;
