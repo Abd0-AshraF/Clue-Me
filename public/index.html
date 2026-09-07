@@ -3,6 +3,22 @@
   <head>
     <script>
       (function() {
+        try {
+          var testKey = "__cm_test__";
+          window.localStorage.setItem(testKey, testKey);
+          window.localStorage.removeItem(testKey);
+        } catch(e) {
+          var mem = {};
+          try {
+            window.localStorage = {
+              getItem: function(k) { return mem[k] !== undefined ? mem[k] : null; },
+              setItem: function(k, v) { mem[k] = String(v); },
+              removeItem: function(k) { delete mem[k]; },
+              clear: function() { mem = {}; }
+            };
+          } catch(err) {}
+        }
+
         function isDiscordEnv() {
           try {
             var hn = window.location.hostname || "";
