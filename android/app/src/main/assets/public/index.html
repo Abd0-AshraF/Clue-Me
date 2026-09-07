@@ -1,6 +1,202 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
   <head>
+    <script>
+      (function() {
+        function installStoragePolyfill(prop) {
+          var mem = {};
+          var polyfill = {
+            getItem: function(k) { return mem[k] !== undefined ? mem[k] : null; },
+            setItem: function(k, v) { mem[k] = String(v); },
+            removeItem: function(k) { delete mem[k]; },
+            clear: function() { mem = {}; },
+            key: function(i) { return Object.keys(mem)[i] || null; },
+            get length() { return Object.keys(mem).length; }
+          };
+          try {
+            Object.defineProperty(window, prop, {
+              value: polyfill,
+              configurable: true,
+              writable: true
+            });
+          } catch(e) {}
+          try {
+            if (window.Window && window.Window.prototype) {
+              Object.defineProperty(window.Window.prototype, prop, {
+                get: function() { return polyfill; },
+                configurable: true
+              });
+            }
+          } catch(e) {}
+        }
+
+        try {
+          var testKey = "__cm_test__";
+          window.localStorage.setItem(testKey, testKey);
+          window.localStorage.removeItem(testKey);
+        } catch(e) {
+          installStoragePolyfill("localStorage");
+        }
+        try {
+          var testSession = "__cm_session_test__";
+          window.sessionStorage.setItem(testSession, testSession);
+          window.sessionStorage.removeItem(testSession);
+        } catch(e) {
+          installStoragePolyfill("sessionStorage");
+        }
+
+        function isDiscordEnv() {
+          try {
+            var hn = window.location.hostname || "";
+            var qs = window.location.search || "";
+            var sp = new URLSearchParams(qs);
+            if (hn.indexOf("discordsays.com") !== -1 || hn.indexOf("discord.co") !== -1) {
+              return true;
+            }
+            if (sp.has("frame_id") && sp.has("instance_id")) {
+              return true;
+            }
+            if (sp.has("frame_id") || sp.has("instance_id")) {
+              if (sp.has("channel_id") || sp.has("guild_id") || sp.get("platform") === "mobile" || sp.get("platform") === "desktop") {
+                return true;
+              }
+            }
+            if (sp.get("activity") === "discord" || sp.get("activity") === "mock") {
+              return true;
+            }
+            return false;
+          } catch(e) { return false; }
+        }
+
+        var inDiscord = isDiscordEnv();
+        window.__IS_DISCORD_ACTIVITY__ = inDiscord;
+
+        if (!inDiscord) {
+          try {
+            var pn = window.location.pathname || "";
+            if (pn.indexOf("/.proxy") === 0) {
+              var cleanPn = pn.replace(/^\/\.proxy\/?/, "/") || "/";
+              window.location.replace(cleanPn + (window.location.search || "") + (window.location.hash || ""));
+              return;
+            }
+          } catch(e) {}
+        }
+
+        if (inDiscord) {
+          try {
+            document.documentElement.classList.add("cm-discord-activity");
+
+            // Persist parameters immediately in both storages
+            var allParams = new URLSearchParams(window.location.search || "");
+            if (window.location.hash && window.location.hash.indexOf("?") !== -1) {
+              var hashQuery = window.location.hash.slice(window.location.hash.indexOf("?"));
+              new URLSearchParams(hashQuery).forEach(function(val, key) {
+                if (!allParams.has(key)) allParams.set(key, val);
+              });
+            }
+            ["frame_id", "instance_id", "channel_id", "guild_id", "platform", "location_id", "mobile_app_version"].forEach(function(k) {
+              var val = allParams.get(k);
+              if (val) {
+                try { localStorage.setItem("cm:discord:" + k, val); } catch(e) {}
+                try { sessionStorage.setItem("cm:discord:" + k, val); } catch(e) {}
+                try { localStorage.setItem("cm_discord_" + k, val); } catch(e) {}
+                try { sessionStorage.setItem("cm_discord_" + k, val); } catch(e) {}
+              }
+            });
+
+            function fixDiscordUrl(url) {
+              if (typeof url !== "string") return url;
+              try {
+                var base = window.location.origin;
+                var target = new URL(url, base);
+                if (target.origin === base) {
+                  var pathname = target.pathname;
+                  if (!pathname.startsWith("/.proxy")) {
+                    pathname = "/.proxy" + (pathname.startsWith("/") ? pathname : "/" + pathname);
+                  }
+                  target.pathname = pathname;
+                  var currentParams = new URLSearchParams(window.location.search);
+                  currentParams.forEach(function(val, key) {
+                    if (!target.searchParams.has(key)) {
+                      target.searchParams.set(key, val);
+                    }
+                  });
+                  return target.pathname + target.search + target.hash;
+                }
+              } catch(e) {}
+              return url;
+            }
+
+            var origReplace = window.location.replace;
+            var origAssign = window.location.assign;
+            window.location.replace = function(url) {
+              return origReplace.call(window.location, fixDiscordUrl(url));
+            };
+            window.location.assign = function(url) {
+              return origAssign.call(window.location, fixDiscordUrl(url));
+            };
+
+            if (window.history) {
+              var origPush = window.history.pushState;
+              var origRep = window.history.replaceState;
+              if (origPush) {
+                window.history.pushState = function(state, unused, url) {
+                  return origPush.call(window.history, state, unused, url ? fixDiscordUrl(url) : url);
+                };
+              }
+              if (origRep) {
+                window.history.replaceState = function(state, unused, url) {
+                  return origRep.call(window.history, state, unused, url ? fixDiscordUrl(url) : url);
+                };
+              }
+            }
+          } catch(e) {}
+
+          if (window.location.pathname.indexOf('/.proxy') !== 0) {
+            if (window.location.hostname.indexOf('discordsays.com') !== -1 || window.location.hostname.indexOf('discord.co') !== -1) {
+              var target = '/.proxy/' + (window.location.search || '');
+              if (window.location.hash) target += window.location.hash;
+              window.location.replace(target);
+              return;
+            }
+          }
+        }
+
+        var origFetch = window.fetch;
+        if (origFetch) {
+          window.fetch = function(input, init) {
+            try {
+              if (window.__IS_DISCORD_ACTIVITY__) {
+                if (typeof input === 'string') {
+                  if (input.charAt(0) === '/' && input.indexOf('/.proxy') !== 0) {
+                    input = '/.proxy' + input;
+                  }
+                } else if (input && typeof input === 'object' && typeof input.url === 'string') {
+                  if (input.url.charAt(0) === '/' && input.url.indexOf('/.proxy') !== 0) {
+                    input = new Request('/.proxy' + input.url, input);
+                  }
+                }
+              }
+            } catch(e) {}
+            return origFetch.call(this, input, init);
+          };
+        }
+
+        var origXhrOpen = XMLHttpRequest.prototype.open;
+        if (origXhrOpen) {
+          XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+            try {
+              if (window.__IS_DISCORD_ACTIVITY__ && typeof url === 'string') {
+                if (url.charAt(0) === '/' && url.indexOf('/.proxy') !== 0) {
+                  url = '/.proxy' + url;
+                }
+              }
+            } catch(e) {}
+            return origXhrOpen.call(this, method, url, async, user, password);
+          };
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
@@ -62,18 +258,31 @@
 
       /* Native Android / Mobile App Polish */
       html.cm-native-app {
-        --cm-safe-top: max(env(safe-area-inset-top, 36px), 36px);
+        --cm-safe-top: env(safe-area-inset-top, 0px);
       }
       html.cm-native-app header.sticky,
       html.cm-native-app .sticky.top-0,
       html.cm-native-app header,
       html.cm-native-app .cm-head {
-        padding-top: max(var(--cm-safe-top, 36px), 36px) !important;
+        padding-top: env(safe-area-inset-top, 0px) !important;
       }
       @media (max-width: 768px) {
         header.sticky,
         .sticky.top-0 {
-          padding-top: max(var(--cm-safe-top, 0px), env(safe-area-inset-top, 0px));
+          padding-top: env(safe-area-inset-top, 0px);
+        }
+      }
+
+      /* Suppress visible scrollbar tracks on mobile/phone screens */
+      @media (max-width: 768px) {
+        html, body, #root, #root > div, .cm-game-page, .cm-game-shell, main {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        ::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
         }
       }
 
@@ -90,10 +299,10 @@
         min-height: 100vh !important;
       }
       html.cm-discord-activity #root > div {
-        min-height: 100vh;
+        min-height: 100%;
         box-sizing: border-box !important;
-        padding-top: max(var(--cm-safe-top, 48px), 48px) !important;
-        padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
       }
       html.cm-discord-activity header.sticky,
       html.cm-discord-activity .sticky.top-0 {
@@ -106,9 +315,223 @@
         box-sizing: border-box;
       }
       html.cm-ui-phone:not(.cm-discord-activity) .cm-game-page {
-        padding-top: max(var(--cm-safe-top, 0px), 12px);
-        padding-bottom: max(var(--cm-safe-bottom, 0px), 16px);
+        padding-top: 0;
+        padding-bottom: max(var(--cm-safe-bottom, 0px), 8px);
       }
+      .cm-game-page {
+        padding-top: 0 !important;
+      }
+      .cm-game-page > header {
+        padding-top: max(env(safe-area-inset-top, 0px), 4px);
+        padding-left: max(env(safe-area-inset-left, 0px), 0.5rem) !important;
+        padding-right: max(env(safe-area-inset-right, 0px), 0.5rem) !important;
+        flex-shrink: 0;
+      }
+      .cm-game-page > header > div {
+        height: 2.75rem !important;
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+        gap: 0.25rem !important;
+      }
+      @media (max-width: 640px) {
+        .cm-game-page > header button,
+        .cm-game-page > header .cm-seat-btn {
+          height: 2.1rem !important;
+          min-width: 2.1rem !important;
+          padding-inline: 0.35rem !important;
+        }
+      }
+      .cm-game-shell > main {
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.35rem !important;
+        gap: 0.45rem !important;
+      }
+
+      /* Enhanced mobile teambar and player roster */
+      .cm-teambar {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 36rem;
+        display: grid;
+        flex-shrink: 0 !important;
+        margin-bottom: 0.25rem !important;
+      }
+      .cm-teambar-side {
+        border-radius: 16px !important;
+        padding: 0.5rem 0.6rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.35rem !important;
+        min-width: 0 !important;
+      }
+      .cm-teambar-head {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.35rem !important;
+        font-size: 0.8rem !important;
+        font-weight: 800 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        padding-bottom: 0.25rem !important;
+      }
+      .cm-teambar-players {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+        gap: 0.3rem !important;
+        align-items: center !important;
+        width: 100% !important;
+      }
+      .cm-teambar-player {
+        width: 100% !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 999px !important;
+        box-sizing: border-box !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+      }
+      .cm-mobile-roster-chip {
+        border: 1px solid rgba(255, 255, 255, 0.22) !important;
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: inherit !important;
+        transition: transform 0.12s ease, background 0.12s ease !important;
+      }
+      .cm-mobile-roster-chip:active {
+        transform: scale(0.96) !important;
+      }
+      .cm-mobile-roster-captain {
+        background: rgba(245, 158, 11, 0.25) !important;
+        border-color: rgba(245, 158, 11, 0.5) !important;
+      }
+      .cm-teambar-role {
+        font-size: 0.58rem !important;
+        padding: 0.05rem 0.25rem !important;
+        border-radius: 999px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.15rem !important;
+        flex-shrink: 0 !important;
+      }
+      .cm-turn-hint {
+        margin: 0.55rem auto 0.35rem auto !important;
+        padding: 0.35rem 0.95rem !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.16) !important;
+        border-radius: 999px !important;
+        font-size: 0.74rem !important;
+        line-height: 1.35 !important;
+        font-weight: 700 !important;
+        color: var(--cm-ink) !important;
+        text-align: center !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        max-width: 95% !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+        flex-shrink: 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+      }
+
+      /* Pulse Glow Animation for Team Turn Indicator (Clue Phase) */
+      @keyframes cmPulseGlowRed {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.75), 0 0 30px rgba(239, 68, 68, 0.35);
+          transform: scale(1.03);
+        }
+      }
+      @keyframes cmPulseGlowBlue {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 18px 4px rgba(59, 130, 246, 0.75), 0 0 30px rgba(59, 130, 246, 0.35);
+          transform: scale(1.03);
+        }
+      }
+      .cm-pulse-glow-red {
+        animation: cmPulseGlowRed 1.8s ease-in-out infinite !important;
+        border-color: var(--cm-red-brand) !important;
+      }
+      .cm-pulse-glow-blue {
+        animation: cmPulseGlowBlue 1.8s ease-in-out infinite !important;
+        border-color: var(--cm-blue-brand) !important;
+      }
+
+      /* Game Tip Toast component */
+      .cm-game-tip-toast {
+        position: fixed;
+        bottom: 4.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 90;
+        max-width: min(92vw, 420px);
+        width: 100%;
+        background: rgba(24, 27, 31, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1.5px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 0.75rem 0.9rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        animation: cmTipSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      @keyframes cmTipSlideUp {
+        from {
+          opacity: 0;
+          transform: translate(-50%, 16px) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0) scale(1);
+        }
+      }
+      .cm-game-tip-toast-title {
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: #f8fafc;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      .cm-game-tip-toast-body {
+        font-size: 0.72rem;
+        line-height: 1.35;
+        color: #cbd5e1;
+        margin-top: 0.15rem;
+      }
+      .cm-game-tip-toast-close {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        border-radius: 999px;
+        width: 1.4rem;
+        height: 1.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        cursor: pointer;
+        flex-shrink: 0;
+        margin-inline-start: auto;
+      }
+      .cm-game-tip-toast-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+      }
+
       html.cm-discord-activity.cm-ui-phone .cm-game-shell {
         padding-top: 0;
         padding-bottom: 0;
@@ -246,40 +669,47 @@
           var isDiscord = false;
           try {
             var qs = new URLSearchParams(location.search);
-            var storedFid = sessionStorage.getItem('cm_discord_frame_id');
-            var storedIid = sessionStorage.getItem('cm_discord_instance_id');
-
-            if (
-              qs.has('frame_id') ||
-              qs.has('instance_id') ||
-              Boolean(storedFid) ||
-              qs.get('activity') === 'mock' ||
-              qs.get('activity') === 'discord' ||
-              sessionStorage.getItem('cm_is_discord') === '1' ||
+            var isDiscordHost = Boolean(
               (window.name && window.name.indexOf('discord') !== -1) ||
               (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
               (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1))
-            ) {
+            );
+            var hasDiscordParams = Boolean(
+              qs.has('frame_id') ||
+              qs.has('instance_id') ||
+              qs.get('activity') === 'mock' ||
+              qs.get('activity') === 'discord'
+            );
+
+            if (hasDiscordParams || isDiscordHost) {
               isDiscord = true;
               sessionStorage.setItem('cm_is_discord', '1');
 
-              // Persist query parameters in sessionStorage
-              if (qs.get('frame_id')) sessionStorage.setItem('cm_discord_frame_id', qs.get('frame_id'));
-              if (qs.get('instance_id')) sessionStorage.setItem('cm_discord_instance_id', qs.get('instance_id'));
-              if (qs.get('platform')) sessionStorage.setItem('cm_discord_platform', qs.get('platform'));
+              // Persist query parameters in sessionStorage in both key formats
+              ['frame_id', 'instance_id', 'platform', 'channel_id', 'guild_id'].forEach(function(k) {
+                var v = qs.get(k) || sessionStorage.getItem('cm_discord_' + k) || sessionStorage.getItem('cm:discord:' + k);
+                if (v) {
+                  sessionStorage.setItem('cm_discord_' + k, v);
+                  sessionStorage.setItem('cm:discord:' + k, v);
+                }
+              });
 
               // Ensure valid platform ('mobile' vs 'desktop') required by Discord Embedded SDK
-              var rawPlat = qs.get('platform') || sessionStorage.getItem('cm_discord_platform');
-              var isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var rawPlat = qs.get('platform') || sessionStorage.getItem('cm_discord_platform') || sessionStorage.getItem('cm:discord:platform');
+              var isMobileDevice = /Android|iPhone|iPad|iPod|mobile/i.test(navigator.userAgent);
               var validPlatform = (rawPlat === 'mobile' || rawPlat === 'desktop') ? rawPlat : (isMobileDevice ? 'mobile' : 'desktop');
 
               var paramModified = false;
-              if (!qs.get('frame_id') && sessionStorage.getItem('cm_discord_frame_id')) {
-                qs.set('frame_id', sessionStorage.getItem('cm_discord_frame_id'));
+              var storedFid = sessionStorage.getItem('cm_discord_frame_id') || sessionStorage.getItem('cm:discord:frame_id');
+              var fidVal = qs.get('frame_id') || storedFid;
+              if (fidVal && !qs.get('frame_id')) {
+                qs.set('frame_id', fidVal);
                 paramModified = true;
               }
-              if (!qs.get('instance_id') && sessionStorage.getItem('cm_discord_instance_id')) {
-                qs.set('instance_id', sessionStorage.getItem('cm_discord_instance_id'));
+              var storedIid = sessionStorage.getItem('cm_discord_instance_id') || sessionStorage.getItem('cm:discord:instance_id');
+              var iidVal = qs.get('instance_id') || storedIid;
+              if (iidVal && !qs.get('instance_id')) {
+                qs.set('instance_id', iidVal);
                 paramModified = true;
               }
               if (qs.get('platform') !== validPlatform) {
@@ -291,6 +721,13 @@
                 var newSearch = '?' + qs.toString();
                 window.history.replaceState({}, document.title, window.location.pathname + newSearch + window.location.hash);
               }
+            } else {
+              // Not in Discord activity context — clear any stale sessionStorage overrides
+              sessionStorage.removeItem('cm_is_discord');
+              ['frame_id', 'instance_id', 'platform', 'channel_id', 'guild_id'].forEach(function(k) {
+                sessionStorage.removeItem('cm_discord_' + k);
+                sessionStorage.removeItem('cm:discord:' + k);
+              });
             }
           } catch(e) {}
           if (isDiscord) {
@@ -1110,37 +1547,21 @@
                 var href = anchor.getAttribute("href");
                 if (!href || href === "#" || href.indexOf("javascript:") === 0) {
                   e.preventDefault();
-                  e.stopPropagation();
                   return;
                 }
                 if (href.indexOf("http://") === 0 || href.indexOf("https://") === 0) {
                   e.preventDefault();
-                  e.stopPropagation();
                   safeOpenExternal(href);
                   return;
                 }
-                if (href.indexOf("/") === 0) {
-                  if (href.indexOf("/api/") === 0) {
-                    if (typeof isCapacitorNative !== "undefined" && isCapacitorNative) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      var fullUrl = ((window.__CLUE_ME_SERVER_URL__ || "") + href);
-                      if (href.indexOf("auth/discord") !== -1) {
-                        safeOpenExternal(fullUrl);
-                      } else {
-                        window.location.assign(fullUrl);
-                      }
-                    }
-                    return;
-                  }
+                if (href.indexOf("/") === 0 && href.indexOf("/api/") !== 0) {
                   e.preventDefault();
-                  e.stopPropagation();
                   window.history.pushState({}, "", href);
                   window.dispatchEvent(new PopStateEvent("popstate"));
                   return;
                 }
               }
-            }, true);
+            }, false);
           } else {
             document.addEventListener("click", function(e) {
               var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
@@ -1164,6 +1585,8 @@
 
         // Online-Only Gatekeeper for Clue Me
         (function() {
+          var isDiscordEnv = window.location.search.includes("frame_id") || window.location.search.includes("instance_id") || window.location.hostname.includes("discordsays.com") || window.location.pathname.includes("/.proxy");
+          if (isDiscordEnv) return; // Skip offline blocker in Discord activity to prevent freeze/reconnect screen
           var isAr = document.documentElement.lang !== "en";
           function showOfflineScreen() {
             var existing = document.getElementById("cm-offline-blocker");
@@ -1241,7 +1664,7 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v32.js?v=165"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v32.js?v=166"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=158">
     <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=158">
     <link rel="stylesheet" href="/assets/room-layout-v20.css?v=158">
