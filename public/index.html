@@ -314,6 +314,11 @@
       html.cm-discord-activity .cm-lobby-page {
         box-sizing: border-box;
       }
+      @media (max-width: 768px), (pointer: coarse) {
+        html.cm-discord-activity .cm-game-page > header {
+          padding-top: max(var(--discord-safe-area-inset-top, 0px), env(safe-area-inset-top, 0px), 50px) !important;
+        }
+      }
       html.cm-ui-phone:not(.cm-discord-activity) .cm-game-page {
         padding-top: 0;
         padding-bottom: max(var(--cm-safe-bottom, 0px), 8px);
