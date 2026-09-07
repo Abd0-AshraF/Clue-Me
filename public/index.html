@@ -1208,37 +1208,21 @@
                 var href = anchor.getAttribute("href");
                 if (!href || href === "#" || href.indexOf("javascript:") === 0) {
                   e.preventDefault();
-                  e.stopPropagation();
                   return;
                 }
                 if (href.indexOf("http://") === 0 || href.indexOf("https://") === 0) {
                   e.preventDefault();
-                  e.stopPropagation();
                   safeOpenExternal(href);
                   return;
                 }
-                if (href.indexOf("/") === 0) {
-                  if (href.indexOf("/api/") === 0) {
-                    if (typeof isCapacitorNative !== "undefined" && isCapacitorNative) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      var fullUrl = ((window.__CLUE_ME_SERVER_URL__ || "") + href);
-                      if (href.indexOf("auth/discord") !== -1) {
-                        safeOpenExternal(fullUrl);
-                      } else {
-                        window.location.assign(fullUrl);
-                      }
-                    }
-                    return;
-                  }
+                if (href.indexOf("/") === 0 && href.indexOf("/api/") !== 0) {
                   e.preventDefault();
-                  e.stopPropagation();
                   window.history.pushState({}, "", href);
                   window.dispatchEvent(new PopStateEvent("popstate"));
                   return;
                 }
               }
-            }, true);
+            }, false);
           } else {
             document.addEventListener("click", function(e) {
               var anchor = e.target && e.target.closest ? e.target.closest("a") : null;
