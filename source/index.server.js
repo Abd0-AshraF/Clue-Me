@@ -3295,7 +3295,11 @@ async function exchangeActivityCode(config, code) {
     }),
     signal: AbortSignal.timeout(15e3)
   });
-  if (!tokenRes.ok) throw new Error(`discord activity token exchange failed: ${tokenRes.status}`);
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text().catch(() => "");
+    console.error("[discord-activity] token exchange status:", tokenRes.status, "body:", errText);
+    throw new Error(`discord activity token exchange failed: ${tokenRes.status} - ${errText}`);
+  }
   const tokenBody = await tokenRes.json();
   if (!tokenBody.access_token) throw new Error("discord activity exchange returned no token");
   return tokenBody.access_token;
