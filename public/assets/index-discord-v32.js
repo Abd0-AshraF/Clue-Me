@@ -94,7 +94,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
   handleClose(r){try{RT.parse(r)}catch(e){}}
   handleHandshake(){this.isReady=!0;this.eventBus.emit(xt.READY)}
   handleFrame(r){var s;let l;try{l=DT(r)}catch(f){try{l=typeof r==="string"?JSON.parse(r):r}catch(e){return}}if(!l)return;if(l.cmd==="DISPATCH")this.eventBus.emit(l.evt,l.data);else{if(l.evt===Hm){if(l.nonce!=null){(s=this.pendingCommands.get(l.nonce))===null||s===void 0||s.reject(l.data),this.pendingCommands.delete(l.nonce);return}this.eventBus.emit("error",new aw(l.data.code,l.data.message))}if(l.nonce==null){return}const f=this.pendingCommands.get(l.nonce);if(f!=null){const{resolve:p}=f;p(l.data),this.pendingCommands.delete(l.nonce)}}}
-}class _w{constructor(r,s,i,l){this.platform=ei.DESKTOP,this.instanceId="123456789012345678",this.configuration=Dv(),this.source=null,this.sourceOrigin="",this.sdkVersion="mock",this.mobileAppVersion="unknown",this.frameId="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",this.eventBus=new J1,this.clientId=r,this.commands=this._updateCommandMocks({}),this.guildId=s,this.channelId=i,this.locationId=l,this.customId=null,this.referrerId=null}_updateCommandMocks(r){return this.commands=xw(Object.assign({},Sw,r),(s,i,l)=>{s[l]=async(...f)=>(console.info(`DiscordSDKMock: ${String(l)}(${JSON.stringify(f)})`),await i(...f))}),this.commands}emitReady(){this.emitEvent("READY",void 0)}close(...r){console.info(`DiscordSDKMock: close(${JSON.stringify(r)})`)}ready(){return Promise.resolve()}async subscribe(r,s,...i){return await this.eventBus.on(r,s)}async unsubscribe(r,s,...i){return await this.eventBus.off(r,s)}emitEvent(r,s){this.eventBus.emit(r,s)}}const Sw={authorize:()=>Promise.resolve({code:"mock_code"}),authenticate:()=>Promise.resolve({access_token:"mock_token",user:{username:"mock_user_username",discriminator:"mock_user_discriminator",id:"mock_user_id",avatar:null,public_flags:1},scopes:[],expires:new Date(2121,1,1).toString(),application:{description:"mock_app_description",icon:"mock_app_icon",id:"mock_app_id",name:"mock_app_name"}}),setActivity:()=>Promise.resolve({name:"mock_activity_name",type:0}),getChannel:()=>Promise.resolve({id:"mock_channel_id",name:"mock_channel_name",type:Bm.GUILD_TEXT,voice_states:[],messages:[]}),getSkus:()=>Promise.resolve({skus:[]}),getEntitlements:()=>Promise.resolve({entitlements:[]}),startPurchase:()=>Promise.resolve([]),setConfig:()=>Promise.resolve({use_interactive_pip:!1}),userSettingsGetLocale:()=>Promise.resolve({locale:""}),openExternalLink:()=>Promise.resolve({opened:!1}),encourageHardwareAcceleration:()=>Promise.resolve({enabled:!0}),captureLog:()=>Promise.resolve(null),setOrientationLockState:()=>Promise.resolve(null),openInviteDialog:()=>Promise.resolve(null),getPlatformBehaviors:()=>Promise.resolve({iosKeyboardResizesView:!0}),getChannelPermissions:()=>Promise.resolve({permissions:rv(1234567890)}),openShareMomentDialog:()=>Promise.resolve(null),shareLink:()=>Promise.resolve({success:!1}),initiateImageUpload:()=>Promise.resolve({image_url:"https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0b52aa9e99b832574a53_full_logo_blurple_RGB.png"}),getInstanceConnectedParticipants:()=>Promise.resolve({participants:[]})};function sd({className:n}){return u.jsxs("svg",{viewBox:"0 0 48 48",className:fe("shrink-0",n),"aria-hidden":"true",focusable:"false",children:[u.jsx("rect",{x:"5",y:"8",width:"26",height:"22",rx:"5.5",fill:"var(--cm-surface)",stroke:"var(--cm-border-strong)",strokeWidth:"1.6"}),u.jsx("rect",{x:"9.5",y:"14",width:"16",height:"3.4",rx:"1.7",fill:"var(--cm-red)"}),u.jsx("rect",{x:"9.5",y:"20.6",width:"11",height:"3.4",rx:"1.7",fill:"var(--cm-blue)"}),u.jsx("circle",{cx:"31",cy:"30",r:"9",fill:"none",stroke:"var(--cm-ink)",strokeWidth:"3"}),u.jsx("line",{x1:"37.6",y1:"36.6",x2:"43",y2:"42",stroke:"var(--cm-ink)",strokeWidth:"3.6",strokeLinecap:"round"})]})}function Nl({className:n,markClassName:r,textClassName:s}){const i=xm.name.split(" ");return u.jsxs("span",{className:fe("inline-flex items-center gap-2.5 leading-none",n),children:[u.jsx(sd,{className:r}),u.jsx("span",{dir:"ltr",className:fe("font-bold text-ink",s),children:i.map((l,f)=>u.jsxs("span",{className:f===i.length-1?"text-red-brand":void 0,children:[f>0?" ":"",l]},`${l}-${f}`))})]})}const Ew={primary:"bg-red-brand text-white shadow-card hover:bg-red-strong hover:shadow-lift",secondary:"border border-border bg-surface text-ink shadow-card hover:border-border-strong hover:shadow-lift",ghost:"text-ink-soft hover:bg-surface-soft/80 hover:text-ink"},Nw={red:"bg-red-brand text-white shadow-card hover:bg-red-strong hover:shadow-lift",blue:"bg-blue-brand text-white shadow-card hover:bg-blue-strong hover:shadow-lift"},Tw={sm:"h-9 gap-1.5 rounded-lg px-3.5 text-sm",md:"h-11 gap-2 rounded-xl px-5 text-base",lg:"h-12 gap-2.5 rounded-xl px-6 text-base md:text-lg"};function Je({variant:n="primary",size:r="md",icon:s,className:i,children:l,type:f="button",sound:p=!0,team:m,onClick:h,...g}){const{play:v}=Xt(),k=E=>{p&&v("click"),h?.(E)};return u.jsxs("button",{type:f,onClick:k,className:fe("inline-flex items-center justify-center whitespace-nowrap font-semibold select-none","transition-all duration-150 ease-game","active:scale-[0.98]","disabled:pointer-events-none disabled:opacity-50",m?Nw[m]:Ew[n],Tw[r],i),...g,children:[s,l]})}const Hv=T.createContext({status:"none",active:!1,retry:()=>{}});function ww(){return T.useContext(Hv)}function l1(){try{if(typeof window!=="undefined"&&typeof window.__IS_DISCORD_ACTIVITY__==="boolean")return window.__IS_DISCORD_ACTIVITY__;const n=new URLSearchParams(window.location.search);const h=typeof window!=="undefined"&&Boolean(window.location.hostname&&(window.location.hostname.indexOf("discordsays.com")!==-1||window.location.hostname.indexOf("discord.co")!==-1));return(n.has("frame_id")&&n.has("instance_id"))||n.get("activity")==="mock"||n.get("activity")==="discord"||h}catch{return!1}}function kw(){return new URLSearchParams(window.location.search).get("activity")==="mock"}async function Aw(){const n=await Ds("/api/auth/discord/config");if(!n.enabled||!n.clientId)throw new Error("Discord Activity is not configured");return n.clientId}const jw=["identify","guilds"];let discordActivitySdkPromise=null;async function getDiscordActivitySdk(){return discordActivitySdkPromise||(discordActivitySdkPromise=(async()=>{try{const n=await Aw().catch(()=>null),r=kw();if(!n){console.warn("Discord client ID not configured");return{sdk:null,clientId:null,mock:!1}}const s=r?new _w(n,"mock-guild","mock-channel","mock-location"):new mw(n,{disableConsoleLogOverride:!0});await Promise.race([s.ready(),new Promise((i,l)=>window.setTimeout(()=>l(new Error("Discord SDK READY timed out")),6000))]).catch(e=>{console.warn("Discord SDK ready warning:",e)});return{sdk:s,clientId:n,mock:r}}catch(e){console.warn("Discord SDK initialization warning:",e);return{sdk:null,clientId:null,mock:!1}}})().catch(n=>{discordActivitySdkPromise=null;return{sdk:null,clientId:null,mock:!1}})),discordActivitySdkPromise}async function openDiscordInviteDialog(){try{const{sdk:n}=await getDiscordActivitySdk();if(n&&n.commands&&typeof n.commands.openInviteDialog==="function"){await n.commands.openInviteDialog();return!0}}catch(e){console.warn("Discord openInviteDialog error:",e)}return!1}window.__CLUEME_OPEN_DISCORD_INVITE__=openDiscordInviteDialog;async function triggerWebShare(n,r,s){if(typeof navigator!=="undefined"&&typeof navigator.share==="function"){try{await navigator.share({title:n,text:r,url:s});return!0}catch(i){if(i&&i.name==="AbortError")return!0;console.warn("Web Share API error:",i)}}return!1}window.__CLUEME_SHARE_ROOM__=triggerWebShare;let discordPresenceTimer=null,discordPresencePending=null,discordPresenceLastFingerprint="",discordPresenceLastSentAt=0;const discordPresenceStartedAt=new Map;async function flushDiscordPresence(){if(!discordPresencePending)return;const{room:n,view:r,fingerprint:s}=discordPresencePending;discordPresencePending=null,discordPresenceTimer=null;try{const{sdk:i}=await getDiscordActivitySdk();if(!i||!i.commands||!i.isReady)return;const l=n.status==="playing",f=n.players.filter(g=>g.connected!==!1).length,p=Math.max(1,Math.min(f,n.maxPlayers)),m=r?.winner?`${r.winner==="red"?"Red":"Blue"} team won`:r?`${r.turnTeam==="red"?"Red":"Blue"} turn \u2022 ${r.phase==="clue"?"Giving a clue":r.phase==="guess"?"Guessing":"Round over"}`:l?"Game in progress":"Waiting for players",h=discordPresenceStartedAt.get(n.code)??Math.floor(Date.now()/1e3);discordPresenceStartedAt.set(n.code,h);await Promise.race([i.commands.setActivity({activity:{type:0,details:l?`Playing Clue Me \u2022 Room ${n.code}`:`Clue Me lobby \u2022 Room ${n.code}`,state:`${m} \u2022 ${p}/${n.maxPlayers} players`,timestamps:{start:h},assets:{large_image:"clue-me-main",large_text:"Clue Me \u2014 One clue. One team.",small_image:"lobby",small_text:l?m:"Building teams"},party:{id:`clue-me:${n.code}`,size:[p,n.maxPlayers]},instance:!0}}),new Promise((g,v)=>setTimeout(()=>v(new Error("Presence timeout")),2000))]).catch(()=>{});discordPresenceLastFingerprint=s,discordPresenceLastSentAt=Date.now()}catch(i){console.warn("Could not update Discord room presence",i)}if(discordPresencePending){const i=Math.max(0,4e3-(Date.now()-discordPresenceLastSentAt));discordPresenceTimer=window.setTimeout(flushDiscordPresence,i)}}async function updateDiscordRoomPresence(n,r=null){if(!l1()||!n)return;const s=n.players.filter(f=>f.connected!==!1).length,i=JSON.stringify([n.code,n.status,n.maxPlayers,s,r?.gameId??null,r?.turnTeam??null,r?.phase??null,r?.winner??null]);if(i===discordPresenceLastFingerprint||(discordPresencePending={room:n,view:r,fingerprint:i},discordPresenceTimer!==null))return;const l=Math.max(0,4e3-(Date.now()-discordPresenceLastSentAt));l===0?await flushDiscordPresence():discordPresenceTimer=window.setTimeout(flushDiscordPresence,l)}function Ow({children:n,onAuthenticated:r}){
+}class _w{constructor(r,s,i,l){this.platform=ei.DESKTOP,this.instanceId="123456789012345678",this.configuration=Dv(),this.source=null,this.sourceOrigin="",this.sdkVersion="mock",this.mobileAppVersion="unknown",this.frameId="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",this.eventBus=new J1,this.clientId=r,this.commands=this._updateCommandMocks({}),this.guildId=s,this.channelId=i,this.locationId=l,this.customId=null,this.referrerId=null}_updateCommandMocks(r){return this.commands=xw(Object.assign({},Sw,r),(s,i,l)=>{s[l]=async(...f)=>(console.info(`DiscordSDKMock: ${String(l)}(${JSON.stringify(f)})`),await i(...f))}),this.commands}emitReady(){this.emitEvent("READY",void 0)}close(...r){console.info(`DiscordSDKMock: close(${JSON.stringify(r)})`)}ready(){return Promise.resolve()}async subscribe(r,s,...i){return await this.eventBus.on(r,s)}async unsubscribe(r,s,...i){return await this.eventBus.off(r,s)}emitEvent(r,s){this.eventBus.emit(r,s)}}const Sw={authorize:()=>Promise.resolve({code:"mock_code"}),authenticate:()=>Promise.resolve({access_token:"mock_token",user:{username:"mock_user_username",discriminator:"mock_user_discriminator",id:"mock_user_id",avatar:null,public_flags:1},scopes:[],expires:new Date(2121,1,1).toString(),application:{description:"mock_app_description",icon:"mock_app_icon",id:"mock_app_id",name:"mock_app_name"}}),setActivity:()=>Promise.resolve({name:"mock_activity_name",type:0}),getChannel:()=>Promise.resolve({id:"mock_channel_id",name:"mock_channel_name",type:Bm.GUILD_TEXT,voice_states:[],messages:[]}),getSkus:()=>Promise.resolve({skus:[]}),getEntitlements:()=>Promise.resolve({entitlements:[]}),startPurchase:()=>Promise.resolve([]),setConfig:()=>Promise.resolve({use_interactive_pip:!1}),userSettingsGetLocale:()=>Promise.resolve({locale:""}),openExternalLink:()=>Promise.resolve({opened:!1}),encourageHardwareAcceleration:()=>Promise.resolve({enabled:!0}),captureLog:()=>Promise.resolve(null),setOrientationLockState:()=>Promise.resolve(null),openInviteDialog:()=>Promise.resolve(null),getPlatformBehaviors:()=>Promise.resolve({iosKeyboardResizesView:!0}),getChannelPermissions:()=>Promise.resolve({permissions:rv(1234567890)}),openShareMomentDialog:()=>Promise.resolve(null),shareLink:()=>Promise.resolve({success:!1}),initiateImageUpload:()=>Promise.resolve({image_url:"https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0b52aa9e99b832574a53_full_logo_blurple_RGB.png"}),getInstanceConnectedParticipants:()=>Promise.resolve({participants:[]})};function sd({className:n}){return u.jsxs("svg",{viewBox:"0 0 48 48",className:fe("shrink-0",n),"aria-hidden":"true",focusable:"false",children:[u.jsx("rect",{x:"5",y:"8",width:"26",height:"22",rx:"5.5",fill:"var(--cm-surface)",stroke:"var(--cm-border-strong)",strokeWidth:"1.6"}),u.jsx("rect",{x:"9.5",y:"14",width:"16",height:"3.4",rx:"1.7",fill:"var(--cm-red)"}),u.jsx("rect",{x:"9.5",y:"20.6",width:"11",height:"3.4",rx:"1.7",fill:"var(--cm-blue)"}),u.jsx("circle",{cx:"31",cy:"30",r:"9",fill:"none",stroke:"var(--cm-ink)",strokeWidth:"3"}),u.jsx("line",{x1:"37.6",y1:"36.6",x2:"43",y2:"42",stroke:"var(--cm-ink)",strokeWidth:"3.6",strokeLinecap:"round"})]})}function Nl({className:n,markClassName:r,textClassName:s}){const i=xm.name.split(" ");return u.jsxs("span",{className:fe("inline-flex items-center gap-2.5 leading-none",n),children:[u.jsx(sd,{className:r}),u.jsx("span",{dir:"ltr",className:fe("font-bold text-ink",s),children:i.map((l,f)=>u.jsxs("span",{className:f===i.length-1?"text-red-brand":void 0,children:[f>0?" ":"",l]},`${l}-${f}`))})]})}const Ew={primary:"bg-red-brand text-white shadow-card hover:bg-red-strong hover:shadow-lift",secondary:"border border-border bg-surface text-ink shadow-card hover:border-border-strong hover:shadow-lift",ghost:"text-ink-soft hover:bg-surface-soft/80 hover:text-ink"},Nw={red:"bg-red-brand text-white shadow-card hover:bg-red-strong hover:shadow-lift",blue:"bg-blue-brand text-white shadow-card hover:bg-blue-strong hover:shadow-lift"},Tw={sm:"h-9 gap-1.5 rounded-lg px-3.5 text-sm",md:"h-11 gap-2 rounded-xl px-5 text-base",lg:"h-12 gap-2.5 rounded-xl px-6 text-base md:text-lg"};function Je({variant:n="primary",size:r="md",icon:s,className:i,children:l,type:f="button",sound:p=!0,team:m,onClick:h,...g}){const{play:v}=Xt(),k=E=>{p&&v("click"),h?.(E)};return u.jsxs("button",{type:f,onClick:k,className:fe("inline-flex items-center justify-center whitespace-nowrap font-semibold select-none","transition-all duration-150 ease-game","active:scale-[0.98]","disabled:pointer-events-none disabled:opacity-50",m?Nw[m]:Ew[n],Tw[r],i),...g,children:[s,l]})}const Hv=T.createContext({status:"none",active:!1,retry:()=>{}});function ww(){return T.useContext(Hv)}function l1(){try{if(typeof window!=="undefined"&&typeof window.__IS_DISCORD_ACTIVITY__==="boolean")return window.__IS_DISCORD_ACTIVITY__;const n=new URLSearchParams(window.location.search);const h=typeof window!=="undefined"&&Boolean(window.location.hostname&&(window.location.hostname.indexOf("discordsays.com")!==-1||window.location.hostname.indexOf("discord.co")!==-1));return(n.has("frame_id")&&n.has("instance_id"))||n.get("activity")==="mock"||n.get("activity")==="discord"||h}catch{return!1}}function kw(){return new URLSearchParams(window.location.search).get("activity")==="mock"}async function Aw(){const n=await Ds("/api/auth/discord/config");if(!n.enabled||!n.clientId)throw new Error("Discord Activity is not configured");return n.clientId}const jw=["identify","guilds"];let discordActivitySdkPromise=null;async function getDiscordActivitySdk(){return discordActivitySdkPromise||(discordActivitySdkPromise=(async()=>{try{const n=await Aw().catch(()=>null),r=kw();if(!n){console.warn("Discord client ID not configured");return{sdk:null,clientId:null,mock:!1}}const s=r?new _w(n,"mock-guild","mock-channel","mock-location"):new mw(n,{disableConsoleLogOverride:!0});await Promise.race([s.ready(),new Promise((i,l)=>window.setTimeout(()=>l(new Error("Discord SDK READY timed out")),6000))]).catch(e=>{console.warn("Discord SDK ready warning:",e)});return{sdk:s,clientId:n,mock:r}}catch(e){console.warn("Discord SDK initialization warning:",e);return{sdk:null,clientId:null,mock:!1}}})().catch(n=>{discordActivitySdkPromise=null;return{sdk:null,clientId:null,mock:!1}})),discordActivitySdkPromise}async function openDiscordInviteDialog(){try{const{sdk:n}=await getDiscordActivitySdk();if(n&&n.commands&&typeof n.commands.openInviteDialog==="function"){await n.commands.openInviteDialog();return!0}}catch(e){console.warn("Discord openInviteDialog error:",e)}return!1}window.__CLUEME_OPEN_DISCORD_INVITE__=openDiscordInviteDialog;async function triggerWebShare(n,r,s){if(typeof navigator!=="undefined"&&typeof navigator.share==="function"){try{await navigator.share({title:n,text:r,url:s});return!0}catch(i){if(i&&i.name==="AbortError")return!0;console.warn("Web Share API error:",i)}}return!1}window.__CLUEME_SHARE_ROOM__=triggerWebShare;let discordPresenceTimer=null,discordPresencePending=null,discordPresenceLastFingerprint="",discordPresenceLastSentAt=0;const discordPresenceStartedAt=new Map;async function flushDiscordPresence(){if(!discordPresencePending)return;const{room:n,view:r,fingerprint:s}=discordPresencePending;discordPresencePending=null,discordPresenceTimer=null;try{const{sdk:i}=await getDiscordActivitySdk();if(!i||!i.commands||!i.isReady)return;const l=n.status==="playing",f=n.players.filter(g=>g.connected!==!1).length,p=Math.max(1,Math.min(f,n.maxPlayers)),m=r?.winner?`${r.winner==="red"?"Red":"Blue"} team won`:r?`${r.turnTeam==="red"?"Red":"Blue"} turn \u2022 ${r.phase==="clue"?"Giving a clue":r.phase==="guess"?"Guessing":"Round over"}`:l?"Game in progress":"Waiting for players",h=discordPresenceStartedAt.get(n.code)??Math.floor(Date.now()/1e3);discordPresenceStartedAt.set(n.code,h);await Promise.race([i.commands.setActivity({activity:{type:0,details:l?`Playing Clue Me \u2022 Room ${n.code}`:`Clue Me lobby \u2022 Room ${n.code}`,state:`${m} \u2022 ${p}/${n.maxPlayers} players`,timestamps:{start:h},assets:{large_image:"clue-me-main",large_text:"Clue Me \u2014 One clue. One team.",small_image:"lobby",small_text:l?m:"Building teams"},party:{id:`clue-me:${n.code}`,size:[p,n.maxPlayers]},instance:!0}}),new Promise((g,v)=>setTimeout(()=>v(new Error("Presence timeout")),2000))]).catch(()=>{});discordPresenceLastFingerprint=s,discordPresenceLastSentAt=Date.now()}catch(i){console.warn("Could not update Discord room presence",i)}if(discordPresencePending){const i=Math.max(0,4e3-(Date.now()-discordPresenceLastSentAt));discordPresenceTimer=window.setTimeout(flushDiscordPresence,i)}}async function updateDiscordRoomPresence(n,r=null){if(!l1()||!n)return;const s=n.players.filter(f=>f.connected!==!1).length,i=JSON.stringify([n.code,n.status,n.maxPlayers,s,r?.gameId??null,r?.turnTeam??null,r?.phase??null,r?.winner??null]);if(i===discordPresenceLastFingerprint||(discordPresencePending={room:n,view:r,fingerprint:i},discordPresenceTimer!==null))return;const l=Math.max(0,4e3-(Date.now()-discordPresenceLastSentAt));l===0?await flushDiscordPresence():discordPresenceTimer=window.setTimeout(flushDiscordPresence,l)}let discordAuthPromise = null;function Ow({children:n,onAuthenticated:r}){
   const[s,i]=T.useState(0);
   const p=T.useMemo(()=>l1(),[]);
   const isAlreadyRoom=typeof window!=="undefined"&&window.location.pathname.includes("/room/");
@@ -162,32 +162,47 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
   },[]);
 
   const performDiscordAuth=T.useCallback(async(isInteractive=!1)=>{
+    if(discordAuthPromise){
+      if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth: auth already in progress, awaiting existing promise");
+      try{
+        await discordAuthPromise;
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth: existing promise resolved successfully");
+      }catch(e){
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth: existing promise rejected", {msg:e?.message||String(e)});
+      }
+      return;
+    }
+    let resolveAuth, rejectAuth;
+    discordAuthPromise = new Promise((res, rej) => {
+      resolveAuth = res;
+      rejectAuth = rej;
+    });
     try{
       f("authorizing");
       setErrMsg(null);
       if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth starting",{isInteractive});
-
       const existingUser=await Q_().catch(()=>null);
       const existingToken=zi();
       if(existingUser&&existingToken){
         if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Existing user session found with token",{name:existingUser.name});
         setAuthUser(existingUser);
         await joinAndRedirect(existingUser,existingToken);
+        resolveAuth();
+        discordAuthPromise=null;
         return;
       }
-
       const sdkRes=await getDiscordActivitySdk();
       const sdk=sdkRes?.sdk;
       const clientId=sdkRes?.clientId;
       const isMock=sdkRes?.mock;
-
       if(!sdk||!clientId){
         if(typeof window!=="undefined"&&window.cmLog)window.cmLog("SDK or clientId missing");
         setErrMsg("تعذر الاتصال بديسكورد");
         f("error");
+        rejectAuth(new Error("SDK missing"));
+        discordAuthPromise=null;
         return;
       }
-
       if(isMock){
         const mockAuth=await sdk.commands.authenticate({}).catch(()=>null);
         if(mockAuth?.access_token){
@@ -195,26 +210,60 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
           if(ge?.user&&ge?.token){
             setAuthUser(ge.user);
             await joinAndRedirect(ge.user,ge.token);
+            resolveAuth();
+            discordAuthPromise=null;
             return;
           }
         }
         f("auth_required");
+        resolveAuth();
+        discordAuthPromise=null;
         return;
       }
-
       let authCode=null;
-      try{
-        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Calling sdk.commands.authorize direct prompt");
-        const res=await sdk.commands.authorize({client_id:clientId,response_type:"code",state:"",scope:[...jw]});
-        authCode=res?.code;
-        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authorize result",{hasCode:!!authCode});
-      }catch(authErr){
-        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authorize failed or dismissed",{msg:authErr?.message||String(authErr)});
-        setErrMsg(authErr?.message||"تم إلغاء التفويض أو تعذر فتحه");
-        f("auth_required");
-        return;
+      let authErrorOccurred=null;
+      const tryAuthorize=async(promptValue)=>{
+        let lastErr=null;
+        for(let attempt=1;attempt<=3;attempt++){
+          try{
+            if(typeof window!=="undefined"&&window.cmLog)window.cmLog(`sdk.commands.authorize attempt ${attempt} with prompt=${promptValue}`);
+            const res=await sdk.commands.authorize({client_id:clientId,response_type:"code",state:"",scope:[...jw],prompt:promptValue});
+            if(res?.code)return res.code;
+          }catch(err){
+            lastErr=err;
+            const msg=err?.message||String(err);
+            if(typeof window!=="undefined"&&window.cmLog)window.cmLog(`sdk.commands.authorize error (attempt ${attempt})`,{msg});
+            if(msg.includes("Already authing")||msg.includes("5005")||msg.includes("4005")){
+              if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Already authing detected, waiting 1500ms before retrying authorize...");
+              await new Promise(r=>setTimeout(r,1500));
+              continue;
+            }
+            if(promptValue==="none")throw err;
+            if(msg.includes("canceled")||msg.includes("dismissed")||msg.includes("cancel")||msg.includes("deny"))throw err;
+          }
+        }
+        throw lastErr||new Error("Failed to authorize after retries");
+      };
+      if(!isInteractive){
+        try{
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Attempting silent authorize...");
+          authCode=await tryAuthorize("none");
+        }catch(err){
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Silent authorize failed, falling back to showing authorize screen/prompt...",{msg:err?.message||String(err)});
+          try{
+            if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Launching interactive authorize automatically...");
+            authCode=await tryAuthorize("consent");
+          }catch(interactiveErr){
+            authErrorOccurred=interactiveErr;
+          }
+        }
+      }else{
+        try{
+          authCode=await tryAuthorize("consent");
+        }catch(interactiveErr){
+          authErrorOccurred=interactiveErr;
+        }
       }
-
       if(authCode){
         if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Exchanging code with server...");
         f("authorizing");
@@ -228,20 +277,38 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
           if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Authenticated user successfully with token",{name:ge.user.name});
           setAuthUser(ge.user);
           await joinAndRedirect(ge.user,ge.token);
+          resolveAuth();
+          discordAuthPromise=null;
           return;
         }else{
           if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Code exchange returned no user or token");
           setErrMsg("فشل التحقق من حساب ديسكورد مع السيرفر");
           f("error");
+          rejectAuth(new Error("Code exchange returned no user/token"));
+          discordAuthPromise=null;
           return;
         }
+      }else{
+        const msg=authErrorOccurred?.message||String(authErrorOccurred||"");
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authorize final failure",{msg});
+        if(msg.includes("Already authing")||msg.includes("5005")||msg.includes("4005")){
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Already authing persisted, scheduling background retry in 3 seconds...");
+          setTimeout(()=>{performDiscordAuth(isInteractive)},3000);
+          f("authorizing");
+        }else{
+          setErrMsg(authErrorOccurred?.message||"تم إلغاء التفويض أو تعذر فتحه");
+          f("auth_required");
+        }
+        rejectAuth(authErrorOccurred||new Error("Auth failed"));
+        discordAuthPromise=null;
+        return;
       }
-
-      f("auth_required");
     }catch(flowErr){
       if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Discord auth flow fatal error",{msg:flowErr?.message||String(flowErr)});
       setErrMsg(flowErr?.message||"حدث خطأ أثناء المصادقة");
       f("error");
+      rejectAuth(flowErr);
+      discordAuthPromise=null;
     }
   },[joinAndRedirect]);
 
