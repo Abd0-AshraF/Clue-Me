@@ -120,10 +120,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       setErrMsg(null);
       const tokenToUse=passedToken||zi()||undefined;
       if(!userObj||!tokenToUse){
-        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("joinAndRedirect blocked: no authenticated user or token");
-        f("auth_required");
-        setErrMsg("تسجيل الدخول مطلوب للمتابعة في ديسكورد");
-        return;
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("joinAndRedirect: no authenticated user, continuing as guest");
       }
       const dp=(typeof window!=="undefined"&&window.__DISCORD_PARAMS__)||{};
       const U=new URLSearchParams(window.location.search);
@@ -136,7 +133,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       const gldId=sdk?.guildId??U.get("guild_id")??dp.guild_id??sessionStorage.getItem("cm:discord:guild_id")??localStorage.getItem("cm:discord:guild_id");
       const instanceId=sdk?.instanceId??U.get("instance_id")??dp.instance_id??sessionStorage.getItem("cm:discord:instance_id")??localStorage.getItem("cm:discord:instance_id")??(chanId?"channel:"+chanId:null)??"activity-default";
 
-      let finalPlayerName=(userObj?.name&&typeof userObj.name==="string"&&userObj.name.trim())?userObj.name.trim():"Discord Player";
+      let finalPlayerName=(userObj?.name&&typeof userObj.name==="string"&&userObj.name.trim())?userObj.name.trim():(localStorage.getItem("clue-me:name")||"").trim()||"Discord Player";
       if(finalPlayerName.length>24)finalPlayerName=finalPlayerName.slice(0,24);
       Cu(finalPlayerName);
 
@@ -233,7 +230,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       let authCode=null;
       let authErrorOccurred=null;
       const tryAuthorize=async(isSilent)=>{
-        const scopeCandidates=[["identify","guilds"],["identify"]];
+        const scopeCandidates=[["identify"]];
         let lastErr=null;
         for(const targetScopes of scopeCandidates){
           const maxAttempts=isSilent?1:2;
@@ -309,28 +306,16 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       }else{
         const msg=authErrorOccurred?.message||String(authErrorOccurred||"");
         if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authorize final failure",{msg});
-        if(msg.includes("Already authing")||msg.includes("5005")||msg.includes("4005")){
-          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Already authing persisted, scheduling background retry in 3 seconds...");
-          setTimeout(()=>{performDiscordAuth(isInteractive)},3000);
-          f("authorizing");
-        }else{
-          let friendlyMsg="تم إلغاء التفويض أو تعذر فتحه، يرجى الموافقة للمتابعة";
-          const rawMsg=authErrorOccurred?.message||String(authErrorOccurred||"");
-          if(rawMsg.includes("invalid_literal")||rawMsg.includes("Required")||rawMsg.includes("Expected")){
-            friendlyMsg="تعذر استكمال المصادقة التلقائية مع ديسكورد، يرجى إعادة المحاولة";
-          } else if(rawMsg.includes("cancel")||rawMsg.includes("deny")||rawMsg.includes("dismiss")){
-            friendlyMsg="تم إلغاء طلب الموافقة، يرجى الضغط على الزر أدناه للموافقة والدخول للعبة";
-          }
-          setErrMsg(friendlyMsg);
-          f("auth_required");
-        }
-        rejectAuth(authErrorOccurred||new Error("Auth failed"));
+        setErrMsg(msg||"فشل تفويض ديسكورد");
+        f("auth_required");
+        rejectAuth(authErrorOccurred||new Error("Authorize failed"));
         discordAuthPromise=null;
         return;
       }
     }catch(flowErr){
       if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Discord auth flow fatal error",{msg:flowErr?.message||String(flowErr)});
-      let flowErrText=flowErr?.message||String(flowErr||"");if(flowErrText.startsWith("[")||flowErrText.includes("invalid_literal")||flowErrText.includes("Expected")){flowErrText="تعذر استكمال المصادقة مع ديسكورد، يرجى إعادة المحاولة";}else if(!flowErrText){flowErrText="حدث خطأ أثناء المصادقة";}setErrMsg(flowErrText);f("auth_required");
+      setErrMsg(flowErr?.message||"خطأ في عملية التحقق مع ديسكورد");
+      f("error");
       rejectAuth(flowErr);
       discordAuthPromise=null;
     }
