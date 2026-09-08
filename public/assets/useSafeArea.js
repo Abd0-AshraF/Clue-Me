@@ -46,7 +46,7 @@
     /* Enforce safe top padding for Discord and Native Android App */
     if (isDiscord) {
       if (isPhone || window.innerWidth <= 768) {
-        if (top < 48) top = 48;
+        if (top < 56) top = 56;
       } else {
         if (top < 8) top = 8;
       }

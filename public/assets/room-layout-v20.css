@@ -6196,3 +6196,15 @@ body.cm-discord-activity .cm-room-android-banner {
   box-shadow: none !important;
   transform: none !important;
 }
+
+
+/* Discord Mobile Header Insets */
+html.cm-discord-activity header,
+html.cm-discord-activity #root > div > header,
+html.cm-discord-activity .cm-game-page > header,
+html.cm-discord-activity .cm-home-page header {
+  padding-top: max(56px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 56px)) !important;
+}
+html.cm-discord-activity #root > div {
+  padding-top: 0 !important;
+}

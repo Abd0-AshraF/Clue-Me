@@ -1798,7 +1798,6 @@ var RoomStore = class {
     const room = this.get(code);
     const player = this.player(room, playerId);
     if (!this.can(room, player.id, "START_GAME")) throw new RoomError("NOT_HOST", "Missing permission START_GAME");
-    if (room.status !== "waiting") throw new RoomError("ROOM_IN_PROGRESS", "Game already started");
     room.status = "playing";
     room.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     return room;
