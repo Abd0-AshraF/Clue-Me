@@ -687,11 +687,62 @@
 
   function setHomeLang(lang) {
     var nextLang = lang === 'ar' ? 'ar' : 'en';
-    try { localStorage.setItem('clue-me:lang', nextLang); } catch (e) {}
+    try {
+      localStorage.setItem('ui_lang', nextLang);
+      localStorage.setItem('clue-me:lang', nextLang);
+    } catch (e) {}
     html.lang = nextLang;
     html.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+
+    if (typeof window.updateI18nElements === 'function') {
+      window.updateI18nElements(nextLang);
+    }
+
+    var btns = document.querySelectorAll('.cm-home-mobile-lang, [data-lang]');
+    for (var b = 0; b < btns.length; b++) {
+      var item = btns[b];
+      if (item.getAttribute('data-lang') === nextLang) {
+        item.classList.add('is-active');
+      } else {
+        item.classList.remove('is-active');
+      }
+    }
+
     window.dispatchEvent(new CustomEvent('cm:lang-changed', { detail: nextLang }));
+    window.dispatchEvent(new CustomEvent('cm:lang-change', { detail: nextLang }));
   }
+
+  // ISSUE 1 FIX: Global delegation for change, input, and click touch events on mobile browsers
+  document.addEventListener('change', function (e) {
+    var target = e.target;
+    if (target && (target.id === 'lang-select' || target.id === 'ui-lang-select' || (target.matches && target.matches('#lang-select, #ui-lang-select, [data-ui-lang]')))) {
+      var val = target.value;
+      if (val === 'ar' || val === 'en') {
+        setHomeLang(val);
+      }
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    var target = e.target;
+    if (target && (target.id === 'lang-select' || target.id === 'ui-lang-select' || (target.matches && target.matches('#lang-select, #ui-lang-select, [data-ui-lang]')))) {
+      var val = target.value;
+      if (val === 'ar' || val === 'en') {
+        setHomeLang(val);
+      }
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    var langBtn = e.target && e.target.closest ? e.target.closest('.cm-home-mobile-lang, [data-lang]') : null;
+    if (langBtn) {
+      var lVal = langBtn.getAttribute('data-lang');
+      if (lVal === 'ar' || lVal === 'en') {
+        setHomeMenuOpen(false);
+        setHomeLang(lVal);
+      }
+    }
+  });
 
   function setHomeMenuOpen(open) {
     var btn = document.querySelector('.cm-home-menu-btn');
@@ -4990,63 +5041,7 @@
   /* Lobby: when a game is running, the app renders a plain-text hint
      ("الرجوع للعبة") instead of a button — inject a real, prominent
      return-to-game button inside that status card. */
-  function syncLobbyReturn() {
-    if (!/^\/room\/[A-Za-z0-9]+$/.test(location.pathname)) return;
-    var m = location.pathname.match(/^\/room\/([A-Za-z0-9]+)/);
-    var code = m ? m[1].toUpperCase() : null;
-    if (!code) return;
-    var playingTexts = html.lang === "en" ? ["Game in progress"] : ["\u0627\u0644\u0644\u0639\u0628\u0629 \u0634\u063A\u0627\u0644\u0629"];
-    var ps = document.querySelectorAll("main p, .cm-lobby-spectators ~ * p, body p");
-    var card = null;
-    for (var i = 0; i < ps.length; i++) {
-      var txt = (ps[i].textContent || "").trim();
-      if (playingTexts.indexOf(txt) !== -1) {
-        card = ps[i].parentElement;
-        break;
-      }
-    }
-    /* ---- lobby card ordering (the container is already a flex column):
-       share/seats/teams/management stay, then CHAT, then EVENT LOG, then
-       the game-running status card (with the return button), then footer.
-       Runs in waiting rooms too. */
-    var ar = html.lang !== "en";
-    var chatTitleTexts = ar ? ["شات الغرفة"] : ["Chat"];
-    var chatCard = null;
-    var heads = document.querySelectorAll("main p, main h2, main h3");
-    for (var h = 0; h < heads.length; h++) {
-      if (chatTitleTexts.indexOf((heads[h].textContent || "").trim()) !== -1) {
-        chatCard = heads[h].closest(".rounded-2xl");
-        break;
-      }
-    }
-    var historyCard = document.querySelector(".cm-ev-list");
-    historyCard = historyCard ? historyCard.closest(".rounded-2xl") : null;
-    var footer = null;
-    var mdivs = document.querySelectorAll("main > div");
-    for (var f = 0; f < mdivs.length; f++) {
-      if (/\u0631\u062C\u0648\u0639 \u0644\u0644\u0648\u0628\u064A|\u0627\u0644\u062E\u0631\u0648\u062C \u0645\u0646 \u0627\u0644\u063A\u0631\u0641\u0629|Back to lobby|Leave room/i.test(mdivs[f].textContent || "")) {
-        footer = mdivs[f];
-        break;
-      }
-    }
-    if (chatCard) chatCard.style.order = "6";
-    if (historyCard) historyCard.style.order = "7";
-    if (footer) footer.style.order = "9";
-    if (card) card.style.order = "8";
-
-    if (!card) return;
-    if (card.querySelector(".cm-lobby-return-btn")) return;
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "cm-lobby-return-btn";
-    btn.textContent = html.lang === "en" ? "Back to the game" : "\u0627\u0644\u0631\u062C\u0648\u0639 \u0644\u0644\u0639\u0628\u0629";
-    btn.addEventListener("click", function () {
-      window.history.pushState({}, '', "/room/" + code + "/game");
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
-    card.appendChild(btn);
-  }
-
+  function syncLobbyReturn() { /* Native React lobby controls handle this cleanly */ }
   function applyPill(head, label, value) {
     if (!head) return;
     var text = value ? value.trim() : "";

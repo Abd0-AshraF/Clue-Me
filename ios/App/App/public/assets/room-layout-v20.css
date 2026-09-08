@@ -3962,14 +3962,21 @@ html.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
   font-weight: 900 !important;
 }
 
-/* Mot captain highlight outline */
-html.cm-v20.mot .cm-flip.cm-captain-own-card::after,
-html.mot .cm-flip.cm-captain-own-card::after,
-.mot .cm-flip.cm-captain-own-card::after {
+/* Mot captain highlight outline - RED */
+html.cm-v20.mot .cm-flip.cm-captain-own-card[data-state="red"]::after,
+html.mot .cm-flip.cm-captain-own-card[data-state="red"]::after,
+.mot .cm-flip.cm-captain-own-card[data-state="red"]::after {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.35), 0 0 16px rgba(248, 113, 113, 0.28) !important;
+}
+
+/* Mot captain highlight outline - BLUE */
+html.cm-v20.mot .cm-flip.cm-captain-own-card[data-state="blue"]::after,
+html.mot .cm-flip.cm-captain-own-card[data-state="blue"]::after,
+.mot .cm-flip.cm-captain-own-card[data-state="blue"]::after {
   border-color: #38bdf8 !important;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 0 16px rgba(56, 189, 248, 0.28) !important;
 }
-
 /* Mot teambars */
 html.cm-v20.mot .cm-teambar-red,
 .mot .cm-teambar-red {
@@ -6094,3 +6101,117 @@ body.cm-discord-activity .cm-room-android-banner {
 }
 
 
+
+
+
+
+
+
+/* --- THEME-AWARE CLUE ME JOIN BUTTONS & CODE CARD --- */
+.cm-lobby-code-card {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.75rem !important;
+  padding: 0.55rem 1.4rem !important;
+  border-radius: 1.1rem !important;
+  background: color-mix(in srgb, var(--cm-surface, #22211f) 85%, var(--cm-card-blue, #315c88) 15%) !important;
+  border: 2px solid color-mix(in srgb, var(--cm-border-strong, #64748b) 70%, var(--cm-card-blue, #315c88) 30%) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out !important;
+  text-decoration: none !important;
+  user-select: none !important;
+}
+.cm-lobby-code-card:hover {
+  border-color: color-mix(in srgb, var(--cm-card-blue, #315c88) 80%, white 20%) !important;
+  background: color-mix(in srgb, var(--cm-surface, #22211f) 75%, var(--cm-card-blue, #315c88) 25%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+.cm-lobby-code-card:active {
+  transform: scale(0.97) !important;
+}
+.cm-lobby-code-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: clamp(1.85rem, 5.5vw, 2.5rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.28em !important;
+  color: var(--cm-ink, #ffffff) !important;
+  line-height: 1 !important;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+}
+.cm-lobby-code-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2.2rem !important;
+  height: 2.2rem !important;
+  border-radius: 0.7rem !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--cm-ink, #ffffff) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+.cm-join-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  padding: 0.28rem 0.68rem !important;
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  border-radius: 0.55rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  border: 1px solid transparent !important;
+}
+.cm-join-btn:active {
+  transform: scale(0.95) !important;
+}
+.cm-join-btn-red {
+  background: var(--cm-card-red, #b83a3a) !important;
+  color: var(--cm-card-red-ink, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--cm-card-red, #b83a3a) 80%, white 20%) !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--cm-card-red, #b83a3a) 40%, transparent) !important;
+}
+@media (hover: hover) {
+  .cm-join-btn-red:hover {
+    background: color-mix(in srgb, var(--cm-card-red, #b83a3a) 88%, white 12%) !important;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--cm-card-red, #b83a3a) 55%, transparent) !important;
+  }
+}
+.cm-join-btn-blue {
+  background: var(--cm-card-blue, #315c88) !important;
+  color: var(--cm-card-blue-ink, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--cm-card-blue, #315c88) 80%, white 20%) !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--cm-card-blue, #315c88) 40%, transparent) !important;
+}
+@media (hover: hover) {
+  .cm-join-btn-blue:hover {
+    background: color-mix(in srgb, var(--cm-card-blue, #315c88) 88%, white 12%) !important;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--cm-card-blue, #315c88) 55%, transparent) !important;
+  }
+}
+.cm-join-btn[disabled] {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+
+/* Discord Mobile Header Insets */
+html.cm-discord-activity header,
+html.cm-discord-activity #root > div > header,
+html.cm-discord-activity .cm-game-page > header,
+html.cm-discord-activity .cm-home-page header {
+  padding-top: max(56px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 56px)) !important;
+}
+html.cm-discord-activity #root > div {
+  padding-top: 0 !important;
+}

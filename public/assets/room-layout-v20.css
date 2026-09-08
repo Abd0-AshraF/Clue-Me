@@ -3962,14 +3962,21 @@ html.mot .cm-flip[data-revealed="false"] .cm-face-front .cm-word,
   font-weight: 900 !important;
 }
 
-/* Mot captain highlight outline */
-html.cm-v20.mot .cm-flip.cm-captain-own-card::after,
-html.mot .cm-flip.cm-captain-own-card::after,
-.mot .cm-flip.cm-captain-own-card::after {
+/* Mot captain highlight outline - RED */
+html.cm-v20.mot .cm-flip.cm-captain-own-card[data-state="red"]::after,
+html.mot .cm-flip.cm-captain-own-card[data-state="red"]::after,
+.mot .cm-flip.cm-captain-own-card[data-state="red"]::after {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.35), 0 0 16px rgba(248, 113, 113, 0.28) !important;
+}
+
+/* Mot captain highlight outline - BLUE */
+html.cm-v20.mot .cm-flip.cm-captain-own-card[data-state="blue"]::after,
+html.mot .cm-flip.cm-captain-own-card[data-state="blue"]::after,
+.mot .cm-flip.cm-captain-own-card[data-state="blue"]::after {
   border-color: #38bdf8 !important;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 0 16px rgba(56, 189, 248, 0.28) !important;
 }
-
 /* Mot teambars */
 html.cm-v20.mot .cm-teambar-red,
 .mot .cm-teambar-red {
