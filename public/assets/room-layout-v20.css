@@ -6215,3 +6215,5 @@ html.cm-discord-activity .cm-home-page header {
 html.cm-discord-activity #root > div {
   padding-top: 0 !important;
 }
+
+html.cm-discord-activity .cm-v20, html.cm-discord-activity { --cm-vp-h: 100%; }
