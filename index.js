@@ -150,7 +150,24 @@ var is = new sb();
 
 var app = UK({ roomStore: ts, gameStore: ns, authStore: rs, adminStore: is });
 var ub = httpModule.createServer(app);
+function normalizeDiscordProxy(req) {
+  if (req && req.url) {
+    if (req.url.startsWith("/.proxy/")) {
+      const old = req.url;
+      req.url = req.url.substring(7);
+      if (!req.url.startsWith("/")) req.url = "/" + req.url;
+      req._parsedUrl = null;
+      console.log(`[proxy-debug] Rewrote "${old}" -> "${req.url}"`);
+    } else if (req.url === "/.proxy") {
+      req.url = "/";
+      req._parsedUrl = null;
+      console.log(`[proxy-debug] Rewrote "/.proxy" -> "/"`);
+    }
+  }
+}
 var lb = MK(ub, ts, ns, rs, is);
+ub.prependListener("request", normalizeDiscordProxy);
+ub.prependListener("upgrade", normalizeDiscordProxy);
 
 var port = Number(process.env.PORT || 3000);
 ub.listen(port, () => {
