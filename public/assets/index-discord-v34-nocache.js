@@ -111,7 +111,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
   const[l,f]=T.useState(()=>!p?"none":isAlreadyRoom?"ready":"boot");
   const[errMsg,setErrMsg]=T.useState(null);
   const[authUser,setAuthUser]=T.useState(null);
-  const m=T.useRef(r);
+  const m=T.useRef(r);  const silentAuthAttemptedRef=T.useRef(!1);
   T.useEffect(()=>{m.current=r},[r]);
 
   const joinAndRedirect=T.useCallback(async(userObj,passedToken=null)=>{
@@ -227,6 +227,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
         discordAuthPromise=null;
         return;
       }
+      const isMobileDiscord=typeof window!=="undefined"&&(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!window.ReactNativeWebView);
       let authCode=null;
       let authErrorOccurred=null;
       const tryAuthorize=async(isSilent)=>{
@@ -236,10 +237,13 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
           const maxAttempts=isSilent?1:2;
           for(let attempt=1;attempt<=maxAttempts;attempt++){
             try{
-              if(typeof window!=="undefined"&&window.cmLog)window.cmLog(`sdk.commands.authorize (silent=${isSilent}, attempt=${attempt}, scopes=${targetScopes.join(",")})`);
+              if(typeof window!=="undefined"&&window.cmLog)window.cmLog(`sdk.commands.authorize (isMobile=${isMobileDiscord}, silent=${isSilent}, attempt=${attempt}, scopes=${targetScopes.join(",")})`);
               const authPayload={client_id:clientId,response_type:"code",state:"",scope:targetScopes};
-              if(isSilent){authPayload.prompt="none";}
-              const res=await sdk.commands.authorize(authPayload);
+              if(isSilent && !isMobileDiscord){authPayload.prompt="none";}
+              const res=await Promise.race([
+                sdk.commands.authorize(authPayload),
+                new Promise((_,rej)=>setTimeout(()=>rej(new Error("Authorize timeout")),isMobileDiscord?10000:15000))
+              ]);
               if(res?.code){
                 if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authorize succeeded!",{codeLength:res.code.length,scope:targetScopes});
                 return res.code;
@@ -264,12 +268,12 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
           if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Attempting silent authorize...");
           authCode=await tryAuthorize(!0);
         }catch(err){
-          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Silent authorize failed, attempting interactive prompt...",{msg:err?.message||String(err)});
-          try{
-            authCode=await tryAuthorize(!1);
-          }catch(interactiveErr){
-            authErrorOccurred=interactiveErr;
-          }
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Silent authorize failed, stopping auto-prompt to prevent loops",{msg:err?.message||String(err)});
+          f("auth_required");
+          setErrMsg(null);
+          resolveAuth();
+          discordAuthPromise=null;
+          return;
         }
       }else{
         try{
@@ -285,7 +289,10 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
         const ge=await W_(authCode);
         if(ge&&ge.user&&ge.token){
           if(ge.accessToken){
-            await sdk.commands.authenticate({access_token:ge.accessToken}).catch(err=>{
+            Promise.race([
+              sdk.commands.authenticate({access_token:ge.accessToken}),
+              new Promise(r=>setTimeout(r,3000))
+            ]).catch(err=>{
               if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authenticate warning",{msg:err?.message||String(err)});
             });
           }
@@ -322,9 +329,10 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
   },[joinAndRedirect]);
 
   T.useEffect(()=>{
-    if(!p||isAlreadyRoom)return;
+    if(!p||isAlreadyRoom||silentAuthAttemptedRef.current)return;
+    silentAuthAttemptedRef.current=!0;
     performDiscordAuth(!1);
-  },[p,isAlreadyRoom,s,performDiscordAuth]);
+  },[p,isAlreadyRoom]);
 
   const h=T.useMemo(()=>({
     status:l,
@@ -332,13 +340,14 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
     errorMessage:errMsg,
     authUser,
     retry:()=>i(g=>g+1),
-    doAuth:()=>performDiscordAuth(!0)
-  }),[l,p,errMsg,authUser,performDiscordAuth]);
+    doAuth:()=>performDiscordAuth(!0),
+    doGuest:()=>joinAndRedirect(null,null)
+  }),[l,p,errMsg,authUser,performDiscordAuth,joinAndRedirect]);
 
   return u.jsx(Hv.Provider,{value:h,children:n});
 }
 function Rw({children:n}){
-  const{status:r,errorMessage:errMsg,retry:s,doAuth:doLogin}=ww(),
+  const{status:r,errorMessage:errMsg,retry:s,doAuth:doLogin,doGuest}=ww(),
        {t:i}=Ve(),
        {push:l}=Ls(),
        {user:f}=xa(),
@@ -415,6 +424,9 @@ function Rw({children:n}){
       u.jsxs("div",{className:"flex flex-col gap-2 w-full max-w-xs mt-2",children:[
         u.jsx(Je,{size:"default",className:"w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold shadow-md cursor-pointer",onClick:doLogin,children:
           isAr?"🔄 إعادة المحاولة والموافقة":"🔄 Retry & Authorize"
+        }),
+        u.jsx("button",{type:"button",className:"w-full py-2 px-3 text-xs font-bold rounded-lg border border-[#5865F2]/40 bg-surface hover:bg-surface-hover text-ink transition-colors cursor-pointer shadow-sm",onClick:doGuest,children:
+          isAr?"👤 المتابعة كزائر (بدون حساب)":"👤 Continue as Guest"
         }),
         u.jsx("button",{type:"button",className:"w-full py-1.5 px-3 text-xs rounded-lg border border-black/10 dark:border-white/10 text-ink-soft hover:text-ink bg-surface/50 transition-colors cursor-pointer",onClick:copyLog,children:
           copied?(isAr?"✅ تم نسخ تقرير التشخيص":"✅ Report Copied!"):(isAr?"📋 نسخ تقرير التشخيص":"📋 Copy Diagnostics")
