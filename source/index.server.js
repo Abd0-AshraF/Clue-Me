@@ -4511,10 +4511,8 @@ function normalizeDiscordProxy(req) {
     if (req.url.startsWith("/.proxy/")) {
       req.url = req.url.substring(7);
       if (!req.url.startsWith("/")) req.url = "/" + req.url;
-      req._parsedUrl = null;
     } else if (req.url === "/.proxy") {
       req.url = "/";
-      req._parsedUrl = null;
     }
   }
 }

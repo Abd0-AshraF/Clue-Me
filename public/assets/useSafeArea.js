@@ -87,11 +87,7 @@
       var setInsets = stateArr[1];
 
       React.useEffect(function () {
-        function update(e) {
-          /* Do not recalculate container padding during soft keyboard expansion */
-          if (e && e.type === 'resize' && window.visualViewport && (window.innerHeight - window.visualViewport.height > 120)) {
-            return;
-          }
+        function update() {
           var updated = detectSafeAreaInsets();
           setInsets(updated);
           var targetEl = containerRef && containerRef.current ? containerRef.current : containerRef;
