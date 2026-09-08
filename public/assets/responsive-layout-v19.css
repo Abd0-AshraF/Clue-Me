@@ -913,7 +913,7 @@ html.cm-discord-activity #root > div,
 html.cm-discord-activity .cm-game-page,
 html.cm-discord-activity .cm-home-page,
 html.cm-discord-activity .cm-lobby-page {
-  padding-top: 0;
+  padding-top: max(var(--cm-safe-top, 0px), 0px) !important;
   padding-bottom: max(var(--cm-safe-bottom, 0px), 16px) !important;
 }
 
@@ -949,3 +949,9 @@ html.cm-ui-phone:not(.cm-discord-activity) .cm-lobby-page {
   }
 }
 
+
+
+/* Discord Mobile Header Insets */
+html.cm-discord-activity header {
+  padding-top: max(var(--cm-safe-top, 0px), 0px) !important;
+}

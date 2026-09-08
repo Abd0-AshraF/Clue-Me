@@ -1546,7 +1546,6 @@ var RoomStore = class {
   updatePlayer(code, playerId, patch) {
     const room = this.get(code);
     this.player(room, playerId);
-    if (room.status !== "waiting") throw new RoomError("ROOM_IN_PROGRESS", "Game already started");
     const player = this.player(room, playerId);
     const before = { team: player.team, role: player.role };
     this.assertSeatAllowed(room, playerId, patch.team ?? void 0, patch.role);
