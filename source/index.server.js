@@ -3293,7 +3293,7 @@ async function exchangeActivityCode(config, code) {
       grant_type: "authorization_code",
       code
     }),
-    signal: AbortSignal.timeout(8e3)
+    signal: AbortSignal.timeout(15e3)
   });
   if (!tokenRes.ok) throw new Error(`discord activity token exchange failed: ${tokenRes.status}`);
   const tokenBody = await tokenRes.json();
