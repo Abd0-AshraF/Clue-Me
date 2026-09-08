@@ -185,6 +185,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       rejectAuth = rej;
     });
     try{
+      const isMobileDiscord=typeof window!=="undefined"&&(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!window.ReactNativeWebView);
       f("authorizing");
       setErrMsg(null);
       if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth starting",{isInteractive});
@@ -194,6 +195,14 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
         if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Existing user session found with token",{name:existingUser.name});
         setAuthUser(existingUser);
         await joinAndRedirect(existingUser,existingToken);
+        resolveAuth();
+        discordAuthPromise=null;
+        return;
+      }
+      if(isMobileDiscord && !isInteractive){
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Mobile detected and non-interactive, skipping auto-authorize to avoid Already authing/disallowed prompt");
+        f("auth_required");
+        setErrMsg(null);
         resolveAuth();
         discordAuthPromise=null;
         return;
@@ -227,7 +236,6 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
         discordAuthPromise=null;
         return;
       }
-      const isMobileDiscord=typeof window!=="undefined"&&(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!window.ReactNativeWebView);
       let authCode=null;
       let authErrorOccurred=null;
       const tryAuthorize=async(isSilent)=>{
