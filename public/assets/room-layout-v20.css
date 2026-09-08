@@ -6217,3 +6217,204 @@ html.cm-discord-activity #root > div {
 }
 
 html.cm-discord-activity .cm-v20, html.cm-discord-activity { --cm-vp-h: 100%; }
+
+/* =============================================================================
+   CLUE ME PREMIUM CUSTOM OVERRIDES:
+   1. ELIMINATING BLUE FOCUS OUTLINES ON BOARD CARD BUTTONS
+   2. CUSTOM COLORED CAPTAIN OWN CARD OUTLINES (RED AND BLUE GLOWS)
+   3. SIMPLIFIED & BEAUTIFIED EVENT LOG WITH BOARD-STYLE MINIMALIST CARDS
+   ============================================================================= */
+
+/* 1. Eliminate Blue Focus Outlines on Card Buttons */
+.cm-v20 .cm-flip button:focus,
+.cm-v20 .cm-flip button:focus-visible,
+.cm-v20 .cm-flip > button:focus,
+.cm-v20 .cm-flip > button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 2. Custom Colored Captain Own Card Outlines */
+.cm-v20 .cm-flip.cm-captain-own-card::after {
+  display: none !important; /* Disable default generic gold outline */
+}
+
+/* Red Captain Cards */
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="red"]::after {
+  display: block !important;
+  content: "" !important;
+  border-color: #ef4444 !important;
+  box-shadow:
+    0 0 0 1.5px rgba(239, 68, 68, 0.45),
+    0 0 16px rgba(239, 68, 68, 0.25) !important;
+}
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="red"] .cm-face-front,
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="red"] .cm-face-back {
+  border-color: #f87171 !important;
+}
+
+/* Blue Captain Cards */
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="blue"]::after {
+  display: block !important;
+  content: "" !important;
+  border-color: #3b82f6 !important;
+  box-shadow:
+    0 0 0 1.5px rgba(59, 130, 246, 0.45),
+    0 0 16px rgba(59, 130, 246, 0.25) !important;
+}
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-front,
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-back {
+  border-color: #60a5fa !important;
+}
+
+/* Neutral Captain Cards */
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="neutral"]::after {
+  display: block !important;
+  content: "" !important;
+  border-color: #d1d5db !important;
+  box-shadow:
+    0 0 0 1.5px rgba(209, 213, 219, 0.4),
+    0 0 12px rgba(209, 213, 219, 0.15) !important;
+}
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="neutral"] .cm-face-front,
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="neutral"] .cm-face-back {
+  border-color: #9ca3af !important;
+}
+
+/* Assassin Captain Cards */
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="assassin"]::after {
+  display: block !important;
+  content: "" !important;
+  border-color: #111827 !important;
+  box-shadow:
+    0 0 0 1.5px rgba(17, 24, 39, 0.55),
+    0 0 16px rgba(0, 0, 0, 0.45) !important;
+}
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="assassin"] .cm-face-front,
+.cm-v20 .cm-flip.cm-captain-own-card[data-state="assassin"] .cm-face-back {
+  border-color: #374151 !important;
+}
+
+/* Dark and Mani-Dark Themes Adaptations */
+html.cm-v20.dark .cm-flip.cm-captain-own-card[data-state="red"]::after,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="red"]::after,
+.dark .cm-v20 .cm-flip.cm-captain-own-card[data-state="red"]::after {
+  border-color: #f87171 !important;
+  box-shadow:
+    0 0 0 2px rgba(248, 113, 113, 0.5),
+    0 0 22px rgba(248, 113, 113, 0.3) !important;
+}
+html.cm-v20.dark .cm-flip.cm-captain-own-card[data-state="red"] .cm-face-front,
+html.cm-v20.dark .cm-flip.cm-captain-own-card[data-state="red"] .cm-face-back,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="red"] .cm-face-front,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="red"] .cm-face-back {
+  border-color: #fca5a5 !important;
+}
+
+html.cm-v20.dark .cm-flip.cm-captain-own-card[data-state="blue"]::after,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="blue"]::after,
+.dark .cm-v20 .cm-flip.cm-captain-own-card[data-state="blue"]::after {
+  border-color: #60a5fa !important;
+  box-shadow:
+    0 0 0 2px rgba(96, 165, 250, 0.5),
+    0 0 22px rgba(96, 165, 250, 0.3) !important;
+}
+html.cm-v20.dark .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-front,
+html.cm-v20.dark .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-back,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-front,
+html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-back {
+  border-color: #93c5fd !important;
+}
+
+
+/* 3. Simplified & Beautified Event Log */
+
+/* Force clean, uniform, theme-harmonized neutral backgrounds for log rows */
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev,
+.cm-v20 .cm-side-row > .cm-dock .cm-dock-list > .cm-ev,
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-red,
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-blue,
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-positive,
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev.cm-ev-danger {
+  background: color-mix(in srgb, var(--cm-surface) 92%, transparent) !important;
+  border: 1.5px solid color-mix(in srgb, var(--cm-border-strong) 40%, transparent) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  padding: 0.5rem 0.75rem !important;
+  margin-bottom: 0.38rem !important;
+  border-radius: 12px !important;
+}
+
+/* Make arrow-style connect from user to card by replacing action text */
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft {
+  font-size: 0 !important;
+}
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after {
+  content: "←" !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  margin: 0 0.45rem !important;
+  color: var(--cm-ink) !important;
+  opacity: 0.45;
+  display: inline-block;
+  vertical-align: middle;
+}
+html[lang="en"] .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after,
+body:not([dir="rtl"]) .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after,
+[dir="ltr"] .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after {
+  content: "→" !important;
+}
+
+/* Hide redundant team suffix span (e.g. "— الفريق الأحمر") */
+.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body span.leading-relaxed > span.text-xs.font-bold {
+  display: none !important;
+}
+
+/* Board-style elegant word cards inside the log */
+.cm-v20 .cm-dock-list .bg-card-red,
+.cm-v20 .cm-dock-list .bg-card-blue,
+.cm-v20 .cm-dock-list .bg-card-neutral,
+.cm-v20 .cm-dock-list .bg-card-assassin {
+  display: inline-block !important;
+  padding: 0.2rem 0.55rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 900 !important;
+  border-radius: 8px !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+  margin-inline-start: 0.25rem !important;
+  margin-inline-end: 0.25rem !important;
+  letter-spacing: 0.01em !important;
+  transform: translateY(-0.5px);
+  transition: transform 0.15s ease !important;
+}
+
+.cm-v20 .cm-dock-list .bg-card-red {
+  background: var(--cm-card-red) !important;
+  color: var(--cm-card-red-ink, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--cm-card-red) 75%, black) !important;
+}
+
+.cm-v20 .cm-dock-list .bg-card-blue {
+  background: var(--cm-card-blue) !important;
+  color: var(--cm-card-blue-ink, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--cm-card-blue) 75%, black) !important;
+}
+
+.cm-v20 .cm-dock-list .bg-card-neutral {
+  background: var(--cm-card-neutral) !important;
+  color: var(--cm-card-neutral-ink, #1c1914) !important;
+  border-color: color-mix(in srgb, var(--cm-card-neutral) 75%, black) !important;
+  border-width: 1px !important;
+}
+
+.cm-v20 .cm-dock-list .bg-card-assassin {
+  background: var(--cm-card-assassin) !important;
+  color: var(--cm-card-assassin-ink, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--cm-card-assassin) 70%, white 30%) !important;
+}

@@ -3347,6 +3347,14 @@ function mountDiscordRoutes(app2, authStore2, config) {
       if (now - entry.createdAt > EXCHANGE_TTL_MS) exchanges.delete(key);
     }
   };
+  if (!config || !config.clientId || !config.clientSecret) {
+    const cid = (process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID || "").trim();
+    const sec = (process.env.DISCORD_CLIENT_SECRET || process.env.DISCORD_SECRET || "").trim();
+    const red = (process.env.DISCORD_REDIRECT_URI || "").trim();
+    if (cid && sec) {
+      config = { clientId: cid, clientSecret: sec, redirectUri: red || void 0 };
+    }
+  }
   const enabled = Boolean(config?.clientId && config?.clientSecret);
   app2.get("/api/auth/discord/config", (_req, res) => {
     const serverInviteUrl = process.env.DISCORD_SERVER_INVITE_URL?.trim() || null;
