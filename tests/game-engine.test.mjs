@@ -208,8 +208,8 @@ test('Discord Activity environment suppresses native app banners and handles pop
   const indexJs = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
   assert.match(indexJs, /accountToken:S\.string\(\)\.max\(128\)\.optional\(\)\.nullable\(\)/);
 
-  const activeBundlePath = fs.existsSync(new URL('../public/assets/index-discord-v34.js', import.meta.url))
-    ? '../public/assets/index-discord-v34.js'
+  const activeBundlePath = fs.existsSync(new URL('../public/assets/index-discord-v34-nocache.js', import.meta.url))
+    ? '../public/assets/index-discord-v34-nocache.js'
     : fs.existsSync(new URL('../public/assets/index-discord-v33.js', import.meta.url))
       ? '../public/assets/index-discord-v33.js'
       : fs.existsSync(new URL('../public/assets/index-discord-v32.js', import.meta.url))
