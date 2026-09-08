@@ -111,7 +111,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
   const[l,f]=T.useState(()=>!p?"none":isAlreadyRoom?"ready":"boot");
   const[errMsg,setErrMsg]=T.useState(null);
   const[authUser,setAuthUser]=T.useState(null);
-  const m=T.useRef(r);  const silentAuthAttemptedRef=T.useRef(!1);
+  const m=T.useRef(r);
   T.useEffect(()=>{m.current=r},[r]);
 
   const joinAndRedirect=T.useCallback(async(userObj,passedToken=null)=>{
@@ -120,7 +120,10 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       setErrMsg(null);
       const tokenToUse=passedToken||zi()||undefined;
       if(!userObj||!tokenToUse){
-        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("joinAndRedirect: no authenticated user, continuing as guest");
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("joinAndRedirect blocked: no authenticated user or token");
+        f("auth_required");
+        setErrMsg("تسجيل الدخول مطلوب للمتابعة في ديسكورد");
+        return;
       }
       const dp=(typeof window!=="undefined"&&window.__DISCORD_PARAMS__)||{};
       const U=new URLSearchParams(window.location.search);
@@ -133,7 +136,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       const gldId=sdk?.guildId??U.get("guild_id")??dp.guild_id??sessionStorage.getItem("cm:discord:guild_id")??localStorage.getItem("cm:discord:guild_id");
       const instanceId=sdk?.instanceId??U.get("instance_id")??dp.instance_id??sessionStorage.getItem("cm:discord:instance_id")??localStorage.getItem("cm:discord:instance_id")??(chanId?"channel:"+chanId:null)??"activity-default";
 
-      let finalPlayerName=(userObj?.name&&typeof userObj.name==="string"&&userObj.name.trim())?userObj.name.trim():(localStorage.getItem("clue-me:name")||"").trim()||"Discord Player";
+      let finalPlayerName=(userObj?.name&&typeof userObj.name==="string"&&userObj.name.trim())?userObj.name.trim():"Discord Player";
       if(finalPlayerName.length>24)finalPlayerName=finalPlayerName.slice(0,24);
       Cu(finalPlayerName);
 
@@ -168,12 +171,126 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
     }
   },[]);
 
-  const performDiscordAuth=T.useCallback(async(isInteractive=!1)=>{if(discordAuthPromise&&!isInteractive){try{await discordAuthPromise;}catch(e){}return;}discordAuthPromise=new Promise((res,rej)=>{let resolveAuth=res,rejectAuth=rej;(async()=>{try{f("authorizing");setErrMsg(null);if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth starting",{isInteractive});const existingUser=await Q_().catch(()=>null);const existingToken=zi();if(existingUser&&existingToken){if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Existing user session found with token",{name:existingUser.name});setAuthUser(existingUser);await joinAndRedirect(existingUser,existingToken);resolveAuth();discordAuthPromise=null;return;}if(!isInteractive){if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Non-interactive initial load: seamlessly joining activity without auth prompt");await joinAndRedirect(null,null);resolveAuth();discordAuthPromise=null;return;}const sdkRes=await getDiscordActivitySdk();const sdk=sdkRes?.sdk;const clientId=sdkRes?.clientId;const isMock=sdkRes?.mock;if(!sdk||!clientId||isMock){await joinAndRedirect(null,null);resolveAuth();discordAuthPromise=null;return;}let authCode=null;try{const authPayload={client_id:clientId,response_type:"code",state:"",scope:["identify"]};const res=await Promise.race([sdk.commands.authorize(authPayload),new Promise((_,rej)=>setTimeout(()=>rej(new Error("Authorize timeout")),8000))]);if(res?.code)authCode=res.code;}catch(err){if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Interactive authorize failed/Already authing, falling back to seamless join",{msg:err?.message});}if(authCode){const ge=await W_(authCode).catch(()=>null);if(ge&&ge.user&&ge.token){if(ge.accessToken){sdk.commands.authenticate({access_token:ge.accessToken}).catch(()=>{});}setAuthUser(ge.user);await joinAndRedirect(ge.user,ge.token);resolveAuth();discordAuthPromise=null;return;}}await joinAndRedirect(null,null);resolveAuth();discordAuthPromise=null;}catch(flowErr){if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Discord auth flow fallback error",{msg:flowErr?.message});await joinAndRedirect(null,null).catch(()=>{});resolveAuth();discordAuthPromise=null;}})();});await discordAuthPromise;},[joinAndRedirect]);
+  const performDiscordAuth=T.useCallback(async(isInteractive=!1)=>{
+    if(discordAuthPromise){
+      if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth: auth already in progress, awaiting existing promise");
+      try{
+        await discordAuthPromise;
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth: existing promise resolved successfully");
+      }catch(e){
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth: existing promise rejected", {msg:e?.message||String(e)});
+      }
+      return;
+    }
+    let resolveAuth, rejectAuth;
+    discordAuthPromise = new Promise((res, rej) => {
+      resolveAuth = res;
+      rejectAuth = rej;
+    });
+    try{
+      f("authorizing");
+      setErrMsg(null);
+      if(typeof window!=="undefined"&&window.cmLog)window.cmLog("performDiscordAuth starting",{isInteractive});
+      const existingUser=await Q_().catch(()=>null);
+      const existingToken=zi();
+      if(existingUser&&existingToken){
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Existing user session found with token",{name:existingUser.name});
+        setAuthUser(existingUser);
+        await joinAndRedirect(existingUser,existingToken);
+        resolveAuth();
+        discordAuthPromise=null;
+        return;
+      }
+      const sdkRes=await getDiscordActivitySdk();
+      const sdk=sdkRes?.sdk;
+      const clientId=sdkRes?.clientId;
+      const isMock=sdkRes?.mock;
+      if(!sdk||!clientId){
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("SDK or clientId missing");
+        setErrMsg("تعذر الاتصال بديسكورد");
+        f("error");
+        rejectAuth(new Error("SDK missing"));
+        discordAuthPromise=null;
+        return;
+      }
+      if(isMock){
+        const mockAuth=await sdk.commands.authenticate({}).catch(()=>null);
+        if(mockAuth?.access_token){
+          const ge=await $_(mockAuth.access_token).catch(()=>null);
+          if(ge?.user&&ge?.token){
+            setAuthUser(ge.user);
+            await joinAndRedirect(ge.user,ge.token);
+            resolveAuth();
+            discordAuthPromise=null;
+            return;
+          }
+        }
+        f("auth_required");
+        resolveAuth();
+        discordAuthPromise=null;
+        return;
+      }
+      let authCode=null;
+      let authErrorOccurred=null;
+      const tryAuthorize=async(promptValue)=>{        let lastErr=null;        const maxAttempts=promptValue==="none"?1:2;        for(let attempt=1;attempt<=maxAttempts;attempt++){          try{            if(typeof window!=="undefined"&&window.cmLog)window.cmLog(`sdk.commands.authorize attempt ${attempt} with prompt=${promptValue}`);            const res=await sdk.commands.authorize({client_id:clientId,response_type:"code",state:"",scope:[...jw],prompt:promptValue});            if(res?.code)return res.code;          }catch(err){            lastErr=err;            const msg=err?.message||String(err);            if(typeof window!=="undefined"&&window.cmLog)window.cmLog(`sdk.commands.authorize error (attempt ${attempt})`,{msg});            if(msg.includes("Already authing")||msg.includes("5005")||msg.includes("4005")){              if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Already authing detected, waiting 1500ms before retrying authorize...");              await new Promise(r=>setTimeout(r,1500));              continue;            }            throw err;          }        }        throw lastErr||new Error("Failed to authorize");      };      if(!isInteractive){        try{          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Attempting silent authorize...");          authCode=await tryAuthorize("none");        }catch(err){          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Silent authorize failed, falling back to showing consent prompt...",{msg:err?.message||String(err)});          try{            authCode=await tryAuthorize("consent");          }catch(interactiveErr){            authErrorOccurred=interactiveErr;          }        }      }else{        try{          authCode=await tryAuthorize("consent");        }catch(interactiveErr){          authErrorOccurred=interactiveErr;        }      }      if(authCode){
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Exchanging code with server...");
+        f("authorizing");
+        const ge=await W_(authCode);
+        if(ge&&ge.user&&ge.token){
+          if(ge.accessToken){
+            await sdk.commands.authenticate({access_token:ge.accessToken}).catch(err=>{
+              if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authenticate warning",{msg:err?.message||String(err)});
+            });
+          }
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Authenticated user successfully with token",{name:ge.user.name});
+          setAuthUser(ge.user);
+          await joinAndRedirect(ge.user,ge.token);
+          resolveAuth();
+          discordAuthPromise=null;
+          return;
+        }else{
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Code exchange returned no user or token");
+          setErrMsg("فشل التحقق من حساب ديسكورد مع السيرفر");
+          f("error");
+          rejectAuth(new Error("Code exchange returned no user/token"));
+          discordAuthPromise=null;
+          return;
+        }
+      }else{
+        const msg=authErrorOccurred?.message||String(authErrorOccurred||"");
+        if(typeof window!=="undefined"&&window.cmLog)window.cmLog("sdk.commands.authorize final failure",{msg});
+        if(msg.includes("Already authing")||msg.includes("5005")||msg.includes("4005")){
+          if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Already authing persisted, scheduling background retry in 3 seconds...");
+          setTimeout(()=>{performDiscordAuth(isInteractive)},3000);
+          f("authorizing");
+        }else{
+          let friendlyMsg="تم إلغاء التفويض أو تعذر فتحه، يرجى الموافقة للمتابعة";
+          const rawMsg=authErrorOccurred?.message||String(authErrorOccurred||"");
+          if(rawMsg.includes("invalid_literal")||rawMsg.includes("Required")||rawMsg.includes("Expected")){
+            friendlyMsg="تعذر استكمال المصادقة التلقائية مع ديسكورد، يرجى إعادة المحاولة";
+          } else if(rawMsg.includes("cancel")||rawMsg.includes("deny")||rawMsg.includes("dismiss")){
+            friendlyMsg="تم إلغاء طلب الموافقة، يرجى الضغط على الزر أدناه للموافقة والدخول للعبة";
+          }
+          setErrMsg(friendlyMsg);
+          f("auth_required");
+        }
+        rejectAuth(authErrorOccurred||new Error("Auth failed"));
+        discordAuthPromise=null;
+        return;
+      }
+    }catch(flowErr){
+      if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Discord auth flow fatal error",{msg:flowErr?.message||String(flowErr)});
+      setErrMsg(flowErr?.message||"حدث خطأ أثناء المصادقة");
+      f("error");
+      rejectAuth(flowErr);
+      discordAuthPromise=null;
+    }
+  },[joinAndRedirect]);
+
   T.useEffect(()=>{
-    if(!p||isAlreadyRoom||silentAuthAttemptedRef.current)return;
-    silentAuthAttemptedRef.current=!0;
+    if(!p||isAlreadyRoom)return;
     performDiscordAuth(!1);
-  },[p,isAlreadyRoom]);
+  },[p,isAlreadyRoom,s,performDiscordAuth]);
 
   const h=T.useMemo(()=>({
     status:l,
@@ -181,14 +298,13 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
     errorMessage:errMsg,
     authUser,
     retry:()=>i(g=>g+1),
-    doAuth:()=>performDiscordAuth(!0),
-    doGuest:()=>joinAndRedirect(null,null)
-  }),[l,p,errMsg,authUser,performDiscordAuth,joinAndRedirect]);
+    doAuth:()=>performDiscordAuth(!0)
+  }),[l,p,errMsg,authUser,performDiscordAuth]);
 
   return u.jsx(Hv.Provider,{value:h,children:n});
 }
 function Rw({children:n}){
-  const{status:r,errorMessage:errMsg,retry:s,doAuth:doLogin,doGuest}=ww(),
+  const{status:r,errorMessage:errMsg,retry:s,doAuth:doLogin}=ww(),
        {t:i}=Ve(),
        {push:l}=Ls(),
        {user:f}=xa(),
@@ -260,20 +376,13 @@ function Rw({children:n}){
         })
       }),
       u.jsx("p",{className:"text-base font-bold text-ink",children:
-        (errMsg&&(errMsg.startsWith("[")||errMsg.includes("invalid_literal")||errMsg.includes("Expected"))?(isAr?"يلزم تسجيل الدخول وتفويض ديسكورد للمتابعة":"Discord authorization is required to continue"):errMsg)||(isAr?"يلزم تسجيل الدخول بحساب ديسكورد للمتابعة":"Discord authorization is required to continue")
+        errMsg||(isAr?"يلزم تسجيل الدخول بحساب ديسكورد للمتابعة":"Discord authorization is required to continue")
       }),
-      u.jsxs("div",{className:"flex flex-col gap-2 w-full max-w-xs mt-2",children:[
+      u.jsx("div",{className:"flex flex-col gap-2 w-full max-w-xs mt-2",children:
         u.jsx(Je,{size:"default",className:"w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold shadow-md cursor-pointer",onClick:doLogin,children:
           isAr?"🔄 إعادة المحاولة والموافقة":"🔄 Retry & Authorize"
-        }),
-        u.jsx("button",{type:"button",className:"w-full py-2 px-3 text-xs font-bold rounded-lg border border-[#5865F2]/40 bg-surface hover:bg-surface-hover text-ink transition-colors cursor-pointer shadow-sm",onClick:doGuest,children:
-          isAr?"👤 المتابعة كزائر (بدون حساب)":"👤 Continue as Guest"
-        }),
-        u.jsx("button",{type:"button",className:"w-full py-1.5 px-3 text-xs rounded-lg border border-black/10 dark:border-white/10 text-ink-soft hover:text-ink bg-surface/50 transition-colors cursor-pointer",onClick:copyLog,children:
-          copied?(isAr?"✅ تم نسخ تقرير التشخيص":"✅ Report Copied!"):(isAr?"📋 نسخ تقرير التشخيص":"📋 Copy Diagnostics")
-        }),
-        errMsg?u.jsx("p",{className:"text-[10px] text-ink-soft/70 font-mono break-all mt-1 px-1",children:String(errMsg).slice(0,160)}):null
-      ]})
+        })
+      })
     ]}):null
   ]});
 }
