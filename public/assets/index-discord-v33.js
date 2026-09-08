@@ -280,8 +280,7 @@ function g2({children:n}){const[r,s]=T.useState(p2);T.useEffect(()=>{const l=doc
       }
     }catch(flowErr){
       if(typeof window!=="undefined"&&window.cmLog)window.cmLog("Discord auth flow fatal error",{msg:flowErr?.message||String(flowErr)});
-      setErrMsg(flowErr?.message||"حدث خطأ أثناء المصادقة");
-      f("error");
+      let flowErrText=flowErr?.message||String(flowErr||"");if(flowErrText.startsWith("[")||flowErrText.includes("invalid_literal")||flowErrText.includes("Expected")){flowErrText="تعذر استكمال المصادقة مع ديسكورد، يرجى إعادة المحاولة";}else if(!flowErrText){flowErrText="حدث خطأ أثناء المصادقة";}setErrMsg(flowErrText);f("auth_required");
       rejectAuth(flowErr);
       discordAuthPromise=null;
     }
@@ -376,7 +375,7 @@ function Rw({children:n}){
         })
       }),
       u.jsx("p",{className:"text-base font-bold text-ink",children:
-        errMsg||(isAr?"يلزم تسجيل الدخول بحساب ديسكورد للمتابعة":"Discord authorization is required to continue")
+        (errMsg&&(errMsg.startsWith("[")||errMsg.includes("invalid_literal")||errMsg.includes("Expected"))?(isAr?"يلزم تسجيل الدخول وتفويض ديسكورد للمتابعة":"Discord authorization is required to continue"):errMsg)||(isAr?"يلزم تسجيل الدخول بحساب ديسكورد للمتابعة":"Discord authorization is required to continue")
       }),
       u.jsx("div",{className:"flex flex-col gap-2 w-full max-w-xs mt-2",children:
         u.jsx(Je,{size:"default",className:"w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold shadow-md cursor-pointer",onClick:doLogin,children:
