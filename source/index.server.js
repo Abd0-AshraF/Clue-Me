@@ -3282,14 +3282,7 @@ async function exchangeCode(config, code, redirectUri) {
   identity.accessToken = tokenBody.access_token;
   return identity;
 }
-async function exchangeActivityCode(config, code) {
-  if (mockMode()) return `mock-activity-token:${code}`;
-  const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
+async function exchangeActivityCode(config, code) {  if (mockMode()) return `mock-activity-token:${code}`;  const redirectUri = config.redirectUri ?? "https://clue-me.ai.studio/api/auth/discord/callback";  const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {    method: "POST",    headers: { "Content-Type": "application/x-www-form-urlencoded" },    body: new URLSearchParams({      client_id: config.clientId,      client_secret: config.clientSecret,      grant_type: "authorization_code",      code,      redirect_uri: redirectUri    }),onfig.clientSecret,
       grant_type: "authorization_code",
       code
     }),
