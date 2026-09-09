@@ -740,7 +740,51 @@
             }
           } catch(e) {}
           if (isDiscord) {
+            window.__IS_DISCORD_ACTIVITY__ = true;
             document.documentElement.classList.add('cm-discord-activity');
+
+            // Complete Isolation for Discord Activity Storage
+            try {
+              var origGet = localStorage.getItem.bind(localStorage);
+              var origSet = localStorage.setItem.bind(localStorage);
+              var origRemove = localStorage.removeItem.bind(localStorage);
+
+              var isolatedKeys = {
+                'clue-me:token': 'clue-me:activity:token',
+                'clue-me:discord_user': 'clue-me:activity:user',
+                'clue-me:discord_authed': 'clue-me:activity:authed',
+                'clue-me:user': 'clue-me:activity:user',
+                'clue-me:name': 'clue-me:activity:name',
+                'clue-me:avatar': 'clue-me:activity:avatar'
+              };
+
+              var blockedInActivity = {
+                'clue-me:pending_discord_session': true,
+                'clue-me:discord_session': true,
+                'discord_session': true,
+                'discord_access_token': true
+              };
+
+              localStorage.getItem = function(k) {
+                if (blockedInActivity[k]) return null;
+                var targetKey = isolatedKeys[k] || k;
+                return origGet(targetKey);
+              };
+
+              localStorage.setItem = function(k, v) {
+                if (blockedInActivity[k]) return;
+                var targetKey = isolatedKeys[k] || k;
+                return origSet(targetKey, v);
+              };
+
+              localStorage.removeItem = function(k) {
+                if (blockedInActivity[k]) return;
+                var targetKey = isolatedKeys[k] || k;
+                return origRemove(targetKey);
+              };
+            } catch (e) {
+              console.warn('[Storage Isolation] Could not isolate localStorage:', e);
+            }
           }
           var lang = localStorage.getItem('ui_lang') || localStorage.getItem('clue-me:lang');
           if (lang !== 'ar' && lang !== 'en') lang = 'en';
@@ -768,7 +812,7 @@
           }
 
           // Handle Discord OAuth Callback (/auth/callback)
-          if (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname.indexOf('/auth/callback') === 0) {
+          if (!isDiscord && (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname.indexOf('/auth/callback') === 0)) {
             console.log("[Discord OAuth] /auth/callback route reached.");
 
             var hashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -931,7 +975,7 @@
           var ses = qs.get('discord_session');
           var isAuthDiscord = qs.get('auth') === 'discord' || qs.has('discord_session');
           
-          if (window.opener && (ses || isAuthDiscord)) {
+          if (!isDiscord && window.opener && (ses || isAuthDiscord)) {
             console.log("[Popup] Auth redirect detected inside popup window.");
             if (ses) {
               fetch('/api/auth/discord/exchange', {
@@ -967,7 +1011,7 @@
             return;
           }
 
-          if (ses || isAuthDiscord) {
+          if (!isDiscord && (ses || isAuthDiscord)) {
             if (ses) {
               try {
                 localStorage.setItem('discord_session', ses);
@@ -1306,7 +1350,7 @@
         window.safeOpenExternal = safeOpenExternal;
 
         function handleDiscordCallback(url) {
-          if (!url) return;
+          if (!url || window.__IS_DISCORD_ACTIVITY__) return;
           try {
             var rawUrl = String(url);
             var normUrl = rawUrl.replace(/^(clue-me|clueme|intent):\/\//i, "https://clueme.wisp.uno/");
