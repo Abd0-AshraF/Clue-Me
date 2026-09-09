@@ -3282,20 +3282,50 @@ async function exchangeCode(config, code, redirectUri) {
   identity.accessToken = tokenBody.access_token;
   return identity;
 }
-async function exchangeActivityCode(config, code) {  if (mockMode()) return `mock-activity-token:${code}`;  const redirectUri = config.redirectUri ?? "https://clue-me.ai.studio/api/auth/discord/callback";  const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {    method: "POST",    headers: { "Content-Type": "application/x-www-form-urlencoded" },    body: new URLSearchParams({      client_id: config.clientId,      client_secret: config.clientSecret,      grant_type: "authorization_code",      code,      redirect_uri: redirectUri    }),onfig.clientSecret,
+async function exchangeActivityCode(config, code) {
+  if (mockMode()) return `mock-activity-token:${code}`;
+  
+  const uris = [
+    undefined,
+    `discord-${config.clientId}://authorize`,
+    `discord-${config.clientId}://authorize/callback`,
+    `discord-${config.clientId}:/authorize/callback`,
+    `http://127.0.0.1/callback`,
+    config.redirectUri
+  ];
+
+  let lastErr = "";
+  let attemptLogs = [];
+  for (let uri of uris) {
+    let bodyObj = {
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
       grant_type: "authorization_code",
       code
-    }),
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!tokenRes.ok) {
-    const errText = await tokenRes.text().catch(() => "");
-    console.error("[discord-activity] token exchange status:", tokenRes.status, "body:", errText);
-    throw new Error(`discord activity token exchange failed: ${tokenRes.status} - ${errText}`);
+    };
+    if (uri) bodyObj.redirect_uri = uri;
+    
+    let tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(bodyObj),
+      signal: AbortSignal.timeout(15e3)
+    });
+    
+    if (!tokenRes.ok) {
+      let errTxt = await tokenRes.text().catch(() => "");
+      console.error("[discord-activity] token exchange failed with uri", uri, "status:", tokenRes.status, "body:", errTxt);
+      lastErr = `${tokenRes.status} - ${errTxt}`;
+      attemptLogs.push({uri, status: tokenRes.status, errTxt});
+      continue;
+    }
+    
+    let s = await tokenRes.json();
+    if (!s.access_token) throw new Error("discord activity exchange returned no token");
+    return s.access_token;
   }
-  const tokenBody = await tokenRes.json();
-  if (!tokenBody.access_token) throw new Error("discord activity exchange returned no token");
-  return tokenBody.access_token;
+  
+  throw new Error(`exchange failed. Attempts: ${JSON.stringify(attemptLogs)}`);
 }
 async function fetchIdentity(accessToken) {
   const meRes = await fetch(`${DISCORD_API}/users/@me`, {
