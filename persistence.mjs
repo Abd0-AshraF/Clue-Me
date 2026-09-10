@@ -72,6 +72,17 @@ export function restorePersistentState(state, roomStore, gameStore, authStore, a
   if (typeof authStore.sweepSessions === "function") {
     authStore.sweepSessions();
   }
+  if (authStore.users) {
+    for (const [key, user] of authStore.users) {
+      if (!user || !user.email) continue;
+      const em = String(user.email).toLowerCase();
+      if (authStore.adminEmails?.has(em) || authStore.rootEmails?.has(em) || em === "ashrafnasr468@gmail.com") {
+        user.admin = true;
+        if (authStore.adminEmails) authStore.adminEmails.add(em);
+        if (authStore.rootEmails) authStore.rootEmails.add(em);
+      }
+    }
+  }
 
   const admin = state.admin ?? {};
   adminStore.reports = Array.isArray(admin.reports) ? admin.reports : [];
