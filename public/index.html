@@ -678,12 +678,19 @@
           var isDiscord = false;
           try {
             var qs = new URLSearchParams(location.search);
-            var isDiscordHost = Boolean(
+            var isOauthRoute = Boolean(
+              window.name === 'cm_oauth_popup' ||
+              window.name === 'discord_login' ||
+              (location.pathname && location.pathname.indexOf('/auth/callback') === 0) ||
+              qs.has('discord_session') ||
+              qs.get('auth') === 'discord'
+            );
+            var isDiscordHost = !isOauthRoute && Boolean(
               (window.name && window.name.indexOf('discord') !== -1) ||
               (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
               (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1))
             );
-            var hasDiscordParams = Boolean(
+            var hasDiscordParams = !isOauthRoute && Boolean(
               qs.has('frame_id') ||
               qs.has('instance_id') ||
               qs.get('activity') === 'mock' ||
@@ -1115,7 +1122,7 @@
             var height = 750;
             var left = (window.screen.width - width) / 2;
             var top = (window.screen.height - height) / 2;
-            var popup = window.open(oauthUrl, "discord_login", "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top);
+            var popup = window.open(oauthUrl, "cm_oauth_popup", "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top);
             
             if (!popup || popup.closed || typeof popup.closed == "undefined") {
               // Popup blocked - redirect the parent window directly as fallback
