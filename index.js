@@ -166,11 +166,44 @@ var rs = new ab();
 var is = new sb();
 
 import * as httpModule from "node:http";
+import { createPostgresPersistence, capturePersistentState, restorePersistentState } from "./persistence.mjs";
 
 var ts = new ob();
 var ns = new QI();
 var rs = new ab();
 var is = new sb();
+
+var databaseUrl = (process.env.DATABASE_URL || "").trim();
+var persistence = null;
+if (databaseUrl) {
+  try {
+    persistence = await createPostgresPersistence(databaseUrl);
+    const restoredState = await persistence.load();
+    if (restoredState) {
+      restorePersistentState(restoredState, ts, ns, rs, is);
+      console.log(`[database] restored ${rs.users.size} users and ${ts.rooms.size} active rooms from NeonDB`);
+    } else {
+      console.log("[database] connected to NeonDB; new persistent state initialized");
+    }
+  } catch (err) {
+    console.error("[database] startup persistence failed:", err);
+  }
+} else {
+  console.warn("[database] DATABASE_URL is not set; running in memory only");
+}
+
+var persistNow = (force = false) => {
+  if (!persistence) return Promise.resolve();
+  return persistence.save(capturePersistentState(ts, ns, rs, is), force);
+};
+
+if (persistence) {
+  persistNow(true);
+  var persistenceTimer = setInterval(() => {
+    persistNow(false);
+  }, Number(process.env.DATABASE_SAVE_INTERVAL_MS || 3000));
+  persistenceTimer.unref();
+}
 
 var app = UK({ roomStore: ts, gameStore: ns, authStore: rs, adminStore: is, discord: ((process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID) && (process.env.DISCORD_CLIENT_SECRET || process.env.DISCORD_SECRET || "VP2ciXtf_NgNZbXyqXfKn-pqt5uvHtHZ" || process.env.DISCORD_SECRET)) ? { clientId: (process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID).trim(), clientSecret: "VP2ciXtf_NgNZbXyqXfKn-pqt5uvHtHZ", redirectUri: process.env.DISCORD_REDIRECT_URI?.trim() || void 0 } : null });
 var ub = httpModule.createServer(app);
@@ -180,3 +213,4 @@ var port = Number(process.env.PORT || 3000);
 ub.listen(port, () => {
   console.log(`[server] Clue Me server running on port ${port}`);
 });
+
