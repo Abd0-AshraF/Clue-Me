@@ -8,12 +8,31 @@ function safeEntries(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function isTestUser(email, user) {
+  if (!email && !user) return false;
+  const em = String(email || user?.email || "").toLowerCase();
+  const name = String(user?.name || "").toLowerCase();
+  return em === "tester@clue.me" || em === "test@clue.me" || name === "testerpersistent";
+}
+
+function filterAuthUsers(usersList) {
+  return safeEntries(usersList).filter(([email, user]) => !isTestUser(email, user));
+}
+
+function filterAuthSessions(sessionsList) {
+  return safeEntries(sessionsList).filter(([token, sess]) => {
+    if (!sess) return false;
+    const email = sess.email || "";
+    return !isTestUser(email, null);
+  });
+}
+
 export function capturePersistentState(roomStore, gameStore, authStore, adminStore) {
   return {
     version: 1,
     auth: {
-      users: entriesOf(authStore.users),
-      sessions: entriesOf(authStore.sessions),
+      users: filterAuthUsers(entriesOf(authStore.users)),
+      sessions: filterAuthSessions(entriesOf(authStore.sessions)),
       adminSeeded: Boolean(authStore.adminSeeded)
     },
     admin: {
@@ -47,8 +66,8 @@ export function capturePersistentState(roomStore, gameStore, authStore, adminSto
 export function restorePersistentState(state, roomStore, gameStore, authStore, adminStore) {
   if (!state || state.version !== 1) return false;
   const auth = state.auth ?? {};
-  authStore.users = new Map(safeEntries(auth.users));
-  authStore.sessions = new Map(safeEntries(auth.sessions));
+  authStore.users = new Map(filterAuthUsers(auth.users));
+  authStore.sessions = new Map(filterAuthSessions(auth.sessions));
   authStore.adminSeeded = Boolean(auth.adminSeeded);
   if (typeof authStore.sweepSessions === "function") {
     authStore.sweepSessions();
