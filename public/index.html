@@ -198,7 +198,7 @@
       })();
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta
       name="description"
       content="Clue Me — كلمة واحدة… تصنع الفوز. لعبة تخمين كلمات متعددة اللاعبين مصمّمة للعربية أولاً."
@@ -1735,6 +1735,26 @@
     
 
     
+<script>
+(function(){
+  function resetScroll(){
+    if(window.scrollY!==0||window.scrollX!==0)window.scrollTo(0,0);
+    if(document.body.scrollTop!==0)document.body.scrollTop=0;
+    if(document.documentElement.scrollTop!==0)document.documentElement.scrollTop=0;
+  }
+  window.addEventListener("scroll",resetScroll,{passive:true});
+  document.addEventListener("focusin",function(){
+    setTimeout(resetScroll,10);setTimeout(resetScroll,100);setTimeout(resetScroll,300);
+  },{passive:true});
+  document.addEventListener("focusout",function(){
+    setTimeout(resetScroll,10);setTimeout(resetScroll,100);
+  },{passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",resetScroll,{passive:true});
+    window.visualViewport.addEventListener("scroll",resetScroll,{passive:true});
+  }
+})();
+</script>
 </head>
   <body>
     <div id="root"></div>
