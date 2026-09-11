@@ -1990,9 +1990,7 @@
     window.fetch = function (input, init) {
       var url = typeof input === "string" ? input : (input && input.url) || "";
       /* watch: create room, join room, and the join page's room lookup */
-      var isRoomCall =
-        (/\/api\/rooms(\/join)?(?:$|\?)/.test(url) && (!init || !init.method || /post/i.test(init.method || ""))) ||
-        (/\/api\/rooms\/[A-Za-z0-9]{4}(?:$|\?)/.test(url) && (!init || /get/i.test(init.method || "GET")));
+      var isRoomCall = /^\/api\/rooms\/[A-Za-z0-9]{4}$/.test(url) && (!init || !init.method || /get/i.test(init.method || "GET"));
       if (!isRoomCall) return _fetch(input, init);
       return _fetch(input, init).then(
         function (res) {

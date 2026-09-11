@@ -198,7 +198,7 @@
       })();
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta
       name="description"
       content="Clue Me — كلمة واحدة… تصنع الفوز. لعبة تخمين كلمات متعددة اللاعبين مصمّمة للعربية أولاً."
@@ -225,7 +225,10 @@
     <meta name="twitter:description" content="لعبة تخمين كلمات عربية جماعية للأصدقاء." />
     <meta name="twitter:image" content="https://clueme.wisp.uno/discord-embed-v1.png" />
     <!-- SOCIAL_META_END -->
-    <meta http-equiv="Cache-Control" content="no-store" />
+    <!-- Anti-Cache headers for Mobile Discord Activity WebViews -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0, post-check=0, pre-check=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Clue Me — كلمة واحدة… تصنع الفوز</title>
     <style>
@@ -678,12 +681,19 @@
           var isDiscord = false;
           try {
             var qs = new URLSearchParams(location.search);
-            var isDiscordHost = Boolean(
+            var isOauthRoute = Boolean(
+              window.name === 'cm_oauth_popup' ||
+              window.name === 'discord_login' ||
+              (location.pathname && location.pathname.indexOf('/auth/callback') === 0) ||
+              qs.has('discord_session') ||
+              qs.get('auth') === 'discord'
+            );
+            var isDiscordHost = !isOauthRoute && Boolean(
               (window.name && window.name.indexOf('discord') !== -1) ||
               (location.hostname && (location.hostname.indexOf('discordsays.com') !== -1 || location.hostname.indexOf('discord.com') !== -1)) ||
               (document.referrer && (document.referrer.indexOf('discord') !== -1 || document.referrer.indexOf('discordsays') !== -1))
             );
-            var hasDiscordParams = Boolean(
+            var hasDiscordParams = !isOauthRoute && Boolean(
               qs.has('frame_id') ||
               qs.has('instance_id') ||
               qs.get('activity') === 'mock' ||
@@ -740,7 +750,51 @@
             }
           } catch(e) {}
           if (isDiscord) {
+            window.__IS_DISCORD_ACTIVITY__ = true;
             document.documentElement.classList.add('cm-discord-activity');
+
+            // Complete Isolation for Discord Activity Storage
+            try {
+              var origGet = localStorage.getItem.bind(localStorage);
+              var origSet = localStorage.setItem.bind(localStorage);
+              var origRemove = localStorage.removeItem.bind(localStorage);
+
+              var isolatedKeys = {
+                'clue-me:token': 'clue-me:activity:token',
+                'clue-me:discord_user': 'clue-me:activity:user',
+                'clue-me:discord_authed': 'clue-me:activity:authed',
+                'clue-me:user': 'clue-me:activity:user',
+                'clue-me:name': 'clue-me:activity:name',
+                'clue-me:avatar': 'clue-me:activity:avatar'
+              };
+
+              var blockedInActivity = {
+                'clue-me:pending_discord_session': true,
+                'clue-me:discord_session': true,
+                'discord_session': true,
+                'discord_access_token': true
+              };
+
+              localStorage.getItem = function(k) {
+                if (blockedInActivity[k]) return null;
+                var targetKey = isolatedKeys[k] || k;
+                return origGet(targetKey);
+              };
+
+              localStorage.setItem = function(k, v) {
+                if (blockedInActivity[k]) return;
+                var targetKey = isolatedKeys[k] || k;
+                return origSet(targetKey, v);
+              };
+
+              localStorage.removeItem = function(k) {
+                if (blockedInActivity[k]) return;
+                var targetKey = isolatedKeys[k] || k;
+                return origRemove(targetKey);
+              };
+            } catch (e) {
+              console.warn('[Storage Isolation] Could not isolate localStorage:', e);
+            }
           }
           var lang = localStorage.getItem('ui_lang') || localStorage.getItem('clue-me:lang');
           if (lang !== 'ar' && lang !== 'en') lang = 'en';
@@ -768,7 +822,7 @@
           }
 
           // Handle Discord OAuth Callback (/auth/callback)
-          if (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname.indexOf('/auth/callback') === 0) {
+          if (!isDiscord && (activeRoute.type === 'AUTH_CALLBACK' || window.location.pathname.indexOf('/auth/callback') === 0)) {
             console.log("[Discord OAuth] /auth/callback route reached.");
 
             var hashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -931,7 +985,7 @@
           var ses = qs.get('discord_session');
           var isAuthDiscord = qs.get('auth') === 'discord' || qs.has('discord_session');
           
-          if (window.opener && (ses || isAuthDiscord)) {
+          if (!isDiscord && window.opener && (ses || isAuthDiscord)) {
             console.log("[Popup] Auth redirect detected inside popup window.");
             if (ses) {
               fetch('/api/auth/discord/exchange', {
@@ -967,7 +1021,7 @@
             return;
           }
 
-          if (ses || isAuthDiscord) {
+          if (!isDiscord && (ses || isAuthDiscord)) {
             if (ses) {
               try {
                 localStorage.setItem('discord_session', ses);
@@ -1071,7 +1125,7 @@
             var height = 750;
             var left = (window.screen.width - width) / 2;
             var top = (window.screen.height - height) / 2;
-            var popup = window.open(oauthUrl, "discord_login", "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top);
+            var popup = window.open(oauthUrl, "cm_oauth_popup", "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top);
             
             if (!popup || popup.closed || typeof popup.closed == "undefined") {
               // Popup blocked - redirect the parent window directly as fallback
@@ -1306,7 +1360,7 @@
         window.safeOpenExternal = safeOpenExternal;
 
         function handleDiscordCallback(url) {
-          if (!url) return;
+          if (!url || window.__IS_DISCORD_ACTIVITY__) return;
           try {
             var rawUrl = String(url);
             var normUrl = rawUrl.replace(/^(clue-me|clueme|intent):\/\//i, "https://clueme.wisp.uno/");
@@ -1673,17 +1727,37 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v34-nocache.js?v=193"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=193">
-    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=193">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=193">
-    <script src="/assets/useSafeArea.js?v=193"></script>
-    <script defer src="/assets/game-room-v20.js?v=193"></script>
-    <script defer src="/assets/game-ai-hud-v21.js?v=193"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v51.js?v=304"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=304">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=304">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=304">
+    <script src="/assets/useSafeArea.js?v=304"></script>
+    <script defer src="/assets/game-room-v20.js?v=304"></script>
+    <script defer src="/assets/game-ai-hud-v21.js?v=304"></script>
   
     
 
     
+<script>
+(function(){
+  function resetScroll(){
+    if(window.scrollY!==0||window.scrollX!==0)window.scrollTo(0,0);
+    if(document.body.scrollTop!==0)document.body.scrollTop=0;
+    if(document.documentElement.scrollTop!==0)document.documentElement.scrollTop=0;
+  }
+  window.addEventListener("scroll",resetScroll,{passive:true});
+  document.addEventListener("focusin",function(){
+    setTimeout(resetScroll,10);setTimeout(resetScroll,100);setTimeout(resetScroll,300);
+  },{passive:true});
+  document.addEventListener("focusout",function(){
+    setTimeout(resetScroll,10);setTimeout(resetScroll,100);
+  },{passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize",resetScroll,{passive:true});
+    window.visualViewport.addEventListener("scroll",resetScroll,{passive:true});
+  }
+})();
+</script>
 </head>
   <body>
     <div id="root"></div>
