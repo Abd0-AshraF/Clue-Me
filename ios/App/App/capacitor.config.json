@@ -5,7 +5,15 @@
 	"bundledWebRuntime": false,
 	"server": {
 		"androidScheme": "https",
-		"cleartext": true
+		"cleartext": true,
+		"allowNavigation": [
+			"clue-me.ai.studio",
+			"*.ai.studio",
+			"*.run.app",
+			"https://clue-me.ai.studio",
+			"https://ais-pre-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app",
+			"https://ais-dev-frb66bk6gdpkcntddasbba-520664284111.europe-west3.run.app"
+		]
 	},
 	"plugins": {
 		"SplashScreen": {
@@ -26,6 +34,7 @@
 		"AppPlugin",
 		"HapticsPlugin",
 		"ScreenOrientationPlugin",
+		"SharePlugin",
 		"StatusBarPlugin"
 	]
 }

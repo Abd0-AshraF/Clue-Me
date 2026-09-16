@@ -1,6 +1,32 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
+  <head><script>
+  (function() {
+    function isExtensionNoise(msg) {
+      if (!msg) return false;
+      var str = String(msg).toLowerCase();
+      return str.includes("receiving end does not exist") ||
+             str.includes("message port closed before a response was received") ||
+             str.includes("extension context invalidated") ||
+             str.includes("could not establish connection");
+    }
+    window.addEventListener("error", function(e) {
+      if (isExtensionNoise(e.message) || (e.error && isExtensionNoise(e.error.message))) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return true;
+      }
+    }, true);
+    window.addEventListener("unhandledrejection", function(e) {
+      var reason = e.reason;
+      var msg = reason ? (reason.message || reason) : "";
+      if (isExtensionNoise(msg)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  })();
+</script>
     <script>
       (function() {
         function installStoragePolyfill(prop) {
@@ -164,7 +190,7 @@
 
         var origFetch = window.fetch;
         if (origFetch) {
-          window.fetch = function(input, init) {
+          var proxyFetch = function(input, init) {
             try {
               if (window.__IS_DISCORD_ACTIVITY__) {
                 if (typeof input === 'string') {
@@ -180,6 +206,14 @@
             } catch(e) {}
             return origFetch.call(this, input, init);
           };
+          try {
+            Object.defineProperty(window, 'fetch', { get: function() { return proxyFetch; }, set: function(v) { proxyFetch = v; }, configurable: true, enumerable: true });
+          } catch(e1) {
+            try {
+              var proto = Object.getPrototypeOf(window) || Window.prototype;
+              if (proto) Object.defineProperty(proto, 'fetch', { get: function() { return proxyFetch; }, set: function(v) { proxyFetch = v; }, configurable: true, enumerable: true });
+            } catch(_) {}
+          }
         }
 
         var origXhrOpen = XMLHttpRequest.prototype.open;
@@ -1309,21 +1343,31 @@
           };
 
           var origFetch = window.fetch;
-          window.fetch = function(input, init) {
-            var reqUrl = typeof input === "string" ? input : (input && input.url ? input.url : String(input));
-            if (isDev && (reqUrl.indexOf("/api/") !== -1 || reqUrl.indexOf("auth") !== -1)) {
-              console.log("[ClueMe URL Interceptor] fetch request intercepted:", reqUrl, init);
-            }
-            if (typeof input === "string") {
-              input = rewriteUrl(input);
-            } else if (input && typeof input.url === "string") {
-              var rewritten = rewriteUrl(input.url);
-              if (rewritten !== input.url) {
-                input = new Request(rewritten, input);
+          if (origFetch) {
+            var interceptedFetch = function(input, init) {
+              var reqUrl = typeof input === "string" ? input : (input && input.url ? input.url : String(input));
+              if (isDev && (reqUrl.indexOf("/api/") !== -1 || reqUrl.indexOf("auth") !== -1)) {
+                console.log("[ClueMe URL Interceptor] fetch request intercepted:", reqUrl, init);
               }
+              if (typeof input === "string") {
+                input = rewriteUrl(input);
+              } else if (input && typeof input.url === "string") {
+                var rewritten = rewriteUrl(input.url);
+                if (rewritten !== input.url) {
+                  input = new Request(rewritten, input);
+                }
+              }
+              return origFetch.call(this, input, init);
+            };
+            try {
+              Object.defineProperty(window, 'fetch', { get: function() { return interceptedFetch; }, set: function(v) { interceptedFetch = v; }, configurable: true, enumerable: true });
+            } catch(e1) {
+              try {
+                var proto = Object.getPrototypeOf(window) || Window.prototype;
+                if (proto) Object.defineProperty(proto, 'fetch', { get: function() { return interceptedFetch; }, set: function(v) { interceptedFetch = v; }, configurable: true, enumerable: true });
+              } catch(_) {}
             }
-            return origFetch.call(this, input, init);
-          };
+          }
 
           var origOpen = XMLHttpRequest.prototype.open;
           XMLHttpRequest.prototype.open = function(method, url, async, user, password) {

@@ -22,12 +22,16 @@ function makeWindow(url, fetchMap = {}) {
     addEventListener(type, fn) { (this._listeners[type] ||= []).push(fn); }
     removeEventListener() {}
   };
-  window.fetch = async (input) => {
-    const full = new URL(typeof input === 'string' ? input : input.url, window.location.href);
-    const key = full.pathname + (full.search || '');
-    const body = fetchMap[key] ?? fetchMap[full.pathname] ?? {};
-    return { ok: true, json: async () => body };
-  };
+  Object.defineProperty(window, 'fetch', {
+    value: async (input) => {
+      const full = new URL(typeof input === 'string' ? input : input.url, window.location.href);
+      const key = full.pathname + (full.search || '');
+      const body = fetchMap[key] ?? fetchMap[full.pathname] ?? {};
+      return { ok: true, json: async () => body };
+    },
+    writable: true,
+    configurable: true
+  });
   return window;
 }
 

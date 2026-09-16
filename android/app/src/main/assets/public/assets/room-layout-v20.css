@@ -6418,3 +6418,511 @@ body:not([dir="rtl"]) .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-
   color: var(--cm-card-assassin-ink, #ffffff) !important;
   border-color: color-mix(in srgb, var(--cm-card-assassin) 70%, white 30%) !important;
 }
+
+/* ==========================================================================
+   Team-Themed Player Card Backgrounds (Explicit Support for All 5 Themes)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Default / Light Theme (فاتح)
+   -------------------------------------------------------------------------- */
+.cm-player-chip-red,
+.cm-team-panel-red .cm-player-chip {
+  background: linear-gradient(135deg, rgba(229, 62, 62, 0.15) 0%, rgba(229, 62, 62, 0.05) 100%), var(--cm-surface, #ffffff) !important;
+  border: 1.5px solid rgba(229, 62, 62, 0.42) !important;
+  box-shadow: 0 2px 6px rgba(229, 62, 62, 0.12) !important;
+  color: #7f1d1d !important;
+}
+.cm-player-chip-red:hover,
+.cm-team-panel-red .cm-player-chip:hover {
+  background: linear-gradient(135deg, rgba(229, 62, 62, 0.22) 0%, rgba(229, 62, 62, 0.1) 100%), var(--cm-surface, #ffffff) !important;
+  border-color: rgba(229, 62, 62, 0.7) !important;
+}
+
+.cm-player-chip-blue,
+.cm-team-panel-blue .cm-player-chip {
+  background: linear-gradient(135deg, rgba(49, 130, 206, 0.15) 0%, rgba(49, 130, 206, 0.05) 100%), var(--cm-surface, #ffffff) !important;
+  border: 1.5px solid rgba(49, 130, 206, 0.42) !important;
+  box-shadow: 0 2px 6px rgba(49, 130, 206, 0.12) !important;
+  color: #1e3a8a !important;
+}
+.cm-player-chip-blue:hover,
+.cm-team-panel-blue .cm-player-chip:hover {
+  background: linear-gradient(135deg, rgba(49, 130, 206, 0.22) 0%, rgba(49, 130, 206, 0.1) 100%), var(--cm-surface, #ffffff) !important;
+  border-color: rgba(49, 130, 206, 0.7) !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Dark Theme (داكن)
+   -------------------------------------------------------------------------- */
+html.dark:not(.mani):not(.mot) .cm-player-chip-red,
+html.dark:not(.mani):not(.mot) .cm-team-panel-red .cm-player-chip,
+.dark:not(.mani):not(.mot) .cm-player-chip-red,
+.dark:not(.mani):not(.mot) .cm-team-panel-red .cm-player-chip {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.28) 0%, rgba(239, 68, 68, 0.12) 100%), #1c1417 !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.55) !important;
+  color: #fecaca !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+}
+
+html.dark:not(.mani):not(.mot) .cm-player-chip-blue,
+html.dark:not(.mani):not(.mot) .cm-team-panel-blue .cm-player-chip,
+.dark:not(.mani):not(.mot) .cm-player-chip-blue,
+.dark:not(.mani):not(.mot) .cm-team-panel-blue .cm-player-chip {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.28) 0%, rgba(59, 130, 246, 0.12) 100%), #121929 !important;
+  border: 1.5px solid rgba(59, 130, 246, 0.55) !important;
+  color: #bfdbfe !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Mani Light Theme (ماني)
+   -------------------------------------------------------------------------- */
+html.mani:not(.dark) .cm-player-chip-red,
+html.mani:not(.dark) .cm-team-panel-red .cm-player-chip,
+.mani:not(.dark) .cm-player-chip-red,
+.mani:not(.dark) .cm-team-panel-red .cm-player-chip {
+  background: linear-gradient(135deg, rgba(225, 130, 153, 0.24) 0%, rgba(225, 130, 153, 0.08) 100%), #fffcfd !important;
+  border: 1.5px solid rgba(225, 130, 153, 0.6) !important;
+  color: #881337 !important;
+  box-shadow: 0 2px 6px rgba(225, 130, 153, 0.18) !important;
+}
+
+html.mani:not(.dark) .cm-player-chip-blue,
+html.mani:not(.dark) .cm-team-panel-blue .cm-player-chip,
+.mani:not(.dark) .cm-player-chip-blue,
+.mani:not(.dark) .cm-team-panel-blue .cm-player-chip {
+  background: linear-gradient(135deg, rgba(100, 160, 230, 0.24) 0%, rgba(100, 160, 230, 0.08) 100%), #f8faff !important;
+  border: 1.5px solid rgba(100, 160, 230, 0.6) !important;
+  color: #1e3a8a !important;
+  box-shadow: 0 2px 6px rgba(100, 160, 230, 0.18) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Mani Dark Theme (ماني داكن)
+   -------------------------------------------------------------------------- */
+html.mani-dark .cm-player-chip-red,
+html.mani-dark .cm-team-panel-red .cm-player-chip,
+html.dark.mani .cm-player-chip-red,
+html.dark.mani .cm-team-panel-red .cm-player-chip,
+.mani-dark .cm-player-chip-red,
+.mani-dark .cm-team-panel-red .cm-player-chip {
+  background: linear-gradient(135deg, rgba(225, 110, 140, 0.32) 0%, rgba(225, 110, 140, 0.14) 100%), #231622 !important;
+  border: 1.5px solid rgba(225, 110, 140, 0.65) !important;
+  color: #fce7f3 !important;
+  box-shadow: 0 2px 8px rgba(225, 110, 140, 0.25) !important;
+}
+
+html.mani-dark .cm-player-chip-blue,
+html.mani-dark .cm-team-panel-blue .cm-player-chip,
+html.dark.mani .cm-player-chip-blue,
+html.dark.mani .cm-team-panel-blue .cm-player-chip,
+.mani-dark .cm-player-chip-blue,
+.mani-dark .cm-team-panel-blue .cm-player-chip {
+  background: linear-gradient(135deg, rgba(120, 150, 240, 0.32) 0%, rgba(120, 150, 240, 0.14) 100%), #161a2c !important;
+  border: 1.5px solid rgba(120, 150, 240, 0.65) !important;
+  color: #e0e7ff !important;
+  box-shadow: 0 2px 8px rgba(120, 150, 240, 0.25) !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. Mot Theme (Mot - Midnight Navy Space)
+   -------------------------------------------------------------------------- */
+html.mot .cm-player-chip-red,
+html.mot .cm-team-panel-red .cm-player-chip,
+.mot .cm-player-chip-red,
+.mot .cm-team-panel-red .cm-player-chip {
+  background: linear-gradient(135deg, rgba(235, 75, 75, 0.3) 0%, rgba(235, 75, 75, 0.12) 100%), #1a1622 !important;
+  border: 1.5px solid rgba(235, 75, 75, 0.6) !important;
+  color: #fee2e2 !important;
+  box-shadow: 0 2px 8px rgba(235, 75, 75, 0.25) !important;
+}
+
+html.mot .cm-player-chip-blue,
+html.mot .cm-team-panel-blue .cm-player-chip,
+.mot .cm-player-chip-blue,
+.mot .cm-team-panel-blue .cm-player-chip {
+  background: linear-gradient(135deg, rgba(50, 150, 240, 0.3) 0%, rgba(50, 150, 240, 0.12) 100%), #101e30 !important;
+  border: 1.5px solid rgba(50, 150, 240, 0.6) !important;
+  color: #e0f2fe !important;
+  box-shadow: 0 2px 8px rgba(50, 150, 240, 0.25) !important;
+}
+
+/* --- Top Teambar Players (In-game Header Roster) --- */
+.cm-teambar-red .cm-teambar-player {
+  background: rgba(229, 62, 62, 0.18) !important;
+  border: 1px solid rgba(229, 62, 62, 0.4) !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+}
+.cm-teambar-blue .cm-teambar-player {
+  background: rgba(49, 130, 206, 0.18) !important;
+  border: 1px solid rgba(49, 130, 206, 0.4) !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+}
+
+/* ==========================================================================
+   INTEGRATED LIVE TURN INDICATOR & THEMES (5 Themes Support)
+   ========================================================================== */
+
+.cm-teambar {
+  max-height: clamp(5.2rem, 18dvh, 8.2rem) !important;
+  flex-shrink: 0 !important;
+}
+
+@media (min-width: 768px) {
+  .cm-v20 .cm-teambar {
+    max-height: 11.5rem !important;
+  }
+}
+
+.cm-v20 .cm-teambar-side {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+.cm-teambar-players {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.28rem !important;
+  width: 100% !important;
+  flex: 1 !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  padding: 0.15rem 0.1rem !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent !important;
+  touch-action: pan-y !important;
+}
+
+.cm-teambar-players::-webkit-scrollbar {
+  width: 3px !important;
+}
+
+.cm-teambar-players::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.cm-teambar-players::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28) !important;
+  border-radius: 9999px !important;
+}
+
+.cm-v20 .cm-teambar-head,
+html.cm-v20.cm-ui-phone .cm-teambar-head,
+html.cm-v20 .cm-teambar-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 0.28rem !important;
+  font-size: clamp(0.72rem, 2.2vw, 0.8rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  flex-shrink: 0 !important;
+}
+
+.cm-v20 .cm-teambar-title-group,
+html.cm-v20 .cm-teambar-title-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.28rem !important;
+  font-size: clamp(0.72rem, 2.2vw, 0.8rem) !important;
+  font-weight: 800 !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.cm-v20 .cm-teambar-icon-badge,
+html.cm-v20 .cm-teambar-icon-badge {
+  width: clamp(1.2rem, 3.4vw, 1.4rem) !important;
+  height: clamp(1.2rem, 3.4vw, 1.4rem) !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+/* Collapse empty vertical gaps below teambar and above board to maximize teambar roster space */
+.cm-v20 .cm-game-shell > main > p,
+.cm-v20 .cm-game-shell > main > [aria-live="polite"] {
+  margin-top: 0.1rem !important;
+  margin-bottom: 0.15rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.cm-v20 .cm-teambar-count,
+html.cm-v20.cm-ui-phone .cm-teambar-count,
+html.cm-v20 .cm-teambar-count {
+  min-width: 1.5rem !important;
+  padding: 0.06rem 0.38rem !important;
+  font-size: clamp(0.68rem, 2vw, 0.74rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  flex-shrink: 0 !important;
+}
+
+/* --- Shield/Sword Icon Badge Pulse Animation (Gentle & Subtle) --- */
+.cm-teambar-icon-badge {
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.cm-teambar-turn-active-red .cm-teambar-icon-badge {
+  animation: cm-shield-pulse-red 1.8s infinite ease-in-out !important;
+  z-index: 2 !important;
+}
+
+.cm-teambar-turn-active-blue .cm-teambar-icon-badge {
+  animation: cm-shield-pulse-blue 1.8s infinite ease-in-out !important;
+  z-index: 2 !important;
+}
+
+@keyframes cm-shield-pulse-red {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes cm-shield-pulse-blue {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.cm-v20 .cm-teambar-live-turn-badge,
+.cm-teambar-live-turn-badge:not(.cm-teambar-live-winner-badge) {
+  display: none !important;
+}
+  border-radius: 9999px !important;
+  font-size: clamp(0.64rem, 1.9vw, 0.7rem) !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  animation: cm-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  max-width: 62% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.cm-teambar-live-pulse {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: currentColor !important;
+  animation: cm-live-turn-pulse 1.1s ease-in-out infinite alternate !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+@keyframes cm-live-turn-pulse {
+  0% { transform: scale(0.75); opacity: 0.4; }
+  100% { transform: scale(1.35); opacity: 1; }
+}
+
+.cm-teambar-live-clue {
+  display: inline-block !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  padding: 0.1rem 0.4rem !important;
+  border-radius: 9999px !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  margin-inline-start: 0.15rem !important;
+  max-width: 120px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* --- Theme 1: Default Light (فاتح) --- */
+.cm-teambar-turn-active-red {
+  border-color: #e53e3e !important;
+}
+.cm-teambar-turn-active-red .cm-teambar-icon-badge {
+  background: #e53e3e !important;
+}
+.cm-teambar-live-turn-badge-red {
+  background: #e53e3e !important;
+  color: #ffffff !important;
+}
+
+.cm-teambar-turn-active-blue {
+  border-color: #3182ce !important;
+}
+.cm-teambar-turn-active-blue .cm-teambar-icon-badge {
+  background: #3182ce !important;
+}
+.cm-teambar-live-turn-badge-blue {
+  background: #3182ce !important;
+  color: #ffffff !important;
+}
+
+/* --- Theme 2: Dark (داكن) --- */
+html.dark:not(.mani):not(.mot) .cm-teambar-turn-active-red,
+.dark:not(.mani):not(.mot) .cm-teambar-turn-active-red {
+  border-color: #ef4444 !important;
+}
+html.dark:not(.mani):not(.mot) .cm-teambar-turn-active-red .cm-teambar-icon-badge,
+.dark:not(.mani):not(.mot) .cm-teambar-turn-active-red .cm-teambar-icon-badge {
+  background: #ef4444 !important;
+}
+html.dark:not(.mani):not(.mot) .cm-teambar-live-turn-badge-red,
+.dark:not(.mani):not(.mot) .cm-teambar-live-turn-badge-red {
+  background: rgba(239, 68, 68, 0.35) !important;
+  color: #fee2e2 !important;
+  border: 1px solid rgba(239, 68, 68, 0.7) !important;
+}
+
+html.dark:not(.mani):not(.mot) .cm-teambar-turn-active-blue,
+.dark:not(.mani):not(.mot) .cm-teambar-turn-active-blue {
+  border-color: #3b82f6 !important;
+}
+html.dark:not(.mani):not(.mot) .cm-teambar-turn-active-blue .cm-teambar-icon-badge,
+.dark:not(.mani):not(.mot) .cm-teambar-turn-active-blue .cm-teambar-icon-badge {
+  background: #3b82f6 !important;
+}
+html.dark:not(.mani):not(.mot) .cm-teambar-live-turn-badge-blue,
+.dark:not(.mani):not(.mot) .cm-teambar-live-turn-badge-blue {
+  background: rgba(59, 130, 246, 0.35) !important;
+  color: #dbeafe !important;
+  border: 1px solid rgba(59, 130, 246, 0.7) !important;
+}
+
+/* --- Theme 3: Mani (ماني) --- */
+html.mani:not(.dark) .cm-teambar-turn-active-red,
+.mani:not(.dark) .cm-teambar-turn-active-red {
+  border-color: #e18299 !important;
+}
+html.mani:not(.dark) .cm-teambar-turn-active-red .cm-teambar-icon-badge,
+.mani:not(.dark) .cm-teambar-turn-active-red .cm-teambar-icon-badge {
+  background: #e18299 !important;
+}
+html.mani:not(.dark) .cm-teambar-live-turn-badge-red,
+.mani:not(.dark) .cm-teambar-live-turn-badge-red {
+  background: #e18299 !important;
+  color: #ffffff !important;
+}
+
+html.mani:not(.dark) .cm-teambar-turn-active-blue,
+.mani:not(.dark) .cm-teambar-turn-active-blue {
+  border-color: #64a0e6 !important;
+}
+html.mani:not(.dark) .cm-teambar-turn-active-blue .cm-teambar-icon-badge,
+.mani:not(.dark) .cm-teambar-turn-active-blue .cm-teambar-icon-badge {
+  background: #64a0e6 !important;
+}
+html.mani:not(.dark) .cm-teambar-live-turn-badge-blue,
+.mani:not(.dark) .cm-teambar-live-turn-badge-blue {
+  background: #64a0e6 !important;
+  color: #ffffff !important;
+}
+
+/* --- Theme 4: Mani Dark (ماني داكن) --- */
+html.mani-dark .cm-teambar-turn-active-red,
+html.dark.mani .cm-teambar-turn-active-red,
+.mani-dark .cm-teambar-turn-active-red {
+  border-color: #f472b6 !important;
+}
+html.mani-dark .cm-teambar-turn-active-red .cm-teambar-icon-badge,
+html.dark.mani .cm-teambar-turn-active-red .cm-teambar-icon-badge,
+.mani-dark .cm-teambar-turn-active-red .cm-teambar-icon-badge {
+  background: #f472b6 !important;
+}
+html.mani-dark .cm-teambar-live-turn-badge-red,
+html.dark.mani .cm-teambar-live-turn-badge-red,
+.mani-dark .cm-teambar-live-turn-badge-red {
+  background: rgba(244, 114, 182, 0.35) !important;
+  color: #fce7f3 !important;
+  border: 1px solid rgba(244, 114, 182, 0.7) !important;
+}
+
+html.mani-dark .cm-teambar-turn-active-blue,
+html.dark.mani .cm-teambar-turn-active-blue,
+.mani-dark .cm-teambar-turn-active-blue {
+  border-color: #818cf8 !important;
+}
+html.mani-dark .cm-teambar-turn-active-blue .cm-teambar-icon-badge,
+html.dark.mani .cm-teambar-turn-active-blue .cm-teambar-icon-badge,
+.mani-dark .cm-teambar-turn-active-blue .cm-teambar-icon-badge {
+  background: #818cf8 !important;
+}
+html.mani-dark .cm-teambar-live-turn-badge-blue,
+html.dark.mani .cm-teambar-live-turn-badge-blue,
+.mani-dark .cm-teambar-live-turn-badge-blue {
+  background: rgba(129, 140, 248, 0.35) !important;
+  color: #e0e7ff !important;
+  border: 1px solid rgba(129, 140, 248, 0.7) !important;
+}
+
+/* --- Theme 5: Mot (الكحلي الفضائي) --- */
+html.mot .cm-teambar-turn-active-red,
+.mot .cm-teambar-turn-active-red {
+  border-color: #f87171 !important;
+}
+html.mot .cm-teambar-turn-active-red .cm-teambar-icon-badge,
+.mot .cm-teambar-turn-active-red .cm-teambar-icon-badge {
+  background: #f87171 !important;
+}
+html.mot .cm-teambar-live-turn-badge-red,
+.mot .cm-teambar-live-turn-badge-red {
+  background: rgba(248, 113, 113, 0.38) !important;
+  color: #fee2e2 !important;
+  border: 1px solid rgba(248, 113, 113, 0.75) !important;
+}
+
+html.mot .cm-teambar-turn-active-blue,
+.mot .cm-teambar-turn-active-blue {
+  border-color: #38bdf8 !important;
+}
+html.mot .cm-teambar-turn-active-blue .cm-teambar-icon-badge,
+.mot .cm-teambar-turn-active-blue .cm-teambar-icon-badge {
+  background: #38bdf8 !important;
+}
+html.mot .cm-teambar-live-turn-badge-blue,
+.mot .cm-teambar-live-turn-badge-blue {
+  background: rgba(56, 189, 248, 0.38) !important;
+  color: #e0f2fe !important;
+  border: 1px solid rgba(56, 189, 248, 0.75) !important;
+}
+
+.cm-teambar-live-winner-badge {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #ffffff !important;
+  border: 1px solid #fef3c7 !important;
+}
+
+
+
+
+/* Disable word board cards glowing/lighting up when clue input is focused */
+.cm-v20 .cm-board-clue-writing [data-chosen=false] .cm-face.cm-face-back,
+.cm-v20 .cm-board-clue-writing [data-chosen=false] .cm-face.cm-face-front,
+.cm-board-clue-writing [data-chosen=false] .cm-face.cm-face-back,
+.cm-board-clue-writing [data-chosen=false] .cm-face.cm-face-front,
+.cm-board-clue-writing .cm-face {
+  box-shadow: none !important;
+}

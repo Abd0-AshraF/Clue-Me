@@ -4,7 +4,10 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('../source/index.server.js', import.meta.url), 'utf8');
-const clientBundle = fs.readFileSync(new URL('../public/assets/index-discord-v30.js', import.meta.url), 'utf8');
+const bundlePath = fs.existsSync(new URL('../public/assets/index-discord-v51.js', import.meta.url))
+  ? '../public/assets/index-discord-v51.js'
+  : '../public/assets/index-discord-v30.js';
+const clientBundle = fs.readFileSync(new URL(bundlePath, import.meta.url), 'utf8');
 
 function loadGameEngine() {
   const start = source.indexOf('var ARABIC_DIGITS_START = 1632;');
@@ -138,7 +141,7 @@ test('reconnect and refresh paths request authoritative snapshots', () => {
   assert.match(source, /sendAuthoritativeSnapshot\(socket, code, player\)/);
   assert.match(clientBundle, /window\.addEventListener\("focus",\$\)/);
   assert.match(clientBundle, /window\.addEventListener\("online",\$\)/);
-  assert.match(clientBundle, /window\.setInterval\(\$,2500\)/);
+  assert.match(clientBundle, /document\.addEventListener\("visibilitychange"/);
 });
 
 test('new round logic supports randomized rematch and START_GAME permission path', () => {
@@ -208,14 +211,33 @@ test('Discord Activity environment suppresses native app banners and handles pop
   const indexJs = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
   assert.match(indexJs, /accountToken:S\.string\(\)\.max\(128\)\.optional\(\)\.nullable\(\)/);
 
-  const activeBundlePath = fs.existsSync(new URL('../public/assets/index-discord-v34-nocache.js', import.meta.url))
-    ? '../public/assets/index-discord-v34-nocache.js'
-    : fs.existsSync(new URL('../public/assets/index-discord-v33.js', import.meta.url))
-      ? '../public/assets/index-discord-v33.js'
-      : fs.existsSync(new URL('../public/assets/index-discord-v32.js', import.meta.url))
-        ? '../public/assets/index-discord-v32.js'
-        : '../public/assets/index-discord-v30.js';
+  const activeBundlePath = fs.existsSync(new URL('../public/assets/index-discord-v51.js', import.meta.url))
+    ? '../public/assets/index-discord-v51.js'
+    : fs.existsSync(new URL('../public/assets/index-discord-v34-nocache.js', import.meta.url))
+      ? '../public/assets/index-discord-v34-nocache.js'
+      : fs.existsSync(new URL('../public/assets/index-discord-v33.js', import.meta.url))
+        ? '../public/assets/index-discord-v33.js'
+        : fs.existsSync(new URL('../public/assets/index-discord-v32.js', import.meta.url))
+          ? '../public/assets/index-discord-v32.js'
+          : '../public/assets/index-discord-v30.js';
   const discordBundle = fs.readFileSync(new URL(activeBundlePath, import.meta.url), 'utf8');
-  assert.match(discordBundle, /const jw=\["identify","guilds","applications\.commands/);
+  assert.match(discordBundle, /const jw=\["identify","guilds"\]/);
 });
+
+test('turn timer options include 180s, 240s, 300s and opponent can end turn when timer expires', () => {
+  const indexJs = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8');
+  assert.match(indexJs, /\[0,30,45,60,90,120,180,240,300\]/);
+  assert.match(indexJs, /isOpponentForce/);
+
+  const serverJs = fs.readFileSync(new URL('../source/index.server.js', import.meta.url), 'utf8');
+  assert.match(serverJs, /const allowed = \[0, 30, 45, 60, 90, 120, 180, 240, 300\];/);
+  assert.match(serverJs, /isOpponentForce/);
+
+  const activeBundle = fs.readFileSync(new URL('../public/assets/index-discord-v51.js', import.meta.url), 'utf8');
+  assert.match(activeBundle, /\[0,60,90,120,180,240,300\]/);
+  assert.match(activeBundle, /TurnCountdownBadge/);
+  assert.match(activeBundle, /cm-turn-hint/);
+  assert.match(activeBundle, /isOpponent&&isTimeExpired/);
+});
+
 

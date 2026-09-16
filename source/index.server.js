@@ -91,6 +91,7 @@ function nextGameId() {
   return `g-${Date.now().toString(36)}-${idCounter}`;
 }
 function createGame(options) {
+  const turnTimer = options.turnTimer ?? 90;
   const { language, words, rng = Math.random } = options;
   if (words.length < BOARD_SIZE) {
     throw new Error(`createGame: need at least ${BOARD_SIZE} words, got ${words.length}`);
@@ -113,7 +114,9 @@ function createGame(options) {
     maxGuesses: 0,
     winner: null,
     winReason: null,
-    moveCount: 0
+    moveCount: 0,
+    turnTimer,
+    turnDeadline: turnTimer > 0 ? Date.now() + turnTimer * 1000 : null
   };
 }
 function remainingCards(state, team) {
@@ -230,9 +233,9 @@ function guess(state, index) {
   endTurnInternal(state);
   return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: true, index };
 }
-function endTurn(state) {
+function endTurn(state, force = false) { if (state.turnTimer > 0) { state.turnDeadline = Date.now() + state.turnTimer * 1000; } else { state.turnDeadline = null; } 
   if (state.winner) return { ok: false, code: "GAME_OVER" };
-  if (state.phase !== "guess") return { ok: false, code: "NOT_GUESS_PHASE" };
+  if (state.phase !== "guess" && !force) return { ok: false, code: "NOT_GUESS_PHASE" };
   state.moveCount += 1;
   endTurnInternal(state);
   return { ok: true, kind: "end-turn", endedTurn: true };
@@ -252,6 +255,8 @@ function getView(state, viewer) {
   const clueRemaining = Math.max(0, clueTarget - clueSelections);
   return {
     gameId: state.id,
+    turnTimer: state.turnTimer ?? 0,
+    turnDeadline: state.winner ? null : state.turnDeadline,
     revision: state.moveCount,
     stateVersion: state.moveCount,
     phase: state.phase,
@@ -1307,7 +1312,7 @@ var RoomError = class extends Error {
   }
 };
 var CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-var MAX_PLAYERS = 12;
+var MAX_PLAYERS = 24;
 var ROOM_TTL_MS = 12 * 60 * 60 * 1e3;
 var nameSchema = z.string().trim().min(1).max(24);
 var codeSchema = z.string().trim().toUpperCase().regex(/^[A-Z]{4}$/);
@@ -1337,10 +1342,11 @@ var activityRoomSchema = z.object({
   packId: z.string().max(64).optional()
 });
 var updatePlayerSchema = z.object({
+  name: playerNameSchema.optional(),
   team: teamSchema.optional(),
   role: roleSchema.optional(),
   ready: z.boolean().optional()
-}).refine((v) => v.team !== void 0 || v.role !== void 0 || v.ready !== void 0, {
+}).refine((v) => v.name !== void 0 || v.team !== void 0 || v.role !== void 0 || v.ready !== void 0, {
   message: "empty patch"
 });
 function randomCode() {
@@ -1416,7 +1422,7 @@ var RoomStore = class {
       status: "waiting",
       ownerId: playerId,
       hostId: playerId,
-      locks: { teams: { red: false, blue: false }, roles: { captain: false, operative: false } },
+      locks: { teams: { red: false, blue: false }, roles: { captain: false, operative: false } }, turnTimer: 90,
       maxPlayers: MAX_PLAYERS,
       players: [
         {
@@ -1549,6 +1555,7 @@ var RoomStore = class {
     const player = this.player(room, playerId);
     const before = { team: player.team, role: player.role };
     this.assertSeatAllowed(room, playerId, patch.team ?? void 0, patch.role);
+    if (patch.name !== void 0 && patch.name.trim()) player.name = patch.name.trim();
     if (patch.team !== void 0) player.team = patch.team;
     if (patch.role !== void 0) {
       player.role = patch.role;
@@ -1690,6 +1697,17 @@ var RoomStore = class {
     return room;
   }
   /** Owner-controlled player cap — never below the people already inside. */
+  setTurnTimer(code, byPlayerId, turnTimer) {
+    const room = this.get(code);
+    this.require(room, byPlayerId, "MANAGE_ROOM");
+    const allowed = [0, 30, 45, 60, 90, 120, 180, 240, 300];
+    if (!allowed.includes(turnTimer)) {
+      throw new RoomError("INVALID_LIMIT", "Invalid timer option");
+    }
+    room.turnTimer = turnTimer;
+    room.updatedAt = (new Date()).toISOString();
+    return room;
+  }
   setMaxPlayers(code, byPlayerId, maxPlayers) {
     const room = this.get(code);
     this.require(room, byPlayerId, "MANAGE_ROOM");
@@ -2149,6 +2167,20 @@ function mountRoomRoutes(app2, store = new RoomStore(), options = {}) {
       handleError(res, err);
     }
   });
+  app2.post("/api/rooms/:code/admin/timer", (req, res) => {
+    try {
+      const input = z.object({ byPlayerId: byPlayer, turnTimer: z.number() }).parse(req.body);
+      const code = codeParam(req.params.code);
+      const actor = store.get(code).players.find((candidate) => candidate.id === input.byPlayerId);
+      const room = store.setTurnTimer(code, input.byPlayerId, input.turnTimer);
+      gameStore2?.addEvent(room.code, "timer", actor?.name ?? null, { value: room.turnTimer });
+      push(room);
+      pushEvents(room);
+      res.json({ room });
+    } catch (err) {
+      handleError(res, err);
+    }
+  });
   app2.post("/api/rooms/:code/admin/limits", (req, res) => {
     try {
       const input = z.object({ byPlayerId: byPlayer, maxPlayers: z.number() }).parse(req.body);
@@ -2252,7 +2284,7 @@ var GameRoomStore = class _GameRoomStore {
       extraWords: overrides.extra,
       disabled: overrides.disabled
     });
-    const game = createGame({ language: room.language, words });
+    const game = createGame({ language: room.language, words, turnTimer: room.turnTimer ?? 90 });
     this.games.set(room.code, game);
     return game;
   }
@@ -2268,7 +2300,7 @@ var GameRoomStore = class _GameRoomStore {
       extraWords: overrides.extra,
       disabled: overrides.disabled
     });
-    const game = createGame({ language: room.language, words });
+    const game = createGame({ language: room.language, words, turnTimer: room.turnTimer ?? 90 });
     this.games.set(room.code, game);
     this.pointers.delete(room.code);
     return game;
@@ -3845,13 +3877,13 @@ function viewerFor(player) {
   return { kind: player.role, team: player.team };
 }
 function initLive(httpServer, roomStore2, gameStore2, authStore2, adminStore2) {
-  const io = new Server(httpServer, { cors: { origin: true } });
+  const io = new Server(httpServer, { cors: { origin: true }, pingInterval: 5000, pingTimeout: 10000, transports: ["websocket", "polling"], allowEIO3: true, maxHttpBufferSize: 1e6 });
   const chatRate = /* @__PURE__ */ new Map();
   const viewBroadcastQueues = /* @__PURE__ */ new Map();
   const seatSockets = /* @__PURE__ */ new Map();
   const offlineTimers = /* @__PURE__ */ new Map();
   const processedAuthoritativeActions = /* @__PURE__ */ new Map();
-  const PRESENCE_GRACE_MS = 4500;
+  const PRESENCE_GRACE_MS = 15000;
   const ACTION_DEDUP_TTL_MS = 90 * 1000;
   const ACTION_DEDUP_MAX = 256;
   const seatKey = (code, playerId) => `${code}:${playerId}`;
@@ -3948,23 +3980,21 @@ function initLive(httpServer, roomStore2, gameStore2, authStore2, adminStore2) {
     return true;
   };
   const broadcastViews = (code) => {
-    const previous = viewBroadcastQueues.get(code) ?? Promise.resolve();
-    const next = previous
-      .catch(() => {})
-      .then(async () => {
-        const sockets = await io.in(channel(code)).fetchSockets();
-        for (const socket of sockets) {
+    try {
+      const roomChan = channel(code);
+      const socketIds = io.sockets.adapter.rooms.get(roomChan);
+      if (!socketIds || socketIds.size === 0) return;
+      for (const sid of socketIds) {
+        const socket = io.sockets.sockets.get(sid);
+        if (socket) {
           try {
             emitGameView(socket, code);
-          } catch {
-          }
+          } catch (e) {}
         }
-      })
-      .catch(() => {});
-    viewBroadcastQueues.set(code, next);
-    void next.finally(() => {
-      if (viewBroadcastQueues.get(code) === next) viewBroadcastQueues.delete(code);
-    });
+      }
+    } catch (err) {
+      console.error("[server] broadcastViews error:", err);
+    }
   };
   const broadcastEvents2 = (code) => {
     io.to(channel(code)).emit("game:events", { events: gameStore2.eventsFor(code) });
@@ -4184,7 +4214,9 @@ function initLive(httpServer, roomStore2, gameStore2, authStore2, adminStore2) {
           socket.emit("game:error", { code: "FORBIDDEN" });
           return;
         }
-        const isTurn = viewer.team === game.turnTeam && (action.type === "clue" ? viewer.kind === "captain" : viewer.kind === "operative");
+        const isExpired = !!(game.turnDeadline && Date.now() >= game.turnDeadline);
+        const isOpponentForce = action.type === "endTurn" && isExpired && viewer.team && viewer.team !== game.turnTeam;
+        const isTurn = (viewer.team === game.turnTeam && (action.type === "clue" ? viewer.kind === "captain" : viewer.kind === "operative")) || isOpponentForce;
         if (!isTurn) {
           socket.emit("game:error", { code: "FORBIDDEN" });
           sendAuthoritativeSnapshot(socket, code, player);
@@ -4196,7 +4228,7 @@ function initLive(httpServer, roomStore2, gameStore2, authStore2, adminStore2) {
         } else if (action.type === "guess") {
           result = guess(game, action.index);
         } else {
-          result = endTurn(game);
+          result = endTurn(game, isOpponentForce);
         }
         if (!result.ok) {
           socket.emit("game:error", { code: result.code });
@@ -4604,3 +4636,7 @@ export {
   AdminStore
 };
 //# sourceMappingURL=index.js.map
+
+setInterval(() => {
+  // Timer expiration: turns do not auto-end automatically; opponent team can end turn using the End Turn button
+}, 1000);

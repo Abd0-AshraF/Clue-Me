@@ -1986,62 +1986,72 @@
 
   /* ---- capture real errors from the join/create calls ---- */
   try {
-    var _fetch = window.fetch.bind(window);
-    window.fetch = function (input, init) {
-      var url = typeof input === "string" ? input : (input && input.url) || "";
-      /* watch: create room, join room, and the join page's room lookup */
-      var isRoomCall = /^\/api\/rooms\/[A-Za-z0-9]{4}$/.test(url) && (!init || !init.method || /get/i.test(init.method || "GET"));
-      if (!isRoomCall) return _fetch(input, init);
-      return _fetch(input, init).then(
-        function (res) {
-          /* capture auth header for our own admin calls */
-          try {
-            var h = init && init.headers;
-            if (h && h.authorization && /\/api\/admin/.test(url)) {
-              window.__cmAdminToken = h.authorization;
-            }
-          } catch (e) {}
-          if (res.ok && /\/api\/admin\/users|\/api\/admin\/audit|\/api\/auth\/(profile|me)/.test(url)) {
+    var _fetch = window.fetch ? window.fetch.bind(window) : null;
+    if (_fetch) {
+      var roomFetch = function (input, init) {
+        var url = typeof input === "string" ? input : (input && input.url) || "";
+        /* watch: create room, join room, and the join page's room lookup */
+        var isRoomCall = /^\/api\/rooms\/[A-Za-z0-9]{4}$/.test(url) && (!init || !init.method || /get/i.test(init.method || "GET"));
+        if (!isRoomCall) return _fetch(input, init);
+        return _fetch(input, init).then(
+          function (res) {
+            /* capture auth header for our own admin calls */
             try {
-              var c2 = res.clone ? res.clone() : null;
-              if (c2) c2.json().then(function (d) {
-                if (d && d.users) window.__cmAdminUsers = { at: Date.now(), users: d.users };
-                if (d && d.entries) window.__cmAdminAudit = { at: Date.now(), entries: d.entries };
-                if (d && d.user && !d.users) window.__cmMe = d.user;
-                if (d && d.users && !window.__cmMe && window.__cmAdminToken) {
-                  fetch("/api/auth/me", { headers: { authorization: window.__cmAdminToken } })
-                    .then(function (r) { return r.json(); })
-                    .then(function (md) {
-                      if (md && md.user) {
-                        window.__cmMe = md.user;
-                        try { syncAdminPanel(); } catch (e) {}
-                      }
-                    }).catch(function () {});
-                }
-                try { syncAdminPanel(); } catch (e) {}
-              }).catch(function () {});
+              var h = init && init.headers;
+              if (h && h.authorization && /\/api\/admin/.test(url)) {
+                window.__cmAdminToken = h.authorization;
+              }
             } catch (e) {}
-          }
-          if (res.ok) {
-            lastRoomError = null;
-          } else {
-            var cloned = res.clone ? res.clone() : null;
-            if (cloned) {
-              cloned.json().then(function (data) {
-                lastRoomError = { code: (data && data.error && data.error.code) || "INTERNAL", message: (data && data.error && data.error.message) || "" };
-              }).catch(function () {
-                lastRoomError = { code: "INTERNAL", message: "" };
-              });
+            if (res.ok && /\/api\/admin\/users|\/api\/admin\/audit|\/api\/auth\/(profile|me)/.test(url)) {
+              try {
+                var c2 = res.clone ? res.clone() : null;
+                if (c2) c2.json().then(function (d) {
+                  if (d && d.users) window.__cmAdminUsers = { at: Date.now(), users: d.users };
+                  if (d && d.entries) window.__cmAdminAudit = { at: Date.now(), entries: d.entries };
+                  if (d && d.user && !d.users) window.__cmMe = d.user;
+                  if (d && d.users && !window.__cmMe && window.__cmAdminToken) {
+                    fetch("/api/auth/me", { headers: { authorization: window.__cmAdminToken } })
+                      .then(function (r) { return r.json(); })
+                      .then(function (md) {
+                        if (md && md.user) {
+                          window.__cmMe = md.user;
+                          try { syncAdminPanel(); } catch (e) {}
+                        }
+                      }).catch(function () {});
+                  }
+                  try { syncAdminPanel(); } catch (e) {}
+                }).catch(function () {});
+              } catch (e) {}
             }
+            if (res.ok) {
+              lastRoomError = null;
+            } else {
+              var cloned = res.clone ? res.clone() : null;
+              if (cloned) {
+                cloned.json().then(function (data) {
+                  lastRoomError = { code: (data && data.error && data.error.code) || "INTERNAL", message: (data && data.error && data.error.message) || "" };
+                }).catch(function () {
+                  lastRoomError = { code: "INTERNAL", message: "" };
+                });
+              }
+            }
+            return res;
+          },
+          function (networkErr) {
+            lastRoomError = { code: "NETWORK", message: String(networkErr && networkErr.message || "") };
+            throw networkErr;
           }
-          return res;
-        },
-        function (networkErr) {
-          lastRoomError = { code: "NETWORK", message: String(networkErr && networkErr.message || "") };
-          throw networkErr;
-        }
-      );
-    };
+        );
+      };
+      try {
+        Object.defineProperty(window, 'fetch', { get: function() { return roomFetch; }, set: function(v) { roomFetch = v; }, configurable: true, enumerable: true });
+      } catch (e1) {
+        try {
+          var proto = Object.getPrototypeOf(window) || Window.prototype;
+          if (proto) Object.defineProperty(proto, 'fetch', { value: roomFetch, writable: true, configurable: true, enumerable: true });
+        } catch (_) {}
+      }
+    }
   } catch (e) { /* fetch unhookable — degrade silently */ }
 
   /* ---- replace the generic message with the real diagnosis ----
