@@ -6352,30 +6352,7 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-b
   border-radius: 12px !important;
 }
 
-/* Make arrow-style connect from user to card by replacing action text */
-.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft {
-  font-size: 0 !important;
-}
-.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after {
-  content: "←" !important;
-  font-size: 0.95rem !important;
-  font-weight: 800 !important;
-  margin: 0 0.45rem !important;
-  color: var(--cm-ink) !important;
-  opacity: 0.45;
-  display: inline-block;
-  vertical-align: middle;
-}
-html[lang="en"] .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after,
-body:not([dir="rtl"]) .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after,
-[dir="ltr"] .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after {
-  content: "→" !important;
-}
 
-/* Hide redundant team suffix span (e.g. "— الفريق الأحمر") */
-.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body span.leading-relaxed > span.text-xs.font-bold {
-  display: none !important;
-}
 
 /* Board-style elegant word cards inside the log */
 .cm-v20 .cm-dock-list .bg-card-red,

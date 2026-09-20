@@ -237,7 +237,7 @@ html.cm-v20.mani-dark {
    ------------------------------------------------------------------------- */
 @media (min-width: 1024px) {
   .cm-v20 .cm-board-row {
-    --cm-roster-width: clamp(11rem, 12vw, 14rem);
+    --cm-roster-width: clamp(14rem, 18vw, 18rem);
   }
 
   /* The card itself — the lobby recipe, verbatim tokens. */
@@ -527,28 +527,34 @@ html.cm-v20.mani-dark {
   }
 
   .cm-v20 .cm-teambar-players {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-content: center;
-    gap: 0.26rem;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.22rem;
+    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
   }
 
   /* Roster chips — mini lobby cards hugging avatar + name.
      Tap opens the profile sheet. */
   .cm-v20 .cm-teambar-player.cm-mobile-roster-chip {
-    width: fit-content;
-    max-width: 100%;
-    min-height: 1.6rem;
-    padding: 0.18rem 0.48rem;
-    gap: 0.3rem;
-    border: 2px solid var(--cm-border);
-    border-radius: 0.65rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0;
+    min-height: 1.55rem;
+    padding: 0.15rem 0.35rem;
+    gap: 0.28rem;
+    border: 1.5px solid var(--cm-border);
+    border-radius: 0.55rem;
     background: var(--cm-surface);
     color: var(--cm-ink);
-    font-size: 0.73rem;
+    font-size: 0.74rem;
     font-weight: 700;
     box-shadow: var(--cm-shadow-card);
+    flex: 0 0 auto;
   }
 
   /* Captains carry the team accent. */
@@ -6346,30 +6352,7 @@ html.cm-v20.mani-dark .cm-flip.cm-captain-own-card[data-state="blue"] .cm-face-b
   border-radius: 12px !important;
 }
 
-/* Make arrow-style connect from user to card by replacing action text */
-.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft {
-  font-size: 0 !important;
-}
-.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after {
-  content: "←" !important;
-  font-size: 0.95rem !important;
-  font-weight: 800 !important;
-  margin: 0 0.45rem !important;
-  color: var(--cm-ink) !important;
-  opacity: 0.45;
-  display: inline-block;
-  vertical-align: middle;
-}
-html[lang="en"] .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after,
-body:not([dir="rtl"]) .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after,
-[dir="ltr"] .cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body .text-ink-soft::after {
-  content: "→" !important;
-}
 
-/* Hide redundant team suffix span (e.g. "— الفريق الأحمر") */
-.cm-v20 .cm-dock .cm-dock-list > .cm-ev .cm-ev-body span.leading-relaxed > span.text-xs.font-bold {
-  display: none !important;
-}
 
 /* Board-style elegant word cards inside the log */
 .cm-v20 .cm-dock-list .bg-card-red,
@@ -6567,7 +6550,7 @@ html.mot .cm-team-panel-blue .cm-player-chip,
    ========================================================================== */
 
 .cm-teambar {
-  max-height: clamp(5.2rem, 18dvh, 8.2rem) !important;
+  max-height: clamp(6.2rem, 20dvh, 8.2rem) !important;
   flex-shrink: 0 !important;
 }
 
@@ -6583,20 +6566,21 @@ html.mot .cm-team-panel-blue .cm-player-chip,
   justify-content: flex-start !important;
   overflow: hidden !important;
   height: 100% !important;
+  padding: 0.35rem 0.45rem !important;
 }
 
 .cm-teambar-players {
   display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
   justify-content: flex-start !important;
-  gap: 0.28rem !important;
+  gap: 0.22rem !important;
   width: 100% !important;
   flex: 1 !important;
   overflow-y: auto !important;
   min-height: 0 !important;
-  padding: 0.15rem 0.1rem !important;
+  padding: 0.1rem 0 !important;
   scrollbar-width: thin !important;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent !important;
   touch-action: pan-y !important;
