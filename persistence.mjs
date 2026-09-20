@@ -1,4 +1,8 @@
 import { Pool } from "./postgres-driver.mjs";
+import fs from "fs";
+import path from "path";
+
+const LOCAL_STATE_FILE = path.resolve("database", "clue_me_state.json");
 
 function entriesOf(value) {
   return value instanceof Map ? [...value.entries()] : [];
@@ -30,6 +34,7 @@ function filterAuthSessions(sessionsList) {
 export function capturePersistentState(roomStore, gameStore, authStore, adminStore) {
   return {
     version: 1,
+    savedAt: new Date().toISOString(),
     auth: {
       users: filterAuthUsers(entriesOf(authStore.users)),
       sessions: filterAuthSessions(entriesOf(authStore.sessions)),
@@ -116,59 +121,123 @@ export function restorePersistentState(state, roomStore, gameStore, authStore, a
   return true;
 }
 
+function loadLocalFile() {
+  try {
+    if (fs.existsSync(LOCAL_STATE_FILE)) {
+      const data = fs.readFileSync(LOCAL_STATE_FILE, "utf8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.warn("[persistence] local load warning:", err.message);
+  }
+  return null;
+}
+
+function saveLocalFile(state) {
+  try {
+    const dir = path.dirname(LOCAL_STATE_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const tempFile = `${LOCAL_STATE_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(state, null, 2), "utf8");
+    fs.renameSync(tempFile, LOCAL_STATE_FILE);
+  } catch (err) {
+    console.error("[persistence] local save error:", err.message);
+  }
+}
+
 export async function createPostgresPersistence(databaseUrl) {
-  const sslEnabled = process.env.DATABASE_SSL !== "false";
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    ssl: sslEnabled ? { rejectUnauthorized: false } : false,
-    max: 4,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000
-  });
+  let pool = null;
+  if (databaseUrl && databaseUrl.trim()) {
+    try {
+      const sslEnabled = process.env.DATABASE_SSL !== "false";
+      pool = new Pool({
+        connectionString: databaseUrl.trim(),
+        ssl: sslEnabled ? { rejectUnauthorized: false } : false,
+        max: 4,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000
+      });
 
-  pool.on("error", (err) => console.error("[database] idle client error:", err));
+      pool.on("error", (err) => console.error("[database] idle client error:", err));
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS clue_me_state (
-      state_key TEXT PRIMARY KEY,
-      payload JSONB NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS clue_me_state (
+          state_key TEXT PRIMARY KEY,
+          payload JSONB NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      console.log("[database] connected to Postgres persistence table");
+    } catch (err) {
+      console.warn("[database] Postgres init warning:", err.message);
+      pool = null;
+    }
+  }
 
   let lastJson = null;
   let writeQueue = Promise.resolve();
 
   return {
     async load() {
-      const result = await pool.query("SELECT payload FROM clue_me_state WHERE state_key = $1", ["main"]);
-      const state = result.rows[0]?.payload ?? null;
-      if (state) lastJson = JSON.stringify(state);
-      return state;
+      // Try Postgres first if available
+      if (pool) {
+        try {
+          const result = await pool.query("SELECT payload FROM clue_me_state WHERE state_key = $1", ["main"]);
+          const state = result.rows[0]?.payload ?? null;
+          if (state) {
+            lastJson = JSON.stringify(state);
+            saveLocalFile(state);
+            console.log("[database] loaded authoritative state from Postgres");
+            return state;
+          }
+        } catch (err) {
+          console.warn("[database] Postgres load error, falling back to local file:", err.message);
+        }
+      }
+
+      // Fallback to local file
+      const localState = loadLocalFile();
+      if (localState) {
+        lastJson = JSON.stringify(localState);
+        console.log("[database] loaded state from local persistence file");
+        return localState;
+      }
+
+      return null;
     },
     save(state, force = false) {
       const json = JSON.stringify(state);
       if (!force && json === lastJson) return writeQueue;
       lastJson = json;
-      writeQueue = writeQueue.then(async () => {
-        try {
-          await pool.query(
-            `INSERT INTO clue_me_state (state_key, payload, updated_at)
-             VALUES ($1, $2::jsonb, NOW())
-             ON CONFLICT (state_key)
-             DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
-            ["main", json]
-          );
-        } catch (err) {
-          lastJson = null;
-          console.error("[database] save failed:", err);
-        }
-      });
+
+      // Always save to local file immediately
+      saveLocalFile(state);
+
+      if (pool) {
+        writeQueue = writeQueue.then(async () => {
+          try {
+            await pool.query(
+              `INSERT INTO clue_me_state (state_key, payload, updated_at)
+               VALUES ($1, $2::jsonb, NOW())
+               ON CONFLICT (state_key)
+               DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+              ["main", json]
+            );
+          } catch (err) {
+            console.error("[database] Postgres save failed:", err.message);
+          }
+        });
+      }
+
       return writeQueue;
     },
     async close() {
       await writeQueue;
-      await pool.end();
+      if (pool) {
+        await pool.end();
+      }
     }
   };
 }
