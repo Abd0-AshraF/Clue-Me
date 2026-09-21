@@ -2953,8 +2953,16 @@ html.cm-v20.cm-min-effects .cm-petals i {
   flex-direction: column;
 }
 
-html.cm-v20.cm-discord-activity .cm-game-page {
-  padding-top: max(72px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 72px)) !important;
+html.cm-ui-phone.cm-v20.cm-discord-activity .cm-game-page,
+@media (max-width: 768px) {
+  html.cm-v20.cm-discord-activity .cm-game-page {
+    padding-top: max(56px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 56px)) !important;
+  }
+}
+@media (min-width: 769px) {
+  html.cm-v20.cm-discord-activity .cm-game-page {
+    padding-top: 0 !important;
+  }
 }
 
 .cm-v20 .cm-game-shell {
@@ -2990,7 +2998,7 @@ html.cm-v20.cm-discord-activity .cm-game-page {
 .cm-v20 .cm-game-shell > main > p {
   flex-shrink: 0 !important;
   min-height: auto !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   align-self: center !important;
   margin-inline: auto !important;
   justify-content: center !important;
@@ -3152,7 +3160,7 @@ html.cm-v20.cm-ui-phone .cm-teambar {
   width: 100% !important;
   max-width: 100% !important;
   gap: 0.5rem !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   flex-shrink: 0 !important;
 }
 
@@ -3162,12 +3170,12 @@ html.cm-v20.cm-ui-phone .cm-teambar-side {
   flex-direction: column !important;
   align-items: stretch !important;
   justify-content: flex-start !important;
-  padding: 0.6rem 0.8rem !important;
-  border-radius: 1.15rem !important;
-  gap: 0.4rem !important;
-  min-height: 4.8rem !important;
+  padding: 0.45rem 0.55rem !important;
+  border-radius: 1rem !important;
+  gap: 0.3rem !important;
+  max-height: 7.2rem !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22) !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 html.cm-v20.cm-ui-phone .cm-teambar-head {
@@ -3199,14 +3207,19 @@ html.cm-v20.cm-ui-phone .cm-teambar-count {
 /* Player chips container inside teambar side */
 html.cm-v20.cm-ui-phone .cm-teambar-players {
   display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
   justify-content: flex-start !important;
-  gap: 0.35rem !important;
+  gap: 0.25rem !important;
   width: 100% !important;
-  min-height: 2rem !important;
-  overflow: visible !important;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent !important;
+  touch-action: pan-y !important;
 }
 
 /* Reduced player font size, elegant pill styling, clean layout for people */
@@ -6212,11 +6225,21 @@ body.cm-discord-activity .cm-room-android-banner {
 
 
 /* Discord Mobile Header Insets */
-html.cm-discord-activity header,
-html.cm-discord-activity #root > div > header,
-html.cm-discord-activity .cm-game-page > header,
-html.cm-discord-activity .cm-home-page header {
-  padding-top: max(56px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 56px)) !important;
+@media (max-width: 768px) {
+  html.cm-discord-activity header,
+  html.cm-discord-activity #root > div > header,
+  html.cm-discord-activity .cm-game-page > header,
+  html.cm-discord-activity .cm-home-page header {
+    padding-top: max(56px, env(safe-area-inset-top, 0px), var(--cm-safe-top, 56px)) !important;
+  }
+}
+@media (min-width: 769px) {
+  html.cm-discord-activity header,
+  html.cm-discord-activity #root > div > header,
+  html.cm-discord-activity .cm-game-page > header,
+  html.cm-discord-activity .cm-home-page header {
+    padding-top: 0 !important;
+  }
 }
 html.cm-discord-activity #root > div {
   padding-top: 0 !important;
@@ -6909,4 +6932,86 @@ html.mot .cm-teambar-live-turn-badge-blue,
 .cm-board-clue-writing [data-chosen=false] .cm-face.cm-face-front,
 .cm-board-clue-writing .cm-face {
   box-shadow: none !important;
+}
+
+
+/* ==========================================================================
+   Mobile Team Roster Overflow Containment & Keyboard Space Preservation
+   ========================================================================== */
+
+.cm-v20 .cm-teambar-side,
+.cm-teambar-side {
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.cm-v20 .cm-teambar-players,
+.cm-teambar-players {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: 4.8rem !important;
+  width: 100% !important;
+  gap: 0.25rem !important;
+  box-sizing: border-box !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+}
+
+.cm-v20 .cm-teambar-player,
+.cm-teambar-player {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* teams kept visible */
+
+@media (max-height: 520px) {
+  .cm-teambar,
+  .cm-teambar-row,
+  .cm-ui-teambar {
+    display: none !important;
+  }
+}
+
+html.cm-keyboard-active .cm-board-frame,
+body:has(input[name="cm_clue_word"]:focus) .cm-board-frame,
+body:has(input[name="clue_term"]:focus) .cm-board-frame,
+body:has(input[name="clue-input"]:focus) .cm-board-frame {
+  min-height: 140px !important;
+  max-height: 52dvh !important;
+  flex: 1 1 auto !important;
+}
+
+html.cm-keyboard-active .cm-board-frame > .grid,
+body:has(input[name="cm_clue_word"]:focus) .cm-board-frame > .grid,
+body:has(input[name="clue_term"]:focus) .cm-board-frame > .grid,
+body:has(input[name="clue-input"]:focus) .cm-board-frame > .grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
+  min-height: 135px !important;
+  gap: 0.18rem !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+html.cm-keyboard-active .cm-board-frame .cm-flip,
+body:has(input[name="cm_clue_word"]:focus) .cm-board-frame .cm-flip,
+body:has(input[name="clue_term"]:focus) .cm-board-frame .cm-flip,
+body:has(input[name="clue-input"]:focus) .cm-board-frame .cm-flip {
+  height: 100% !important;
+  min-height: 22px !important;
+}
+
+html.cm-keyboard-active .cm-side,
+body:has(input[name="cm_clue_word"]:focus) .cm-side,
+body:has(input[name="clue_term"]:focus) .cm-side,
+body:has(input[name="clue-input"]:focus) .cm-side {
+  flex-shrink: 0 !important;
+  z-index: 20 !important;
 }

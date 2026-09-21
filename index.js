@@ -202,7 +202,23 @@ if (persistence) {
 }
 
 var app = UK({ roomStore: ts, gameStore: ns, authStore: rs, adminStore: is, discord: ((process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID) && (process.env.DISCORD_CLIENT_SECRET || process.env.DISCORD_SECRET || "VP2ciXtf_NgNZbXyqXfKn-pqt5uvHtHZ" || process.env.DISCORD_SECRET)) ? { clientId: (process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID).trim(), clientSecret: "VP2ciXtf_NgNZbXyqXfKn-pqt5uvHtHZ", redirectUri: process.env.DISCORD_REDIRECT_URI?.trim() || void 0 } : null });
-var ub = httpModule.createServer(app);
+var ub = httpModule.createServer((req, res) => {
+  if (req.url && req.url.startsWith("/.proxy/")) {
+    req.url = req.url.substring(7);
+    if (!req.url.startsWith("/")) req.url = "/" + req.url;
+  } else if (req.url === "/.proxy") {
+    req.url = "/";
+  }
+  app(req, res);
+});
+ub.prependListener("upgrade", (req, socket, head) => {
+  if (req.url && req.url.startsWith("/.proxy/")) {
+    req.url = req.url.substring(7);
+    if (!req.url.startsWith("/")) req.url = "/" + req.url;
+  } else if (req.url === "/.proxy") {
+    req.url = "/";
+  }
+});
 var lb = MK(ub, ts, ns, rs, is);
 
 var port = Number(process.env.PORT || 3000);

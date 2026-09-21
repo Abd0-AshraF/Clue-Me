@@ -1,6 +1,32 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
+  <head><script>
+  (function() {
+    function isExtensionNoise(msg) {
+      if (!msg) return false;
+      var str = String(msg).toLowerCase();
+      return str.includes("receiving end does not exist") ||
+             str.includes("message port closed before a response was received") ||
+             str.includes("extension context invalidated") ||
+             str.includes("could not establish connection");
+    }
+    window.addEventListener("error", function(e) {
+      if (isExtensionNoise(e.message) || (e.error && isExtensionNoise(e.error.message))) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return true;
+      }
+    }, true);
+    window.addEventListener("unhandledrejection", function(e) {
+      var reason = e.reason;
+      var msg = reason ? (reason.message || reason) : "";
+      if (isExtensionNoise(msg)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  })();
+</script>
     <script>
       (function() {
         function installStoragePolyfill(prop) {
@@ -370,50 +396,73 @@
       /* Enhanced mobile teambar and player roster */
       .cm-teambar {
         grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
+        gap: 0.45rem;
         width: 100%;
         max-width: 36rem;
         display: grid;
         flex-shrink: 0 !important;
-        margin-bottom: 0.25rem !important;
+        margin-bottom: 0.2rem !important;
+        overflow: hidden !important;
       }
       .cm-teambar-side {
-        border-radius: 16px !important;
-        padding: 0.5rem 0.6rem !important;
+        border-radius: 14px !important;
+        padding: 0.4rem 0.55rem !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 0.35rem !important;
+        gap: 0.25rem !important;
         min-width: 0 !important;
+        max-height: 7.2rem !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
       }
       .cm-teambar-head {
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        gap: 0.35rem !important;
-        font-size: 0.8rem !important;
+        gap: 0.3rem !important;
+        font-size: 0.78rem !important;
         font-weight: 800 !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-        padding-bottom: 0.25rem !important;
+        padding-bottom: 0.2rem !important;
+        flex-shrink: 0 !important;
       }
       .cm-teambar-players {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
-        gap: 0.3rem !important;
-        align-items: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.25rem !important;
+        align-items: stretch !important;
         width: 100% !important;
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        max-height: 4.8rem !important;
+        padding: 0.05rem 0.05rem !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      .cm-teambar-players::-webkit-scrollbar {
+        width: 3px !important;
+      }
+      .cm-teambar-players::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3) !important;
+        border-radius: 999px !important;
       }
       .cm-teambar-player {
         width: 100% !important;
-        display: inline-flex !important;
+        display: flex !important;
         align-items: center !important;
+        justify-content: space-between !important;
         gap: 0.25rem !important;
         font-size: 0.68rem !important;
         font-weight: 700 !important;
-        padding: 0.2rem 0.4rem !important;
+        padding: 0.15rem 0.35rem !important;
         border-radius: 999px !important;
         box-sizing: border-box !important;
         white-space: nowrap !important;
         overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        flex-shrink: 0 !important;
       }
       .cm-mobile-roster-chip {
         border: 1px solid rgba(255, 255, 255, 0.22) !important;
@@ -1745,13 +1794,13 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v51.js?v=306"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=306">
-    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=306">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=306">
-    <script src="/assets/useSafeArea.js?v=306"></script>
-    <script defer src="/assets/game-room-v20.js?v=306"></script>
-    <script defer src="/assets/game-ai-hud-v21.js?v=306"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v51.js?v=316"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=316">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=316">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=316">
+    <script src="/assets/useSafeArea.js?v=316"></script>
+    <script defer src="/assets/game-room-v20.js?v=316"></script>
+    <script defer src="/assets/game-ai-hud-v21.js?v=316"></script>
   
     
 
@@ -1762,10 +1811,16 @@
     if(window.scrollY!==0||window.scrollX!==0)window.scrollTo(0,0);
     if(document.body.scrollTop!==0)document.body.scrollTop=0;
     if(document.documentElement.scrollTop!==0)document.documentElement.scrollTop=0;
+    var root = document.getElementById("root");
+    if(root && root.scrollTop!==0) root.scrollTop=0;
+    var page = document.querySelector(".cm-game-page");
+    if(page && page.scrollTop!==0) page.scrollTop=0;
+    var shell = document.querySelector(".cm-game-shell");
+    if(shell && shell.scrollTop!==0) shell.scrollTop=0;
   }
   window.addEventListener("scroll",resetScroll,{passive:true});
   document.addEventListener("focusin",function(){
-    setTimeout(resetScroll,10);setTimeout(resetScroll,100);setTimeout(resetScroll,300);
+    setTimeout(resetScroll,10);setTimeout(resetScroll,50);setTimeout(resetScroll,100);setTimeout(resetScroll,300);
   },{passive:true});
   document.addEventListener("focusout",function(){
     setTimeout(resetScroll,10);setTimeout(resetScroll,100);
@@ -1776,7 +1831,17 @@
   }
 })();
 </script>
-</head>
+<style>
+      .cm-v20 .cm-teambar-side, .cm-teambar-side { overflow: hidden !important; box-sizing: border-box !important; }
+      .cm-v20 .cm-teambar-players, .cm-teambar-players { display: flex !important; flex-direction: column !important; flex-wrap: nowrap !important; overflow-y: auto !important; overflow-x: hidden !important; max-height: 4.8rem !important; }
+      .cm-v20 .cm-teambar-player, .cm-teambar-player { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; flex-shrink: 0 !important; }
+      html.cm-keyboard-active .cm-teambar, html.cm-keyboard-active .cm-teambar-row, html.cm-keyboard-active .cm-ui-teambar,
+      body:has(input[name="cm_clue_word"]:focus) .cm-teambar, body:has(input[name="clue_term"]:focus) .cm-teambar, body:has(input[name="clue-input"]:focus) .cm-teambar,
+      body:has(input[name="cm_clue_word"]:focus) .cm-teambar-row, body:has(input[name="clue_term"]:focus) .cm-teambar-row, body:has(input[name="clue-input"]:focus) .cm-teambar-row { display: none !important; }
+      @media (max-height: 520px) { .cm-teambar, .cm-teambar-row, .cm-ui-teambar { display: none !important; } }
+      html.cm-keyboard-active .cm-board-frame, body:has(input[name="cm_clue_word"]:focus) .cm-board-frame, body:has(input[name="clue_term"]:focus) .cm-board-frame, body:has(input[name="clue-input"]:focus) .cm-board-frame { min-height: 140px !important; max-height: 52dvh !important; }
+      html.cm-keyboard-active .cm-board-frame > .grid, body:has(input[name="cm_clue_word"]:focus) .cm-board-frame > .grid, body:has(input[name="clue_term"]:focus) .cm-board-frame > .grid, body:has(input[name="clue-input"]:focus) .cm-board-frame > .grid { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; grid-template-rows: repeat(5, minmax(0, 1fr)) !important; min-height: 135px !important; }
+    </style></head>
   <body>
     <div id="root"></div>
   </body>

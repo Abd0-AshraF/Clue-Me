@@ -184,6 +184,37 @@ function giveClue(state, clue) {
   state.moveCount += 1;
   return { ok: true, kind: "clue", endedTurn: false };
 }
+const SOUND_CATALOG = {
+  correct: [
+    "/sounds/Wing_it_1.mp3",
+    "/sounds/Wing_it_2.mp3",
+    "/sounds/Wing_it_3.mp3",
+    "/sounds/Wing_it_4.mp3",
+    "/sounds/Wing_it_5.mp3"
+  ],
+  wrong: [
+    "/sounds/wrong_1.mp3",
+    "/sounds/wrong_2.mp3",
+    "/sounds/wrong_3.mp3",
+    "/sounds/wrong_4.mp3",
+    "/sounds/wrong_5.mp3",
+    "/sounds/wrong_6.mp3"
+  ],
+  assassin: [
+    "/sounds/black.mp3",
+    "/sounds/black_2.mp3",
+    "/sounds/black_3.mp3",
+    "/sounds/black_4.mp3",
+    "/sounds/black_5.mp3"
+  ]
+};
+
+function pickServerSound(kind) {
+  const list = SOUND_CATALOG[kind];
+  if (!list || !list.length) return null;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function guess(state, index) {
   if (state.winner) return { ok: false, code: "GAME_OVER" };
   if (state.phase !== "guess") return { ok: false, code: "NOT_GUESS_PHASE" };
@@ -193,12 +224,15 @@ function guess(state, index) {
   const card = state.board[index];
   if (card.revealed) return { ok: false, code: "CARD_ALREADY_REVEALED" };
   const actorTeam = state.turnTeam;
+  const isBonus = !!(state.clue && state.clue.number > 0 && state.guessesUsed >= state.clue.number);
   card.revealed = true;
   state.moveCount += 1;
   if (card.color === "assassin") {
     state.winner = otherTeam(actorTeam);
     state.winReason = "assassin";
     state.phase = "over";
+    const soundKind = "assassin";
+    const soundUrl = pickServerSound("assassin");
     return {
       ok: true,
       kind: "guess",
@@ -207,10 +241,15 @@ function guess(state, index) {
       endedTurn: true,
       winner: state.winner,
       winReason: state.winReason,
+      isBonus,
+      soundKind,
+      soundUrl,
       index
     };
   }
   if (resolveWinnerAfterReveal(state, actorTeam)) {
+    const soundKind = "victory";
+    const soundUrl = pickServerSound("correct");
     return {
       ok: true,
       kind: "guess",
@@ -219,19 +258,34 @@ function guess(state, index) {
       endedTurn: true,
       winner: state.winner,
       winReason: state.winReason,
+      isBonus,
+      soundKind,
+      soundUrl,
       index
     };
   }
   if (card.color === actorTeam) {
     state.guessesUsed += 1;
+    let soundKind = null;
+    let soundUrl = null;
+    if (isBonus) {
+      soundKind = "correct";
+      soundUrl = pickServerSound("correct");
+    }
     if (state.guessesUsed >= state.maxGuesses) {
       endTurnInternal(state);
-      return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: true, index };
+      return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: true, isBonus, soundKind, soundUrl, index };
     }
-    return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: false, index };
+    return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: false, isBonus, soundKind, soundUrl, index };
+  }
+  let soundKind = null;
+  let soundUrl = null;
+  if (isBonus) {
+    soundKind = "wrong";
+    soundUrl = pickServerSound("wrong");
   }
   endTurnInternal(state);
-  return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: true, index };
+  return { ok: true, kind: "guess", cardColor: card.color, actorTeam, endedTurn: true, isBonus, soundKind, soundUrl, index };
 }
 function endTurn(state, force = false) { if (state.turnTimer > 0) { state.turnDeadline = Date.now() + state.turnTimer * 1000; } else { state.turnDeadline = null; } 
   if (state.winner) return { ok: false, code: "GAME_OVER" };
@@ -282,344 +336,1472 @@ function getView(state, viewer) {
 
 // ../shared/src/words/data/arabic.ts
 var ARABIC_SEEDS = [
-  /* ------------------------------------------------------------------ Food */
   {
-    words: ["\u0639\u064A\u0634", "\u062C\u0628\u0646\u0629", "\u0632\u0628\u062F\u0629", "\u0644\u0628\u0646", "\u0628\u064A\u0636", "\u0639\u0633\u0644", "\u0633\u0643\u0631", "\u0645\u0644\u062D", "\u0641\u0644\u0641\u0644", "\u0632\u064A\u062A", "\u062E\u0644", "\u062F\u0642\u064A\u0642", "\u0623\u0631\u0632", "\u0645\u0643\u0631\u0648\u0646\u0629", "\u0634\u0648\u0631\u0628\u0629", "\u0633\u0644\u0637\u0629", "\u0633\u0646\u062F\u0648\u062A\u0634", "\u0641\u0637\u064A\u0631\u0629", "\u0643\u0639\u0643\u0629", "\u0634\u0648\u0643\u0648\u0644\u0627\u062A\u0629"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 5,
-    partOfSpeech: "noun",
-    categories: ["food", "everyday", "general"]
+    "words": [
+      "عيش",
+      "جبنة",
+      "زبدة",
+      "لبن",
+      "بيض",
+      "عسل",
+      "سكر",
+      "ملح",
+      "فلفل",
+      "زيت",
+      "خل",
+      "دقيق",
+      "أرز",
+      "مكرونة",
+      "شوربة",
+      "سلطة",
+      "سندوتش",
+      "فطيرة",
+      "كعكة",
+      "شوكولاتة",
+      "مربى",
+      "صلصة",
+      "سمسم",
+      "قرفة",
+      "زنجبيل",
+      "نعناع",
+      "كركم",
+      "كمون",
+      "قرنفل",
+      "زعفران"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "food",
+      "everyday",
+      "general"
+    ]
   },
   {
-    words: ["\u062A\u0641\u0627\u062D", "\u0645\u0648\u0632", "\u0628\u0631\u062A\u0642\u0627\u0644", "\u0628\u0637\u064A\u062E", "\u0639\u0646\u0628", "\u0631\u0645\u0627\u0646", "\u062E\u0648\u062E", "\u0645\u0634\u0645\u0634", "\u062A\u064A\u0646", "\u0628\u0644\u062D", "\u0645\u0627\u0646\u062C\u0648", "\u0641\u0631\u0627\u0648\u0644\u0629", "\u0623\u0646\u0627\u0646\u0627\u0633", "\u0644\u064A\u0645\u0648\u0646", "\u0643\u0645\u062B\u0631\u0649"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["food", "nature"]
+    "words": [
+      "تفاح",
+      "موز",
+      "برتقال",
+      "بطيخ",
+      "عنب",
+      "رمان",
+      "خوخ",
+      "مشمش",
+      "تين",
+      "بلح",
+      "مانجو",
+      "فراولة",
+      "أناناس",
+      "ليمون",
+      "كمثرى",
+      "توت",
+      "جوافة",
+      "كرز",
+      "كيوي",
+      "أفوكادو",
+      "جوز",
+      "لوز",
+      "فستق",
+      "بندق",
+      "كاجو"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "food",
+      "nature"
+    ]
   },
   {
-    words: ["\u0637\u0645\u0627\u0637\u0645", "\u062E\u064A\u0627\u0631", "\u0628\u0635\u0644", "\u062B\u0648\u0645", "\u062C\u0632\u0631", "\u0628\u0637\u0627\u0637\u0633", "\u0628\u0627\u0630\u0646\u062C\u0627\u0646", "\u0643\u0648\u0633\u0629", "\u0633\u0628\u0627\u0646\u062E", "\u062E\u0633", "\u0641\u0627\u0635\u0648\u0644\u064A\u0627", "\u0639\u062F\u0633", "\u062D\u0645\u0635", "\u0630\u0631\u0629", "\u0642\u0631\u0639"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["food", "nature"]
+    "words": [
+      "طماطم",
+      "خيار",
+      "بصل",
+      "ثوم",
+      "جزر",
+      "بطاطس",
+      "باذنجان",
+      "كوسة",
+      "سبانخ",
+      "خس",
+      "فاصوليا",
+      "عدس",
+      "حمص",
+      "ذرة",
+      "قرع",
+      "بقدونس",
+      "كزبرة",
+      "جرجير",
+      "فجل",
+      "كراث",
+      "لفت",
+      "كرفس",
+      "زيتون",
+      "ملفوف",
+      "خرشوف"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "food",
+      "nature"
+    ]
   },
   {
-    words: ["\u0634\u0627\u064A", "\u0642\u0647\u0648\u0629", "\u0639\u0635\u064A\u0631", "\u0645\u0627\u0621", "\u062D\u0644\u064A\u0628", "\u0645\u0634\u0631\u0648\u0628", "\u0645\u0637\u0639\u0645", "\u0645\u0642\u0647\u0649", "\u0645\u062E\u0628\u0632", "\u062C\u0632\u0627\u0631", "\u0637\u0628\u0627\u062E", "\u0648\u0635\u0641\u0629", "\u0648\u062C\u0628\u0629", "\u0625\u0641\u0637\u0627\u0631", "\u0639\u0634\u0627\u0621"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["food", "everyday", "places"]
+    "words": [
+      "شاي",
+      "قهوة",
+      "عصير",
+      "ماء",
+      "حليب",
+      "مشروب",
+      "مطعم",
+      "مقهى",
+      "مخبز",
+      "جزار",
+      "طباخ",
+      "وصفة",
+      "وجبة",
+      "إفطار",
+      "عشاء",
+      "غداء",
+      "وليمة",
+      "نادل",
+      "مطبخ",
+      "قائمة",
+      "مرق",
+      "نبيذ",
+      "شراب",
+      "نكهة",
+      "توابل"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "food",
+      "everyday",
+      "places"
+    ]
   },
   {
-    words: ["\u0641\u0648\u0644", "\u0637\u0639\u0645\u064A\u0629", "\u0643\u0634\u0631\u064A", "\u0645\u0644\u0648\u062E\u064A\u0629", "\u0645\u062D\u0634\u064A", "\u0643\u0628\u0627\u0628", "\u0634\u0627\u0648\u0631\u0645\u0627", "\u0641\u062A\u0629", "\u0628\u0633\u0628\u0648\u0633\u0629", "\u0643\u0646\u0627\u0641\u0629"],
-    dialect: "egyptian",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["food", "egyptianCulture", "arabicCulture"]
-  },
-  /* --------------------------------------------------------------- Animals */
-  {
-    words: ["\u0642\u0637", "\u0643\u0644\u0628", "\u062D\u0635\u0627\u0646", "\u062D\u0645\u0627\u0631", "\u062C\u0645\u0644", "\u0628\u0642\u0631\u0629", "\u062E\u0631\u0648\u0641", "\u0645\u0627\u0639\u0632", "\u062F\u062C\u0627\u062C\u0629", "\u062F\u064A\u0643", "\u0628\u0637\u0629", "\u0623\u0631\u0646\u0628", "\u0641\u0623\u0631", "\u062E\u0646\u0632\u064A\u0631", "\u062B\u0648\u0631"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["animals", "nature"]
-  },
-  {
-    words: ["\u0623\u0633\u062F", "\u0646\u0645\u0631", "\u0641\u0647\u062F", "\u0630\u0626\u0628", "\u062B\u0639\u0644\u0628", "\u062F\u0628", "\u0641\u064A\u0644", "\u0632\u0631\u0627\u0641\u0629", "\u063A\u0632\u0627\u0644", "\u0642\u0631\u062F", "\u062A\u0645\u0633\u0627\u062D", "\u062B\u0639\u0628\u0627\u0646", "\u0633\u0644\u062D\u0641\u0627\u0629", "\u0636\u0641\u062F\u0639", "\u062E\u0641\u0627\u0634"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["animals", "nature"]
-  },
-  {
-    words: ["\u0646\u0633\u0631", "\u0635\u0642\u0631", "\u0628\u0648\u0645\u0629", "\u062D\u0645\u0627\u0645\u0629", "\u0639\u0635\u0641\u0648\u0631", "\u0628\u0628\u063A\u0627\u0621", "\u0646\u0648\u0631\u0633", "\u0637\u0627\u0648\u0648\u0633", "\u063A\u0631\u0627\u0628", "\u0628\u062C\u0639\u0629"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["animals", "nature"]
-  },
-  {
-    words: ["\u0633\u0645\u0643\u0629", "\u0642\u0631\u0634", "\u062D\u0648\u062A", "\u062F\u0648\u0644\u0641\u064A\u0646", "\u0623\u062E\u0637\u0628\u0648\u0637", "\u0633\u0631\u0637\u0627\u0646", "\u0646\u062D\u0644\u0629", "\u0646\u0645\u0644\u0629", "\u0641\u0631\u0627\u0634\u0629", "\u0639\u0646\u0643\u0628\u0648\u062A", "\u0630\u0628\u0627\u0628\u0629", "\u0628\u0639\u0648\u0636\u0629", "\u062F\u0648\u062F\u0629", "\u0635\u0631\u0635\u0648\u0631", "\u062C\u0631\u0627\u062F"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 2,
-    partOfSpeech: "noun",
-    categories: ["animals", "nature"]
-  },
-  /* --------------------------------------------------------------- Objects */
-  {
-    words: ["\u0643\u062A\u0627\u0628", "\u0642\u0644\u0645", "\u0648\u0631\u0642\u0629", "\u062F\u0641\u062A\u0631", "\u0645\u0641\u062A\u0627\u062D", "\u0628\u0627\u0628", "\u0634\u0628\u0627\u0643", "\u0643\u0631\u0633\u064A", "\u062A\u0631\u0627\u0628\u064A\u0632\u0629", "\u0633\u0631\u064A\u0631", "\u0645\u0631\u0622\u0629", "\u0633\u0627\u0639\u0629", "\u0645\u0635\u0628\u0627\u062D", "\u0634\u0645\u0639\u0629", "\u0633\u0644\u0629"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 5,
-    partOfSpeech: "noun",
-    categories: ["objects", "everyday"]
+    "words": [
+      "فول",
+      "طعمية",
+      "كشري",
+      "ملوخية",
+      "محشي",
+      "كباب",
+      "شاورما",
+      "فتة",
+      "بسبوسة",
+      "كنافة",
+      "حواوشي",
+      "كفتة",
+      "قطايف",
+      "زلابية",
+      "حمصية",
+      "سمبوسك",
+      "بقلاوة",
+      "هريسة",
+      "مسقعة",
+      "طاجن"
+    ],
+    "dialect": "egyptian",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "food",
+      "egyptianCulture",
+      "arabicCulture"
+    ]
   },
   {
-    words: ["\u062D\u0642\u064A\u0628\u0629", "\u0645\u062D\u0641\u0638\u0629", "\u0645\u0638\u0644\u0629", "\u0646\u0638\u0627\u0631\u0629", "\u062E\u0627\u062A\u0645", "\u0639\u0642\u062F", "\u0633\u0648\u0627\u0631", "\u0645\u0634\u0637", "\u0641\u0631\u0634\u0627\u0629", "\u0635\u0627\u0628\u0648\u0646", "\u0645\u0646\u0634\u0641\u0629", "\u0648\u0633\u0627\u062F\u0629", "\u0628\u0637\u0627\u0646\u064A\u0629", "\u0633\u062A\u0627\u0631\u0629", "\u0633\u062C\u0627\u062F\u0629"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["objects", "everyday"]
+    "words": [
+      "قط",
+      "كلب",
+      "حصان",
+      "حمار",
+      "جمل",
+      "بقرة",
+      "خروف",
+      "ماعز",
+      "دجاجة",
+      "ديك",
+      "بطة",
+      "أرنب",
+      "فأر",
+      "خنزير",
+      "ثور",
+      "مهر",
+      "عجل",
+      "كبش",
+      "تيس",
+      "أوزة"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "animals",
+      "nature"
+    ]
   },
   {
-    words: ["\u0633\u0643\u064A\u0646", "\u0645\u0644\u0639\u0642\u0629", "\u0634\u0648\u0643\u0629", "\u0637\u0628\u0642", "\u0643\u0648\u0628", "\u0625\u0628\u0631\u064A\u0642", "\u0642\u062F\u0631", "\u0645\u0642\u0644\u0627\u0629", "\u0645\u0642\u0635", "\u0625\u0628\u0631\u0629", "\u062E\u064A\u0637", "\u062D\u0628\u0644", "\u0633\u0644\u0645", "\u0645\u0637\u0631\u0642\u0629", "\u0645\u0633\u0645\u0627\u0631"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["objects", "everyday"]
+    "words": [
+      "أسد",
+      "نمر",
+      "فهد",
+      "ذئب",
+      "ثعلب",
+      "دب",
+      "فيل",
+      "زرافة",
+      "غزال",
+      "قرد",
+      "تمساح",
+      "ثعبان",
+      "سلحفاة",
+      "ضفدع",
+      "خفاش",
+      "ضبع",
+      "خرتيت",
+      "كنغر",
+      "سنجاب",
+      "قنفذ",
+      "حرباء",
+      "ظبي",
+      "وعل",
+      "سمور",
+      "لاما"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "animals",
+      "nature"
+    ]
   },
   {
-    words: ["\u0635\u0646\u062F\u0648\u0642", "\u0632\u062C\u0627\u062C\u0629", "\u0639\u0644\u0628\u0629", "\u0643\u064A\u0633", "\u0635\u062D\u0646", "\u062F\u0644\u0648", "\u0645\u0643\u0646\u0633\u0629", "\u0645\u0631\u0648\u062D\u0629", "\u062B\u0644\u0627\u062C\u0629", "\u0641\u0631\u0646", "\u063A\u0633\u0627\u0644\u0629", "\u0645\u0643\u0648\u0627\u0629", "\u0645\u064A\u0632\u0627\u0646", "\u0642\u0641\u0644", "\u0645\u0633\u0637\u0631\u0629"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["objects", "everyday"]
-  },
-  /* ---------------------------------------------------------------- Places */
-  {
-    words: ["\u0628\u064A\u062A", "\u0645\u062F\u0631\u0633\u0629", "\u062C\u0627\u0645\u0639\u0629", "\u0645\u0643\u062A\u0628\u0629", "\u0645\u0633\u062A\u0634\u0641\u0649", "\u0635\u064A\u062F\u0644\u064A\u0629", "\u0633\u0648\u0642", "\u0645\u062A\u062C\u0631", "\u0628\u0646\u0643", "\u0645\u0637\u0627\u0631", "\u0645\u062D\u0637\u0629", "\u0645\u064A\u0646\u0627\u0621", "\u0641\u0646\u062F\u0642", "\u0645\u062A\u062D\u0641", "\u0645\u0633\u0631\u062D"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 5,
-    partOfSpeech: "noun",
-    categories: ["places", "buildings"]
-  },
-  {
-    words: ["\u062D\u062F\u064A\u0642\u0629", "\u0645\u0644\u0639\u0628", "\u0634\u0627\u0637\u0626", "\u0645\u0632\u0631\u0639\u0629", "\u0645\u0635\u0646\u0639", "\u0645\u0643\u062A\u0628", "\u0642\u0631\u064A\u0629", "\u0645\u062F\u064A\u0646\u0629", "\u0634\u0627\u0631\u0639", "\u0645\u064A\u062F\u0627\u0646", "\u062C\u0633\u0631", "\u0646\u0641\u0642", "\u0628\u0631\u062C", "\u0642\u0644\u0639\u0629", "\u0642\u0635\u0631"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["places", "buildings", "geography"]
-  },
-  {
-    words: ["\u0645\u0633\u062C\u062F", "\u0643\u0646\u064A\u0633\u0629", "\u0645\u0642\u0628\u0631\u0629", "\u0633\u062C\u0646", "\u062B\u0643\u0646\u0629", "\u0645\u0637\u0628\u062E", "\u062D\u0645\u0627\u0645", "\u063A\u0631\u0641\u0629", "\u0635\u0627\u0644\u0629", "\u0634\u0631\u0641\u0629", "\u0633\u0637\u062D", "\u0642\u0628\u0648", "\u0645\u062E\u0632\u0646", "\u0643\u0648\u062E", "\u062E\u064A\u0645\u0629"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["places", "buildings"]
-  },
-  /* ---------------------------------------------------------------- Nature */
-  {
-    words: ["\u0634\u0645\u0633", "\u0642\u0645\u0631", "\u0646\u062C\u0645", "\u0633\u0645\u0627\u0621", "\u0633\u062D\u0627\u0628\u0629", "\u0645\u0637\u0631", "\u062B\u0644\u062C", "\u0631\u064A\u0627\u062D", "\u0628\u0631\u0642", "\u0631\u0639\u062F", "\u0642\u0648\u0633 \u0642\u0632\u062D", "\u0636\u0628\u0627\u0628", "\u062D\u0631\u0627\u0631\u0629", "\u0638\u0644", "\u0646\u0627\u0631"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["nature", "science"]
+    "words": [
+      "نسر",
+      "صقر",
+      "بومة",
+      "حمامة",
+      "عصفور",
+      "ببغاء",
+      "نورس",
+      "طاووس",
+      "غراب",
+      "بجعة",
+      "نعامة",
+      "لقلق",
+      "هدهد",
+      "بلبل",
+      "يمامة",
+      "بطريق",
+      "شاهين",
+      "باشق",
+      "عقاب",
+      "كروان"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "animals",
+      "nature"
+    ]
   },
   {
-    words: ["\u0628\u062D\u0631", "\u0646\u0647\u0631", "\u0628\u062D\u064A\u0631\u0629", "\u0645\u062D\u064A\u0637", "\u062C\u0628\u0644", "\u0648\u0627\u062F\u064A", "\u0635\u062D\u0631\u0627\u0621", "\u063A\u0627\u0628\u0629", "\u0634\u062C\u0631\u0629", "\u0632\u0647\u0631\u0629", "\u0648\u0631\u0642\u0629 \u0634\u062C\u0631", "\u0639\u0634\u0628", "\u062C\u0630\u0631", "\u0628\u0630\u0631\u0629", "\u062B\u0645\u0631\u0629"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["nature", "geography"]
+    "words": [
+      "سمكة",
+      "قرش",
+      "حوت",
+      "دولفين",
+      "أخطبوط",
+      "سرطان",
+      "نحلة",
+      "نملة",
+      "فراشة",
+      "عنكبوت",
+      "ذبابة",
+      "بعوضة",
+      "دودة",
+      "صرصور",
+      "جراد",
+      "عقرب",
+      "جمبري",
+      "حبار",
+      "مرجان",
+      "فقمة",
+      "قنديل",
+      "محار",
+      "حلزون",
+      "يعسوب",
+      "يرقة"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "animals",
+      "nature"
+    ]
   },
   {
-    words: ["\u0631\u0645\u0644", "\u062D\u062C\u0631", "\u0635\u062E\u0631\u0629", "\u062A\u0631\u0627\u0628", "\u0637\u064A\u0646", "\u0630\u0647\u0628", "\u0641\u0636\u0629", "\u062D\u062F\u064A\u062F", "\u0646\u062D\u0627\u0633", "\u062E\u0634\u0628", "\u0632\u062C\u0627\u062C", "\u0628\u0644\u0627\u0633\u062A\u064A\u0643", "\u0648\u0631\u0642", "\u0642\u0645\u0627\u0634", "\u062C\u0644\u062F"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["nature", "science", "objects"]
+    "words": [
+      "كتاب",
+      "قلم",
+      "ورقة",
+      "دفتر",
+      "مفتاح",
+      "باب",
+      "شباك",
+      "كرسي",
+      "ترابيزة",
+      "سرير",
+      "مرآة",
+      "ساعة",
+      "مصباح",
+      "شمعة",
+      "سلة",
+      "ستار",
+      "منبه",
+      "لوحة",
+      "مكتب",
+      "لوح"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "objects",
+      "everyday"
+    ]
   },
   {
-    words: ["\u062C\u0632\u064A\u0631\u0629", "\u0643\u0647\u0641", "\u0634\u0644\u0627\u0644", "\u0628\u0631\u0643\u0627\u0646", "\u0632\u0644\u0632\u0627\u0644", "\u0625\u0639\u0635\u0627\u0631", "\u0645\u0648\u062C\u0629", "\u0639\u0627\u0635\u0641\u0629", "\u0648\u0627\u062D\u0629", "\u0647\u0636\u0628\u0629", "\u0633\u0647\u0644", "\u0633\u0627\u062D\u0644", "\u062E\u0644\u064A\u062C", "\u0645\u0633\u062A\u0646\u0642\u0639", "\u0646\u0628\u0639"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 2,
-    partOfSpeech: "noun",
-    categories: ["nature", "geography"]
-  },
-  /* -------------------------------------------------------- Transportation */
-  {
-    words: ["\u0633\u064A\u0627\u0631\u0629", "\u062D\u0627\u0641\u0644\u0629", "\u0642\u0637\u0627\u0631", "\u0637\u0627\u0626\u0631\u0629", "\u0633\u0641\u064A\u0646\u0629", "\u0642\u0627\u0631\u0628", "\u062F\u0631\u0627\u062C\u0629", "\u0634\u0627\u062D\u0646\u0629", "\u0633\u064A\u0627\u0631\u0629 \u0625\u0633\u0639\u0627\u0641", "\u0635\u0627\u0631\u0648\u062E", "\u0645\u062A\u0631\u0648", "\u062A\u0631\u0627\u0645", "\u0645\u0631\u0643\u0628", "\u0639\u0631\u0628\u0629", "\u0645\u0631\u0648\u062D\u064A\u0629"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["transportation", "objects"]
-  },
-  {
-    words: ["\u0639\u062C\u0644\u0629", "\u0645\u062D\u0631\u0643", "\u0648\u0642\u0648\u062F", "\u0637\u0631\u064A\u0642", "\u0625\u0634\u0627\u0631\u0629", "\u062E\u0631\u064A\u0637\u0629", "\u0628\u0648\u0635\u0644\u0629", "\u062A\u0630\u0643\u0631\u0629", "\u062D\u0642\u064A\u0628\u0629 \u0633\u0641\u0631", "\u062C\u0648\u0627\u0632 \u0633\u0641\u0631", "\u0631\u062D\u0644\u0629", "\u0633\u0627\u0626\u0642", "\u0631\u0627\u0643\u0628", "\u0631\u0635\u064A\u0641", "\u0645\u0631\u0622\u0628"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["transportation", "everyday"]
-  },
-  /* ------------------------------------------------------------ Technology */
-  {
-    words: ["\u0647\u0627\u062A\u0641", "\u062D\u0627\u0633\u0648\u0628", "\u0634\u0627\u0634\u0629", "\u0644\u0648\u062D\u0629 \u0645\u0641\u0627\u062A\u064A\u062D", "\u0641\u0623\u0631\u0629", "\u0637\u0627\u0628\u0639\u0629", "\u0643\u0627\u0645\u064A\u0631\u0627", "\u062A\u0644\u0641\u0627\u0632", "\u0631\u0627\u062F\u064A\u0648", "\u0633\u0645\u0627\u0639\u0629", "\u0628\u0637\u0627\u0631\u064A\u0629", "\u0634\u0627\u062D\u0646", "\u0643\u0627\u0628\u0644", "\u0642\u0645\u0631 \u0635\u0646\u0627\u0639\u064A", "\u0631\u0648\u0628\u0648\u062A"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["technology", "objects"]
-  },
-  {
-    words: ["\u0625\u0646\u062A\u0631\u0646\u062A", "\u0645\u0648\u0642\u0639", "\u062A\u0637\u0628\u064A\u0642", "\u0628\u0631\u0646\u0627\u0645\u062C", "\u0634\u0628\u0643\u0629", "\u062E\u0627\u062F\u0645", "\u0645\u0644\u0641", "\u0631\u0633\u0627\u0644\u0629", "\u0628\u0631\u064A\u062F", "\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631", "\u062D\u0633\u0627\u0628", "\u0631\u0645\u0632", "\u0630\u0643\u0627\u0621 \u0627\u0635\u0637\u0646\u0627\u0639\u064A", "\u0644\u0639\u0628\u0629 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0629", "\u0634\u0631\u064A\u062D\u0629"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["technology", "science"]
-  },
-  /* --------------------------------------------------------------- Science */
-  {
-    words: ["\u0639\u0644\u0645", "\u062A\u062C\u0631\u0628\u0629", "\u0645\u062E\u062A\u0628\u0631", "\u0645\u062C\u0647\u0631", "\u062A\u0644\u0633\u0643\u0648\u0628", "\u0643\u0648\u0643\u0628", "\u0645\u062C\u0631\u0629", "\u0641\u0636\u0627\u0621", "\u062C\u0627\u0630\u0628\u064A\u0629", "\u0637\u0627\u0642\u0629", "\u0643\u0647\u0631\u0628\u0627\u0621", "\u0645\u063A\u0646\u0627\u0637\u064A\u0633", "\u0636\u0648\u0621", "\u0635\u0648\u062A", "\u062D\u0631\u0627\u0631\u0629 \u0646\u0648\u0639\u064A\u0629"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 2,
-    partOfSpeech: "noun",
-    categories: ["science", "education"]
+    "words": [
+      "حقيبة",
+      "محفظة",
+      "مظلة",
+      "نظارة",
+      "خاتم",
+      "عقد",
+      "سوار",
+      "مشط",
+      "فرشاة",
+      "صابون",
+      "منشفة",
+      "وسادة",
+      "بطانية",
+      "ستارة",
+      "سجادة",
+      "عطر",
+      "ولاعة",
+      "سلسلة",
+      "بروش",
+      "حلق",
+      "مرهم",
+      "شفرة",
+      "معجون",
+      "مكحلة",
+      "إسفنجة"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "objects",
+      "everyday"
+    ]
   },
   {
-    words: ["\u0631\u064A\u0627\u0636\u064A\u0627\u062A", "\u0647\u0646\u062F\u0633\u0629", "\u0643\u064A\u0645\u064A\u0627\u0621", "\u0641\u064A\u0632\u064A\u0627\u0621", "\u0623\u062D\u064A\u0627\u0621", "\u062C\u063A\u0631\u0627\u0641\u064A\u0627", "\u062A\u0627\u0631\u064A\u062E", "\u0641\u0644\u0633\u0641\u0629", "\u0637\u0628", "\u062F\u0648\u0627\u0621", "\u0644\u0642\u0627\u062D", "\u062E\u0644\u064A\u0629", "\u062F\u0645\u0627\u063A", "\u0642\u0644\u0628", "\u0639\u0638\u0645"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 2,
-    partOfSpeech: "noun",
-    categories: ["science", "education"]
-  },
-  /* ----------------------------------------------------- People & work */
-  {
-    words: ["\u0637\u0628\u064A\u0628", "\u0645\u0639\u0644\u0645", "\u0645\u0647\u0646\u062F\u0633", "\u0645\u062D\u0627\u0645\u064A", "\u0634\u0631\u0637\u064A", "\u0625\u0637\u0641\u0627\u0626\u064A", "\u0645\u0645\u0631\u0636", "\u0635\u064A\u062F\u0644\u064A", "\u0646\u062C\u0627\u0631", "\u062D\u062F\u0627\u062F", "\u062E\u064A\u0627\u0637", "\u0641\u0644\u0627\u062D", "\u0635\u064A\u0627\u062F", "\u0628\u0627\u0626\u0639", "\u0645\u062D\u0627\u0633\u0628"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["professions", "people"]
-  },
-  {
-    words: ["\u0637\u064A\u0627\u0631", "\u0642\u0628\u0637\u0627\u0646", "\u062C\u0646\u062F\u064A", "\u0642\u0627\u0636", "\u0631\u0633\u0627\u0645", "\u0645\u0635\u0648\u0631", "\u0643\u0627\u062A\u0628", "\u0634\u0627\u0639\u0631", "\u0645\u0645\u062B\u0644", "\u0645\u063A\u0646\u064A", "\u0631\u0627\u0642\u0635", "\u0644\u0627\u0639\u0628", "\u0645\u062F\u0631\u0628", "\u062D\u0627\u0631\u0633", "\u0639\u0627\u0645\u0644"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["professions", "people"]
-  },
-  {
-    words: ["\u0623\u0628", "\u0623\u0645", "\u0627\u0628\u0646", "\u0628\u0646\u062A", "\u0623\u062E", "\u0623\u062E\u062A", "\u062C\u062F", "\u062C\u062F\u0629", "\u0639\u0645", "\u062E\u0627\u0644", "\u0635\u062F\u064A\u0642", "\u062C\u0627\u0631", "\u0636\u064A\u0641", "\u0637\u0641\u0644", "\u0634\u0627\u0628"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 5,
-    partOfSpeech: "noun",
-    categories: ["people", "everyday"]
-  },
-  {
-    words: ["\u0645\u0644\u0643", "\u0645\u0644\u0643\u0629", "\u0623\u0645\u064A\u0631", "\u0631\u0626\u064A\u0633", "\u0648\u0632\u064A\u0631", "\u0633\u0641\u064A\u0631", "\u0639\u0627\u0644\u0645", "\u0645\u062E\u062A\u0631\u0639", "\u0645\u0633\u062A\u0643\u0634\u0641", "\u0628\u0637\u0644", "\u0633\u0627\u062D\u0631", "\u0642\u0631\u0635\u0627\u0646", "\u0641\u0627\u0631\u0633", "\u0644\u0635", "\u062C\u0627\u0633\u0648\u0633"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 2,
-    partOfSpeech: "noun",
-    categories: ["people", "history", "culture"]
-  },
-  /* ---------------------------------------------------------------- Sports */
-  {
-    words: ["\u0643\u0631\u0629", "\u0645\u0628\u0627\u0631\u0627\u0629", "\u0641\u0631\u064A\u0642", "\u0647\u062F\u0641", "\u0628\u0637\u0648\u0644\u0629", "\u0643\u0623\u0633", "\u0645\u064A\u062F\u0627\u0644\u064A\u0629", "\u0633\u0628\u0627\u0642", "\u0633\u0628\u0627\u062D\u0629", "\u062C\u0631\u064A", "\u0645\u0644\u0627\u0643\u0645\u0629", "\u0645\u0635\u0627\u0631\u0639\u0629", "\u062A\u0646\u0633", "\u0634\u0637\u0631\u0646\u062C", "\u062C\u0645\u0628\u0627\u0632"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["sports", "entertainment"]
-  },
-  /* --------------------------------------------------------- Entertainment */
-  {
-    words: ["\u0641\u064A\u0644\u0645", "\u0645\u0633\u0644\u0633\u0644", "\u0645\u0633\u0631\u062D\u064A\u0629", "\u0623\u063A\u0646\u064A\u0629", "\u0645\u0648\u0633\u064A\u0642\u0649", "\u062D\u0641\u0644\u0629", "\u062C\u0627\u0626\u0632\u0629", "\u0628\u0637\u0627\u0642\u0629", "\u0644\u0639\u0628\u0629", "\u0644\u063A\u0632", "\u0646\u0643\u062A\u0629", "\u0642\u0635\u0629", "\u0631\u0648\u0627\u064A\u0629", "\u0645\u062C\u0644\u0629", "\u062C\u0631\u064A\u062F\u0629"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["entertainment", "movies", "music", "culture"]
+    "words": [
+      "سكين",
+      "ملعقة",
+      "شوكة",
+      "طبق",
+      "كوب",
+      "إبريق",
+      "قدر",
+      "مقلاة",
+      "مقص",
+      "إبرة",
+      "خيط",
+      "حبل",
+      "سلم",
+      "مطرقة",
+      "مسمار",
+      "منشار",
+      "فأس",
+      "كماشة",
+      "مفك",
+      "إزميل",
+      "مجرفة",
+      "منجل",
+      "مثقاب",
+      "مبرد",
+      "مخرطة"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "objects",
+      "everyday"
+    ]
   },
   {
-    words: ["\u0628\u064A\u0627\u0646\u0648", "\u062C\u064A\u062A\u0627\u0631", "\u0643\u0645\u0627\u0646", "\u0637\u0628\u0644\u0629", "\u0646\u0627\u064A", "\u0639\u0648\u062F", "\u0645\u0633\u0631\u062D \u063A\u0646\u0627\u0626\u064A", "\u0623\u0648\u0631\u0643\u0633\u062A\u0631\u0627", "\u0644\u062D\u0646", "\u0625\u064A\u0642\u0627\u0639", "\u0643\u0648\u0631\u0627\u0644", "\u0645\u063A\u0646\u064A\u0629", "\u0623\u0644\u0628\u0648\u0645", "\u0645\u0647\u0631\u062C\u0627\u0646", "\u0627\u0633\u062A\u0648\u062F\u064A\u0648"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 2,
-    partOfSpeech: "noun",
-    categories: ["music", "entertainment", "culture"]
-  },
-  /* ---------------------------------------------------- Clothes & the body */
-  {
-    words: ["\u0642\u0645\u064A\u0635", "\u0628\u0646\u0637\u0644\u0648\u0646", "\u0641\u0633\u062A\u0627\u0646", "\u062C\u0627\u0643\u064A\u062A", "\u0645\u0639\u0637\u0641", "\u062D\u0630\u0627\u0621", "\u062C\u0648\u0631\u0628", "\u0642\u0628\u0639\u0629", "\u0648\u0634\u0627\u062D", "\u062D\u0632\u0627\u0645", "\u0642\u0641\u0627\u0632", "\u0628\u062F\u0644\u0629", "\u062A\u0646\u0648\u0631\u0629", "\u0632\u0631", "\u062C\u064A\u0628"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["objects", "everyday"]
-  },
-  {
-    words: ["\u0631\u0623\u0633", "\u0639\u064A\u0646", "\u0623\u0630\u0646", "\u0623\u0646\u0641", "\u0641\u0645", "\u064A\u062F", "\u0642\u062F\u0645", "\u0625\u0635\u0628\u0639", "\u0634\u0639\u0631", "\u0633\u0646", "\u0644\u0633\u0627\u0646", "\u0643\u062A\u0641", "\u0631\u0643\u0628\u0629", "\u0638\u0647\u0631", "\u0648\u062C\u0647"],
-    dialect: "msa",
-    difficulty: 1,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["people", "science", "everyday"]
-  },
-  /* -------------------------------------------------------- Abstract nouns */
-  {
-    words: ["\u062D\u0628", "\u062E\u0648\u0641", "\u0641\u0631\u062D", "\u062D\u0632\u0646", "\u063A\u0636\u0628", "\u0623\u0645\u0644", "\u062D\u0644\u0645", "\u0630\u0643\u0631\u0649", "\u0633\u0631", "\u062D\u0642\u064A\u0642\u0629", "\u0643\u0630\u0628", "\u0635\u062F\u0627\u0642\u0629", "\u0634\u062C\u0627\u0639\u0629", "\u0635\u0628\u0631", "\u0633\u0644\u0627\u0645"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["abstract", "emotions"]
-  },
-  {
-    words: ["\u0648\u0642\u062A", "\u064A\u0648\u0645", "\u0644\u064A\u0644", "\u0635\u0628\u0627\u062D", "\u0634\u0647\u0631", "\u0633\u0646\u0629", "\u0641\u0635\u0644", "\u0639\u064A\u062F", "\u0645\u0648\u0639\u062F", "\u0628\u062F\u0627\u064A\u0629", "\u0646\u0647\u0627\u064A\u0629", "\u0641\u0631\u0635\u0629", "\u062E\u0637\u0629", "\u0641\u0643\u0631\u0629", "\u0633\u0624\u0627\u0644"],
-    dialect: "msa",
-    difficulty: 2,
-    frequency: 4,
-    partOfSpeech: "noun",
-    categories: ["abstract", "everyday"]
+    "words": [
+      "صندوق",
+      "زجاجة",
+      "علبة",
+      "كيس",
+      "صحن",
+      "دلو",
+      "مكنسة",
+      "مروحة",
+      "ثلاجة",
+      "فرن",
+      "غسالة",
+      "مكواة",
+      "ميزان",
+      "قفل",
+      "مسطرة",
+      "مغناطيس",
+      "بوصلة",
+      "جرس",
+      "خرطوم",
+      "مكبس",
+      "برميل",
+      "قارورة",
+      "جرة",
+      "فانوس",
+      "موقد"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "objects",
+      "everyday"
+    ]
   },
   {
-    words: ["\u0644\u0648\u0646", "\u0634\u0643\u0644", "\u062D\u062C\u0645", "\u0631\u0642\u0645", "\u062D\u0631\u0641", "\u0643\u0644\u0645\u0629", "\u062C\u0645\u0644\u0629", "\u0644\u063A\u0629", "\u0635\u0648\u0631\u0629", "\u0635\u0648\u062A \u0639\u0627\u0644", "\u0631\u0627\u0626\u062D\u0629", "\u0637\u0639\u0645", "\u0644\u0645\u0633\u0629", "\u0645\u0633\u0627\u0641\u0629", "\u0648\u0632\u0646"],
-    dialect: "msa",
-    difficulty: 3,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["abstract", "education"]
+    "words": [
+      "بيت",
+      "مدرسة",
+      "جامعة",
+      "مكتبة",
+      "مستشفى",
+      "صيدلية",
+      "سوق",
+      "متجر",
+      "بنك",
+      "مطار",
+      "محطة",
+      "ميناء",
+      "فندق",
+      "متحف",
+      "مسرح",
+      "سينما",
+      "معرض",
+      "مسبح",
+      "ملعب",
+      "مصحة",
+      "مخبأ",
+      "محكمة",
+      "مرصد",
+      "مدرج",
+      "مستودع"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "places",
+      "buildings"
+    ]
   },
-  /* ---------------------------------------------------- Gaming & internet */
   {
-    words: ["\u0648\u062D\u0634", "\u0628\u0637\u0644 \u062E\u0627\u0631\u0642", "\u062E\u0631\u064A\u0637\u0629 \u0644\u0639\u0628\u0629", "\u0645\u0633\u062A\u0648\u0649", "\u0646\u0642\u0637\u0629", "\u062C\u0627\u0626\u0632\u0629 \u0643\u0628\u0631\u0649", "\u0643\u0646\u0632", "\u0633\u064A\u0641", "\u062F\u0631\u0639", "\u0642\u0644\u0639\u0629 \u0644\u0639\u0628\u0629", "\u0645\u063A\u0627\u0645\u0631\u0629", "\u0633\u0628\u0627\u0642 \u0633\u064A\u0627\u0631\u0627\u062A", "\u0628\u0637\u0627\u0642\u0629 \u0644\u0639\u0628", "\u0646\u0631\u062F", "\u062F\u0648\u0645\u064A\u0646\u0648"],
-    dialect: "general",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["gaming", "entertainment", "general"]
+    "words": [
+      "حديقة",
+      "شاطئ",
+      "مزرعة",
+      "مصنع",
+      "مقر",
+      "قرية",
+      "مدينة",
+      "شارع",
+      "ميدان",
+      "جسر",
+      "نفق",
+      "برج",
+      "قلعة",
+      "قصر",
+      "حصن",
+      "منارة",
+      "رصيف",
+      "زقاق",
+      "طريق",
+      "حارة",
+      "معبر",
+      "حلبة",
+      "مرسى",
+      "ممشى",
+      "بوابة"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "places",
+      "buildings",
+      "geography"
+    ]
   },
-  /* ------------------------------------------------------- Egyptian flavour */
   {
-    words: ["\u0647\u0631\u0645", "\u0623\u0628\u0648 \u0627\u0644\u0647\u0648\u0644", "\u0646\u064A\u0644", "\u0641\u0644\u0648\u0643\u0629", "\u062E\u0627\u0646 \u0627\u0644\u062E\u0644\u064A\u0644\u064A", "\u062A\u0648\u0643 \u062A\u0648\u0643", "\u0645\u064A\u0643\u0631\u0648\u0628\u0627\u0635", "\u0639\u0645\u0627\u0631\u0629", "\u0628\u0644\u0643\u0648\u0646\u0629", "\u0633\u0628\u0648\u0639", "\u0645\u0648\u0644\u062F", "\u0641\u0627\u0646\u0648\u0633", "\u0634\u0628\u0634\u0628", "\u062C\u0644\u0627\u0628\u064A\u0629", "\u0637\u0631\u062D\u0629"],
-    dialect: "egyptian",
-    difficulty: 2,
-    frequency: 3,
-    partOfSpeech: "noun",
-    categories: ["egyptianCulture", "arabicCulture", "culture", "places"]
+    "words": [
+      "مسجد",
+      "كنيسة",
+      "مقبرة",
+      "سجن",
+      "ثكنة",
+      "حمام",
+      "غرفة",
+      "صالة",
+      "شرفة",
+      "سطح",
+      "قبو",
+      "مخزن",
+      "كوخ",
+      "خيمة",
+      "صومعة",
+      "محراب",
+      "مئذنة",
+      "رواق",
+      "قبة",
+      "بهو",
+      "مقصورة",
+      "دهليز",
+      "ديوان",
+      "ضريح",
+      "مقام"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "places",
+      "buildings"
+    ]
+  },
+  {
+    "words": [
+      "شمس",
+      "قمر",
+      "نجم",
+      "سماء",
+      "سحابة",
+      "مطر",
+      "ثلج",
+      "رياح",
+      "برق",
+      "رعد",
+      "طيف",
+      "ضباب",
+      "حرارة",
+      "ظل",
+      "نار",
+      "شفق",
+      "ندى",
+      "جليد",
+      "نسيم",
+      "هواء",
+      "غبار",
+      "وهج",
+      "شهاب",
+      "كسوف",
+      "خسوف"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "nature",
+      "science"
+    ]
+  },
+  {
+    "words": [
+      "بحر",
+      "نهر",
+      "بحيرة",
+      "محيط",
+      "جبل",
+      "وادي",
+      "صحراء",
+      "غابة",
+      "شجرة",
+      "زهرة",
+      "غصن",
+      "عشب",
+      "جذر",
+      "بذرة",
+      "ثمرة",
+      "نخلة",
+      "وردة",
+      "ينبوع",
+      "حقل",
+      "روضة",
+      "غدير",
+      "شجيرة",
+      "ساق",
+      "أيكة",
+      "برعم"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "nature",
+      "geography"
+    ]
+  },
+  {
+    "words": [
+      "رمل",
+      "حجر",
+      "صخرة",
+      "تراب",
+      "طين",
+      "ذهب",
+      "فضة",
+      "حديد",
+      "نحاس",
+      "خشب",
+      "زجاج",
+      "بلاستيك",
+      "ورق",
+      "قماش",
+      "جلد",
+      "ياقوت",
+      "زمرد",
+      "ماس",
+      "فحم",
+      "رخام",
+      "عقيق",
+      "بلور",
+      "مرمر",
+      "صلصال",
+      "كهرمان"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "nature",
+      "science",
+      "objects"
+    ]
+  },
+  {
+    "words": [
+      "جزيرة",
+      "كهف",
+      "شلال",
+      "بركان",
+      "زلزال",
+      "إعصار",
+      "موجة",
+      "عاصفة",
+      "واحة",
+      "هضبة",
+      "سهل",
+      "ساحل",
+      "خليج",
+      "مستنقع",
+      "نبع",
+      "مضيق",
+      "أخدود",
+      "قمة",
+      "سراب",
+      "سديم",
+      "قاع",
+      "تل",
+      "منحدر",
+      "شعب",
+      "غار"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "nature",
+      "geography"
+    ]
+  },
+  {
+    "words": [
+      "سيارة",
+      "حافلة",
+      "قطار",
+      "طائرة",
+      "سفينة",
+      "قارب",
+      "دراجة",
+      "شاحنة",
+      "إسعاف",
+      "صاروخ",
+      "مترو",
+      "ترام",
+      "مركب",
+      "عربة",
+      "مروحية",
+      "غواصة",
+      "منطاد",
+      "شراع",
+      "زورق",
+      "ناقلة",
+      "يخت",
+      "جرار",
+      "رافعة",
+      "طوافة",
+      "مكوك"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "transportation",
+      "objects"
+    ]
+  },
+  {
+    "words": [
+      "عجلة",
+      "محرك",
+      "وقود",
+      "إشارة",
+      "تذكرة",
+      "أمتعة",
+      "تأشيرة",
+      "رحلة",
+      "سائق",
+      "راكب",
+      "مرآب",
+      "فرامل",
+      "مقود",
+      "جناح",
+      "صمام",
+      "دواسة",
+      "مكب",
+      "عداد",
+      "عادم",
+      "محور"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "transportation",
+      "everyday"
+    ]
+  },
+  {
+    "words": [
+      "هاتف",
+      "حاسوب",
+      "شاشة",
+      "أزرار",
+      "فأرة",
+      "طابعة",
+      "كاميرا",
+      "تلفاز",
+      "راديو",
+      "سماعة",
+      "بطارية",
+      "شاحن",
+      "كابل",
+      "رادار",
+      "روبوت",
+      "هوائي",
+      "معالج",
+      "عدسة",
+      "شريحة",
+      "لاقط",
+      "مكبر",
+      "كاشف",
+      "ماسح",
+      "محول",
+      "مقبس"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "technology",
+      "objects"
+    ]
+  },
+  {
+    "words": [
+      "إنترنت",
+      "موقع",
+      "تطبيق",
+      "برنامج",
+      "شبكة",
+      "خادم",
+      "ملف",
+      "رسالة",
+      "بريد",
+      "حساب",
+      "رمز",
+      "خوارزمية",
+      "منصة",
+      "ذاكرة",
+      "قرص",
+      "رابط",
+      "نظام",
+      "بيانات",
+      "مجلد",
+      "سيرفر",
+      "قاعدة",
+      "مصفوفة",
+      "تشفير",
+      "تصفح"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "technology",
+      "science"
+    ]
+  },
+  {
+    "words": [
+      "علم",
+      "تجربة",
+      "مختبر",
+      "مجهر",
+      "تلسكوب",
+      "كوكب",
+      "مجرة",
+      "فضاء",
+      "جاذبية",
+      "طاقة",
+      "كهرباء",
+      "ضوء",
+      "صوت",
+      "إشعاع",
+      "نيزك",
+      "مدار",
+      "أثير",
+      "ليزر",
+      "موجات",
+      "إلكترون",
+      "فوتون",
+      "بلازما",
+      "نواة",
+      "طيفنجمي"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "science",
+      "education"
+    ]
+  },
+  {
+    "words": [
+      "رياضيات",
+      "هندسة",
+      "كيمياء",
+      "فيزياء",
+      "أحياء",
+      "جغرافيا",
+      "تاريخ",
+      "فلسفة",
+      "طب",
+      "دواء",
+      "لقاح",
+      "خلية",
+      "دماغ",
+      "قلب",
+      "عظم",
+      "معادلة",
+      "نظرية",
+      "عنصر",
+      "مصل",
+      "جين",
+      "عصب",
+      "هرمون",
+      "شريان",
+      "وريد"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "science",
+      "education"
+    ]
+  },
+  {
+    "words": [
+      "طبيب",
+      "معلم",
+      "مهندس",
+      "محامي",
+      "شرطي",
+      "إطفائي",
+      "ممرض",
+      "صيدلي",
+      "نجار",
+      "حداد",
+      "خياط",
+      "فلاح",
+      "صياد",
+      "بائع",
+      "محاسب",
+      "حلاق",
+      "بناء",
+      "خباز",
+      "ميكانيكي",
+      "ساعي",
+      "حارس",
+      "طحان",
+      "غواص",
+      "طاه",
+      "سباك"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "professions",
+      "people"
+    ]
+  },
+  {
+    "words": [
+      "طيار",
+      "قبطان",
+      "جندي",
+      "قاض",
+      "رسام",
+      "مصور",
+      "كاتب",
+      "شاعر",
+      "ممثل",
+      "مغني",
+      "راقص",
+      "لاعب",
+      "مدرب",
+      "عامل",
+      "مؤلف",
+      "مخرج",
+      "مذيع",
+      "عازف",
+      "مرشد",
+      "نحات",
+      "مترجم",
+      "محرر",
+      "باحث",
+      "محقق",
+      "دبلوماسي"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "professions",
+      "people"
+    ]
+  },
+  {
+    "words": [
+      "أب",
+      "أم",
+      "ابن",
+      "بنت",
+      "أخ",
+      "أخت",
+      "جد",
+      "جدة",
+      "عم",
+      "خال",
+      "صديق",
+      "جار",
+      "ضيف",
+      "طفل",
+      "شاب",
+      "رفيق",
+      "شريك",
+      "زعيم",
+      "قائد",
+      "بطل",
+      "عجوز",
+      "صبي",
+      "حفيد",
+      "توأم",
+      "زميل"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "people",
+      "everyday"
+    ]
+  },
+  {
+    "words": [
+      "ملك",
+      "ملكة",
+      "أمير",
+      "رئيس",
+      "وزير",
+      "سفير",
+      "عالم",
+      "مخترع",
+      "مستكشف",
+      "أسطورة",
+      "ساحر",
+      "قرصان",
+      "فارس",
+      "لص",
+      "جاسوس",
+      "إمبراطور",
+      "حكيم",
+      "محارب",
+      "دوق",
+      "جنرال",
+      "باشا",
+      "سلطان",
+      "خليفة",
+      "حاكم",
+      "عمدة"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "people",
+      "history",
+      "culture"
+    ]
+  },
+  {
+    "words": [
+      "كرة",
+      "مباراة",
+      "فريق",
+      "هدف",
+      "بطولة",
+      "كأس",
+      "ميدالية",
+      "سباق",
+      "سباحة",
+      "جري",
+      "ملاكمة",
+      "مصارعة",
+      "تنس",
+      "شطرنج",
+      "جمباز",
+      "صافرة",
+      "راية",
+      "مرمى",
+      "مضرب",
+      "مضمار",
+      "رماية",
+      "فروسية",
+      "تزلج",
+      "غطس",
+      "سهم"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "sports",
+      "entertainment"
+    ]
+  },
+  {
+    "words": [
+      "فيلم",
+      "مسلسل",
+      "مسرحية",
+      "أغنية",
+      "موسيقى",
+      "حفلة",
+      "جائزة",
+      "بطاقة",
+      "لعبة",
+      "لغز",
+      "نكتة",
+      "قصة",
+      "رواية",
+      "مجلة",
+      "جريدة",
+      "سيناريو",
+      "مشهد",
+      "حكاية",
+      "دراما",
+      "ملحمة",
+      "قصيدة",
+      "أبيات",
+      "نص",
+      "مقال",
+      "فصل"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "entertainment",
+      "movies",
+      "music",
+      "culture"
+    ]
+  },
+  {
+    "words": [
+      "بيانو",
+      "جيتار",
+      "كمان",
+      "طبلة",
+      "ناي",
+      "عود",
+      "أوبرا",
+      "أوركسترا",
+      "لحن",
+      "إيقاع",
+      "كورال",
+      "مغنية",
+      "ألبوم",
+      "مهرجان",
+      "استوديو",
+      "بوق",
+      "دف",
+      "مزمار",
+      "قيثارة",
+      "وتر",
+      "سنطور",
+      "قانون",
+      "ربابة",
+      "صنج",
+      "هارمونيكا"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "music",
+      "entertainment",
+      "culture"
+    ]
+  },
+  {
+    "words": [
+      "قميص",
+      "بنطلون",
+      "فستان",
+      "جاكيت",
+      "معطف",
+      "حذاء",
+      "جورب",
+      "قبعة",
+      "وشاح",
+      "حزام",
+      "قفاز",
+      "بدلة",
+      "تنورة",
+      "زر",
+      "جيب",
+      "عباءة",
+      "شال",
+      "صندل",
+      "ياقة",
+      "كم",
+      "عمامة",
+      "برقع",
+      "تاج",
+      "خلخال",
+      "مئزر"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "objects",
+      "everyday"
+    ]
+  },
+  {
+    "words": [
+      "رأس",
+      "عين",
+      "أذن",
+      "أنف",
+      "فم",
+      "يد",
+      "قدم",
+      "إصبع",
+      "شعر",
+      "سن",
+      "لسان",
+      "كتف",
+      "ركبة",
+      "ظهر",
+      "وجه",
+      "عنق",
+      "جبين",
+      "خد",
+      "ذراع",
+      "كاحل",
+      "كف",
+      "صدر",
+      "بطن",
+      "معصم",
+      "أظفر"
+    ],
+    "dialect": "msa",
+    "difficulty": 1,
+    "frequency": 5,
+    "partOfSpeech": "noun",
+    "categories": [
+      "people",
+      "science",
+      "everyday"
+    ]
+  },
+  {
+    "words": [
+      "حب",
+      "خوف",
+      "فرح",
+      "حزن",
+      "غضب",
+      "أمل",
+      "حلم",
+      "ذكرى",
+      "سر",
+      "حقيقة",
+      "كذب",
+      "صداقة",
+      "شجاعة",
+      "صبر",
+      "سلام",
+      "عدل",
+      "حرية",
+      "شرف",
+      "وفاء",
+      "حكمة",
+      "حسد",
+      "غيرة",
+      "ندم",
+      "شوق",
+      "حنين"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "abstract",
+      "emotions"
+    ]
+  },
+  {
+    "words": [
+      "وقت",
+      "يوم",
+      "ليل",
+      "صباح",
+      "شهر",
+      "سنة",
+      "عيد",
+      "موعد",
+      "بداية",
+      "نهاية",
+      "فرصة",
+      "خطة",
+      "فكرة",
+      "سؤال",
+      "جواب",
+      "لحظة",
+      "عصر",
+      "ماضي",
+      "مستقبل",
+      "أوان",
+      "دهر",
+      "فجر",
+      "غروب",
+      "زمن"
+    ],
+    "dialect": "msa",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "abstract",
+      "everyday"
+    ]
+  },
+  {
+    "words": [
+      "لون",
+      "شكل",
+      "حجم",
+      "رقم",
+      "حرف",
+      "كلمة",
+      "جملة",
+      "لغة",
+      "صورة",
+      "صراخ",
+      "رائحة",
+      "طعم",
+      "لمسة",
+      "مسافة",
+      "وزن",
+      "صدى",
+      "بريق",
+      "عمق",
+      "سرعة",
+      "وميض",
+      "عتمة",
+      "نقاء",
+      "حدة",
+      "ضجيج",
+      "سكون"
+    ],
+    "dialect": "msa",
+    "difficulty": 3,
+    "frequency": 3,
+    "partOfSpeech": "noun",
+    "categories": [
+      "abstract",
+      "education"
+    ]
+  },
+  {
+    "words": [
+      "وحش",
+      "شبح",
+      "متاهة",
+      "مستوى",
+      "نقطة",
+      "وسام",
+      "كنز",
+      "سيف",
+      "درع",
+      "مغامرة",
+      "نرد",
+      "دومينو",
+      "صولجان",
+      "رمح",
+      "خنجر",
+      "فخ",
+      "بلورة",
+      "تنين",
+      "تميمة",
+      "جرعة",
+      "تابوت",
+      "عفريت",
+      "قوس"
+    ],
+    "dialect": "general",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "gaming",
+      "entertainment",
+      "general"
+    ]
+  },
+  {
+    "words": [
+      "هرم",
+      "تمثال",
+      "نيل",
+      "فلوكة",
+      "بازار",
+      "حنطور",
+      "ميكروباص",
+      "عمارة",
+      "بلكونة",
+      "سبوع",
+      "مولد",
+      "شبشب",
+      "جلابية",
+      "طرحة",
+      "طربوش",
+      "مبخرة",
+      "عنبر",
+      "مسك",
+      "ياقوتة",
+      "مسبحة",
+      "شيشة",
+      "قهوجي",
+      "سقا"
+    ],
+    "dialect": "egyptian",
+    "difficulty": 2,
+    "frequency": 4,
+    "partOfSpeech": "noun",
+    "categories": [
+      "egyptianCulture",
+      "arabicCulture",
+      "culture",
+      "places"
+    ]
   }
 ];
-
-// ../shared/src/words/data/english.ts
 var ENGLISH_SEEDS = [
   /* ------------------------------------------------------------------ Food */
   {
@@ -944,7 +2126,7 @@ var ENGLISH_SEEDS = [
 // ../shared/src/words/library.ts
 var WORD_LIBRARY_UPDATED_AT = "2026-08-23";
 var MAX_BOARD_WORD_LENGTH = 22;
-var MAX_BOARD_WORD_TOKENS = 2;
+var MAX_BOARD_WORD_TOKENS = 1;
 var VERB_BLOCKLIST = {
   ar: [
     "\u064A\u0643\u062A\u0628",
@@ -1457,25 +2639,30 @@ var RoomStore = class {
     if (restrictedUntil) {
       throw new RoomError("KICK_RESTRICTED", `Kicked from this room until ${new Date(restrictedUntil).toISOString()}`);
     }
-    // One authenticated Discord/site account represents one room player, even
-    // when the same account opens the room from multiple browsers or devices.
-    if (accountId) {
-      const matches = room.players.filter((candidate) => this.accountIdOf(candidate.id) === accountId);
-      if (matches.length > 0) {
-        const primary = matches.find((candidate) => candidate.id === room.ownerId) ?? matches.sort(
-          (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
-        )[0];
-        const duplicateIds = new Set(matches.filter((candidate) => candidate.id !== primary.id).map((candidate) => candidate.id));
-        if (duplicateIds.size > 0) {
-          room.players = room.players.filter((candidate) => !duplicateIds.has(candidate.id));
-          for (const duplicateId of duplicateIds) this.accountIds.delete(duplicateId);
-        }
-        primary.name = canonicalName;
-        if (avatar) primary.avatar = avatar;
-        this.setAccountId(primary.id, accountId);
-        room.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-        return { room, playerId: primary.id, reused: true, playerName: primary.name };
+    // One authenticated Discord/site account or matching player name represents one room player, even
+    // when the same account/player opens the room from multiple devices/tabs.
+    const norm = (str) => typeof str === "string" ? str.trim().toLowerCase() : "";
+    const targetNormName = norm(canonicalName);
+    const existingMatches = room.players.filter((candidate) => {
+      if (accountId && this.accountIdOf(candidate.id) === accountId) return true;
+      if (targetNormName && norm(candidate.name) === targetNormName) return true;
+      return false;
+    });
+
+    if (existingMatches.length > 0) {
+      const primary = existingMatches.find((candidate) => candidate.id === room.ownerId) ?? existingMatches.sort(
+        (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+      )[0];
+      const duplicateIds = new Set(existingMatches.filter((candidate) => candidate.id !== primary.id).map((candidate) => candidate.id));
+      if (duplicateIds.size > 0) {
+        room.players = room.players.filter((candidate) => !duplicateIds.has(candidate.id));
+        for (const duplicateId of duplicateIds) this.accountIds.delete(duplicateId);
       }
+      primary.name = canonicalName;
+      if (avatar) primary.avatar = avatar;
+      if (accountId) this.setAccountId(primary.id, accountId);
+      room.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      return { room, playerId: primary.id, reused: true, playerName: primary.name };
     }
     if (room.players.length >= room.maxPlayers) throw new RoomError("ROOM_FULL", "Room is full");
     const late = room.status === "playing";

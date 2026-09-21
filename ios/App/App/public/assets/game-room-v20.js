@@ -86,14 +86,25 @@
     correct: [
       "/sounds/Wing_it_1.mp3",
       "/sounds/Wing_it_2.mp3",
-      "/sounds/Wing_it_3.mp3"
+      "/sounds/Wing_it_3.mp3",
+      "/sounds/Wing_it_4.mp3",
+      "/sounds/Wing_it_5.mp3"
     ],
     wrong: [
       "/sounds/wrong_1.mp3",
       "/sounds/wrong_2.mp3",
-      "/sounds/wrong_3.mp3"
+      "/sounds/wrong_3.mp3",
+      "/sounds/wrong_4.mp3",
+      "/sounds/wrong_5.mp3",
+      "/sounds/wrong_6.mp3"
     ],
-    assassin: "/sounds/black.mp3"
+    assassin: [
+      "/sounds/black.mp3",
+      "/sounds/black_2.mp3",
+      "/sounds/black_3.mp3",
+      "/sounds/black_4.mp3",
+      "/sounds/black_5.mp3"
+    ]
   };
   var soundUnlockBound = false;
   var AUDIO_SETTINGS_KEY = "clue-me:audio";
@@ -301,7 +312,7 @@
     var src =
       kind === "correct" ? pickVariant(SOUNDBOARD.correct, 'correct|' + (seed || '')) :
       kind === "wrong" ? pickVariant(SOUNDBOARD.wrong, 'wrong|' + (seed || '')) :
-      kind === "assassin" ? SOUNDBOARD.assassin : null;
+      kind === "assassin" ? pickVariant(SOUNDBOARD.assassin, 'assassin|' + (seed || '')) : null;
     var volume = soundboardVolume();
     if (!src || volume <= 0.001) return;
     try {
@@ -418,12 +429,9 @@
   }
 
   function handleAuthoritativeGuessResult(result) {
-    if (!result || result.kind !== 'guess') return;
-    var kind = guessSoundKind(result.cardColor, lastGameView);
-    if (!kind) return;
-    playSoundEffect(kind, [result.actorTeam, result.cardColor, result.index, result.winner || ''].join('|'));
+    /* Audio playback is authoritatively handled by index-discord-v51.js with synchronized sound URLs to prevent duplicate soundboard play */
+    return;
   }
-
   function bindGuessSoundboard() {
     var socket = window.__clueMeSocket;
     if (!socket || typeof socket.on !== 'function') return;
@@ -2633,19 +2641,49 @@
   function shouldUseKeyboardLock() {
     try {
       if (!isMobileTouchEnv()) return false;
-      return !!document.querySelector('.cm-game-page') || html.classList.contains('cm-discord-activity');
+      return !!document.querySelector(".cm-game-page") || html.classList.contains("cm-discord-activity");
     } catch (e) {
       return false;
     }
   }
 
+  function resetPageScroll() {
+    try {
+      window.scrollTo(0, 0);
+      if (document.body.scrollTop !== 0) document.body.scrollTop = 0;
+      if (document.documentElement.scrollTop !== 0) document.documentElement.scrollTop = 0;
+      var root = document.getElementById("root");
+      if (root && root.scrollTop !== 0) root.scrollTop = 0;
+      var page = document.querySelector(".cm-game-page");
+      if (page && page.scrollTop !== 0) page.scrollTop = 0;
+      var shell = document.querySelector(".cm-game-shell");
+      if (shell && shell.scrollTop !== 0) shell.scrollTop = 0;
+    } catch (e) {}
+  }
+
+  function sanitizeFieldAutofill(input) {
+    if (!input || !input.setAttribute) return;
+    try {
+      input.setAttribute("autocomplete", "one-time-code");
+      input.setAttribute("autocorrect", "off");
+      input.setAttribute("autocapitalize", "none");
+      input.setAttribute("spellcheck", "false");
+      input.setAttribute("data-form-type", "other");
+      input.setAttribute("data-lpignore", "true");
+      input.setAttribute("data-1p-ignore", "true");
+      input.setAttribute("data-bwignore", "true");
+      input.setAttribute("data-private", "true");
+    } catch(e) {}
+  }
+
   function releaseKeyboardLock() {
+    try { document.documentElement.classList.remove("cm-keyboard-active"); } catch(e) {}
     keyboardLocked = false;
     keyboardBaseHeight = 0;
     keyboardActiveInput = null;
     if (window.visualViewport && keyboardViewportHandler) {
-      try { window.visualViewport.removeEventListener('resize', keyboardViewportHandler); } catch (e) {}
-      try { window.visualViewport.removeEventListener('scroll', keyboardViewportHandler); } catch (e) {}
+      try { window.visualViewport.removeEventListener("resize", keyboardViewportHandler); } catch (e) {}
+      try { window.visualViewport.removeEventListener("scroll", keyboardViewportHandler); } catch (e) {}
       keyboardViewportHandler = null;
     }
     var page = document.querySelector(".cm-game-page");
@@ -2656,18 +2694,15 @@
       page.style.paddingBottom = "";
       page.style.boxSizing = "";
     }
-    /* The keyboard may have scrolled the page to reveal the input — put
-       the game back to the top or the header "eats" the board's first row. */
-    try {
-      window.scrollTo(0, 0);
-      if (page) page.scrollTop = 0;
-      var shell = document.querySelector(".cm-game-shell");
-      if (shell) shell.scrollTop = 0;
-    } catch (e) {}
+    resetPageScroll();
   }
 
   document.addEventListener("focusin", function (ev) {
     var target = ev.target;
+    if (target && target.matches && target.matches("input, textarea, select")) {
+      sanitizeFieldAutofill(target);
+      try { document.documentElement.classList.add("cm-keyboard-active"); } catch(e) {}
+    }
     if (isMobileTouchEnv() && isGameTextField(target) && !isRecentUserFocusIntent()) {
       try { target.blur(); } catch (e) {}
       return;
@@ -2680,40 +2715,20 @@
     keyboardActiveInput = target;
     if (!keyboardLocked) {
       keyboardLocked = true;
-      keyboardBaseHeight = Math.max(
-        page.getBoundingClientRect().height || 0,
-        window.innerHeight || 0,
-        window.visualViewport ? window.visualViewport.height || 0 : 0
-      );
-      if (keyboardBaseHeight > 0) {
-        page.style.height = keyboardBaseHeight + "px";
-        page.style.maxHeight = keyboardBaseHeight + "px";
-        page.style.overflow = "auto";
-        page.style.boxSizing = "border-box";
-      }
+      resetPageScroll();
       if (window.visualViewport) {
         keyboardViewportHandler = function () {
           if (!keyboardLocked) return;
-          var vv = window.visualViewport;
-          var inset = Math.max(0, Math.round(keyboardBaseHeight - (vv.height + vv.offsetTop)));
-          page.style.height = keyboardBaseHeight + "px";
-          page.style.maxHeight = keyboardBaseHeight + "px";
-          page.style.paddingBottom = inset > 0 ? inset + 'px' : '';
-          if (keyboardActiveInput && keyboardActiveInput.scrollIntoView) {
-            try { keyboardActiveInput.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch (e) {}
-          }
+          resetPageScroll();
         };
-        try { window.visualViewport.addEventListener('resize', keyboardViewportHandler); } catch (e) {}
-        try { window.visualViewport.addEventListener('scroll', keyboardViewportHandler); } catch (e) {}
-        keyboardViewportHandler();
+        try { window.visualViewport.addEventListener("resize", keyboardViewportHandler, { passive: true }); } catch (e) {}
+        try { window.visualViewport.addEventListener("scroll", keyboardViewportHandler, { passive: true }); } catch (e) {}
       }
     }
-    if (keyboardTimer) window.clearTimeout(keyboardTimer);
-    keyboardTimer = window.setTimeout(function () {
-      try {
-        target.scrollIntoView({ block: "center", behavior: "smooth" });
-      } catch (e) { }
-    }, 180);
+    resetPageScroll();
+    setTimeout(resetPageScroll, 50);
+    setTimeout(resetPageScroll, 150);
+    setTimeout(resetPageScroll, 300);
   }, true);
 
   document.addEventListener("focusout", function (ev) {
@@ -2727,11 +2742,9 @@
         return;
       }
       releaseKeyboardLock();
-    }, 160);
+    }, 120);
   }, true);
 
-  /* Safety net: if the viewport changes a lot while locked (rotation with
-     keyboard open), re-read the real height after the fact. */
   window.addEventListener("orientationchange", function () {
     if (!shouldUseKeyboardLock() || !keyboardLocked) return;
     var active = document.activeElement;
@@ -2739,6 +2752,16 @@
     if (active && active.matches && active.matches("input, textarea, select")) {
       try { active.focus({ preventScroll: true }); } catch (e) {}
     }
+  });
+
+  // Global scanner to neutralize password/credit card autofill on any input
+  document.addEventListener("DOMContentLoaded", function() {
+    try {
+      var inputs = document.querySelectorAll("input, textarea");
+      for (var i = 0; i < inputs.length; i++) {
+        sanitizeFieldAutofill(inputs[i]);
+      }
+    } catch(e) {}
   });
 
   /* ============================================================================
