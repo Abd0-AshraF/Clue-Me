@@ -2732,7 +2732,6 @@
   }, true);
 
   document.addEventListener("focusout", function (ev) {
-    if (!shouldUseKeyboardLock() || !keyboardLocked) return;
     if (ev.target && ev.target.closest && ev.target.closest('[role="dialog"]')) return;
     if (keyboardTimer) window.clearTimeout(keyboardTimer);
     keyboardTimer = window.setTimeout(function () {
