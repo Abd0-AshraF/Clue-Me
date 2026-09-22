@@ -622,7 +622,49 @@
       button, a, [role="button"], .cm-card {
         touch-action: manipulation;
       }
-    </style>
+    
+/* Resizable Dock Styles */
+.cm-dock {
+  height: var(--cm-dock-custom-h, min(42dvh, 17.5rem)) !important;
+}
+.cm-dock.cm-dock-tall {
+  height: var(--cm-dock-custom-h, min(60dvh, 23rem)) !important;
+}
+.cm-dock.cm-dock-compact {
+  height: var(--cm-dock-custom-h, min(28dvh, 12.5rem)) !important;
+}
+.cm-dock.cm-dock-collapsed {
+  height: auto !important;
+  min-height: 0 !important;
+}
+.cm-dock-resize-bar {
+  width: 100%;
+  height: 14px;
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 0;
+  user-select: none;
+  -webkit-user-select: none;
+  background: transparent;
+}
+.cm-dock-resize-grip {
+  width: 40px;
+  height: 4.5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-ink, #ffffff) 30%, transparent);
+  transition: all 0.15s ease;
+}
+.cm-dock-resize-bar:hover .cm-dock-resize-grip,
+.cm-dock-resize-bar:active .cm-dock-resize-grip {
+  width: 54px;
+  background: color-mix(in srgb, var(--cm-ink, #ffffff) 70%, transparent);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
+}
+
+</style>
     <!-- Apply stored language/direction/theme before first paint to avoid a flash. -->
     <script>
       (function () {
@@ -1794,53 +1836,227 @@
       })();
     </script>
 
-    <script type="module" crossorigin src="/assets/index-discord-v51.js?v=316"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=316">
-    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=316">
-    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=316">
-    <script src="/assets/useSafeArea.js?v=316"></script>
-    <script defer src="/assets/game-room-v20.js?v=316"></script>
-    <script defer src="/assets/game-ai-hud-v21.js?v=316"></script>
+    <script type="module" crossorigin src="/assets/index-discord-v51.js?v=322"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-o-tR5boG.css?v=322">
+    <link rel="stylesheet" href="/assets/responsive-layout-v19.css?v=322">
+    <link rel="stylesheet" href="/assets/room-layout-v20.css?v=322">
+    <script src="/assets/useSafeArea.js?v=322"></script>
+    <script defer src="/assets/game-room-v20.js?v=322"></script>
+    <script defer src="/assets/game-ai-hud-v21.js?v=322"></script>
   
     
 
     
 <script>
 (function(){
+  function isClueInputActive(){
+    var act = document.activeElement;
+    if(!act) return false;
+    var name = act.getAttribute("name");
+    return name === "cm_clue_word" || name === "clue_term" || name === "clue-input";
+  }
   function resetScroll(){
+    var page = document.querySelector(".cm-game-page");
+    if(!page || !isClueInputActive()) return;
     if(window.scrollY!==0||window.scrollX!==0)window.scrollTo(0,0);
     if(document.body.scrollTop!==0)document.body.scrollTop=0;
     if(document.documentElement.scrollTop!==0)document.documentElement.scrollTop=0;
     var root = document.getElementById("root");
     if(root && root.scrollTop!==0) root.scrollTop=0;
-    var page = document.querySelector(".cm-game-page");
-    if(page && page.scrollTop!==0) page.scrollTop=0;
+    if(page.scrollTop!==0) page.scrollTop=0;
     var shell = document.querySelector(".cm-game-shell");
     if(shell && shell.scrollTop!==0) shell.scrollTop=0;
   }
-  window.addEventListener("scroll",resetScroll,{passive:true});
-  document.addEventListener("focusin",function(){
-    setTimeout(resetScroll,10);setTimeout(resetScroll,50);setTimeout(resetScroll,100);setTimeout(resetScroll,300);
-  },{passive:true});
-  document.addEventListener("focusout",function(){
-    setTimeout(resetScroll,10);setTimeout(resetScroll,100);
-  },{passive:true});
   if(window.visualViewport){
-    window.visualViewport.addEventListener("resize",resetScroll,{passive:true});
-    window.visualViewport.addEventListener("scroll",resetScroll,{passive:true});
+    window.visualViewport.addEventListener("resize",function(){
+      if(isClueInputActive()){
+        setTimeout(resetScroll,10);
+        setTimeout(resetScroll,80);
+      }
+    },{passive:true});
   }
 })();
 </script>
 <style>
-      .cm-v20 .cm-teambar-side, .cm-teambar-side { overflow: hidden !important; box-sizing: border-box !important; }
-      .cm-v20 .cm-teambar-players, .cm-teambar-players { display: flex !important; flex-direction: column !important; flex-wrap: nowrap !important; overflow-y: auto !important; overflow-x: hidden !important; max-height: 4.8rem !important; }
-      .cm-v20 .cm-teambar-player, .cm-teambar-player { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; flex-shrink: 0 !important; }
+      .cm-v20 .cm-teambar, .cm-teambar {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        max-width: 36rem !important;
+      }
+      .cm-v20 .cm-teambar-side, .cm-teambar-side {
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        padding: 0.28rem 0.45rem !important;
+        border-radius: 12px !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease !important;
+      }
+      @keyframes cm-turn-pulse-glow-red {
+        0% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+          transform: scale(0.99);
+        }
+        50% {
+          box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.35);
+          transform: scale(1.01);
+        }
+        100% {
+          box-shadow: 0 0 6px 0 rgba(239, 68, 68, 0.2);
+          transform: scale(1);
+        }
+      }
+      @keyframes cm-turn-pulse-glow-blue {
+        0% {
+          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45);
+          transform: scale(0.99);
+        }
+        50% {
+          box-shadow: 0 0 12px 2px rgba(59, 130, 246, 0.35);
+          transform: scale(1.01);
+        }
+        100% {
+          box-shadow: 0 0 6px 0 rgba(59, 130, 246, 0.2);
+          transform: scale(1);
+        }
+      }
+      .cm-teambar-turn-active-red {
+        animation: cm-turn-pulse-glow-red 2s infinite ease-in-out !important;
+      }
+      .cm-teambar-turn-active-blue {
+        animation: cm-turn-pulse-glow-blue 2s infinite ease-in-out !important;
+      }
+      .cm-v20 .cm-teambar-head, .cm-teambar-head {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.25rem !important;
+        font-size: 0.76rem !important;
+        font-weight: 900 !important;
+        line-height: 1.2 !important;
+        margin-bottom: 0.2rem !important;
+      }
+      .cm-v20 .cm-teambar-title-group, .cm-teambar-title-group {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        font-weight: 900 !important;
+        letter-spacing: -0.01em !important;
+      }
+      .cm-v20 .cm-teambar-icon-badge, .cm-teambar-icon-badge {
+        width: 1.15rem !important;
+        height: 1.15rem !important;
+        border-radius: 6px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+      }
+      .cm-v20 .cm-teambar-count, .cm-teambar-count {
+        font-size: 0.72rem !important;
+        font-weight: 800 !important;
+        padding: 0 0.35rem !important;
+        line-height: 1.3 !important;
+        border-radius: 999px !important;
+      }
+      .cm-v20 .cm-teambar-players, .cm-teambar-players {
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        max-height: 5.6rem !important;
+        gap: 0.16rem !important;
+        width: 100% !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+        overscroll-behavior: contain !important;
+      }
+      .cm-v20 .cm-teambar-player, .cm-teambar-player {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        flex-shrink: 0 !important;
+        touch-action: pan-y !important;
+        padding: 0.12rem 0.32rem !important;
+        min-height: 20px !important;
+        font-size: 0.68rem !important;
+        gap: 0.25rem !important;
+        border-radius: 6px !important;
+      }
+      .cm-v20 .cm-teambar-role, .cm-teambar-role {
+        font-size: 0.55rem !important;
+        font-weight: 800 !important;
+        padding: 0 0.2rem !important;
+        height: 14px !important;
+        line-height: 14px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.12rem !important;
+      }
+      @media (max-width: 768px) {
+        .cm-v20 .cm-teambar, .cm-teambar {
+          gap: 0.3rem !important;
+          margin-bottom: 0.2rem !important;
+        }
+        .cm-v20 .cm-teambar-side, .cm-teambar-side {
+          padding: 0.2rem 0.35rem !important;
+          max-height: 8.2rem !important;
+          border-radius: 10px !important;
+        }
+        .cm-v20 .cm-teambar-head, .cm-teambar-head {
+          margin-bottom: 0.12rem !important;
+          padding-bottom: 0.12rem !important;
+          font-size: 0.68rem !important;
+          gap: 0.2rem !important;
+        }
+        .cm-v20 .cm-teambar-title-group, .cm-teambar-title-group {
+          gap: 0.2rem !important;
+          font-size: 0.68rem !important;
+        }
+        .cm-v20 .cm-teambar-icon-badge, .cm-teambar-icon-badge {
+          width: 0.95rem !important;
+          height: 0.95rem !important;
+          border-radius: 4px !important;
+        }
+        .cm-v20 .cm-teambar-count, .cm-teambar-count {
+          font-size: 0.66rem !important;
+          padding: 0 0.3rem !important;
+          line-height: 1.2 !important;
+        }
+        .cm-v20 .cm-teambar-players, .cm-teambar-players {
+          max-height: 6.6rem !important;
+          gap: 0.14rem !important;
+        }
+        .cm-v20 .cm-teambar-player, .cm-teambar-player {
+          padding: 0.08rem 0.28rem !important;
+          min-height: 18px !important;
+          height: 18px !important;
+          font-size: 0.62rem !important;
+          gap: 0.2rem !important;
+        }
+        .cm-v20 .cm-teambar-role, .cm-teambar-role {
+          font-size: 0.5rem !important;
+          height: 13px !important;
+          line-height: 13px !important;
+          padding: 0 0.18rem !important;
+        }
+      }
       html.cm-keyboard-active .cm-teambar, html.cm-keyboard-active .cm-teambar-row, html.cm-keyboard-active .cm-ui-teambar,
       body:has(input[name="cm_clue_word"]:focus) .cm-teambar, body:has(input[name="clue_term"]:focus) .cm-teambar, body:has(input[name="clue-input"]:focus) .cm-teambar,
-      body:has(input[name="cm_clue_word"]:focus) .cm-teambar-row, body:has(input[name="clue_term"]:focus) .cm-teambar-row, body:has(input[name="clue-input"]:focus) .cm-teambar-row { display: none !important; }
-      @media (max-height: 520px) { .cm-teambar, .cm-teambar-row, .cm-ui-teambar { display: none !important; } }
-      html.cm-keyboard-active .cm-board-frame, body:has(input[name="cm_clue_word"]:focus) .cm-board-frame, body:has(input[name="clue_term"]:focus) .cm-board-frame, body:has(input[name="clue-input"]:focus) .cm-board-frame { min-height: 140px !important; max-height: 52dvh !important; }
-      html.cm-keyboard-active .cm-board-frame > .grid, body:has(input[name="cm_clue_word"]:focus) .cm-board-frame > .grid, body:has(input[name="clue_term"]:focus) .cm-board-frame > .grid, body:has(input[name="clue-input"]:focus) .cm-board-frame > .grid { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; grid-template-rows: repeat(5, minmax(0, 1fr)) !important; min-height: 135px !important; }
+      body:has(input[name="cm_clue_word"]:focus) .cm-teambar-row, body:has(input[name="clue_term"]:focus) .cm-teambar-row, body:has(input[name="clue-input"]:focus) .cm-teambar-row {
+        display: none !important;
+      }
+      html.cm-keyboard-active .cm-board-frame, body:has(input[name="cm_clue_word"]:focus) .cm-board-frame, body:has(input[name="clue_term"]:focus) .cm-board-frame, body:has(input[name="clue-input"]:focus) .cm-board-frame {
+        min-height: 140px !important;
+        max-height: 52dvh !important;
+      }
+      html.cm-keyboard-active .cm-board-frame > .grid, body:has(input[name="cm_clue_word"]:focus) .cm-board-frame > .grid, body:has(input[name="clue_term"]:focus) .cm-board-frame > .grid, body:has(input[name="clue-input"]:focus) .cm-board-frame > .grid {
+        display: grid !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        grid-template-rows: repeat(5, minmax(0, 1fr)) !important;
+        min-height: 135px !important;
+      }
     </style></head>
   <body>
     <div id="root"></div>

@@ -937,9 +937,6 @@ html.cm-ui-phone:not(.cm-discord-activity) .cm-lobby-page {
 
 /* Virtual Keyboard Viewport Adaptation */
 @media (max-height: 500px) {
-  .cm-teambar {
-    display: none !important;
-  }
   .cm-game-shell > main {
     padding-top: 2px !important;
     padding-bottom: 2px !important;

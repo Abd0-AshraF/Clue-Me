@@ -729,7 +729,7 @@ html.cm-v20.mani-dark {
   flex-direction: column;
   width: min(calc(100vw - 1.5rem), 18.5rem) !important;
   max-width: calc(100vw - 16px);
-  height: min(42dvh, 21rem);
+  height: var(--cm-dock-custom-h, min(42dvh, 21rem));
   max-height: calc(100dvh - 5.5rem);
   min-height: 8rem;
   box-sizing: border-box;
@@ -4852,7 +4852,7 @@ html.cm-v20.mani-dark .cm-teambar-blue {
   .cm-v20 .cm-dock,
   .cm-v20 .cm-side-row > .cm-dock {
     width: clamp(12rem, 72vw, 14.5rem) !important;
-    height: min(42dvh, 17.5rem) !important;
+    height: var(--cm-dock-custom-h, min(42dvh, 17.5rem)) !important;
     border-radius: 1.1rem !important;
     border-width: 3.5px !important;
     border-style: solid !important;
@@ -6970,13 +6970,7 @@ html.mot .cm-teambar-live-turn-badge-blue,
 
 /* teams kept visible */
 
-@media (max-height: 520px) {
-  .cm-teambar,
-  .cm-teambar-row,
-  .cm-ui-teambar {
-    display: none !important;
-  }
-}
+/* @media (max-height: 520px) removed to keep team bar visible */
 
 html.cm-keyboard-active .cm-board-frame,
 body:has(input[name="cm_clue_word"]:focus) .cm-board-frame,
@@ -7014,4 +7008,41 @@ body:has(input[name="clue_term"]:focus) .cm-side,
 body:has(input[name="clue-input"]:focus) .cm-side {
   flex-shrink: 0 !important;
   z-index: 20 !important;
+}
+
+/* Flexible Resizable Dock */
+.cm-dock {
+  height: var(--cm-dock-custom-h, min(42dvh, 17.5rem)) !important;
+}
+.cm-dock.cm-dock-tall {
+  height: var(--cm-dock-custom-h, min(60dvh, 23rem)) !important;
+}
+.cm-dock.cm-dock-compact {
+  height: var(--cm-dock-custom-h, min(28dvh, 12.5rem)) !important;
+}
+.cm-dock-resize-bar {
+  width: 100%;
+  height: 14px;
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 0;
+  user-select: none;
+  -webkit-user-select: none;
+  background: transparent;
+}
+.cm-dock-resize-grip {
+  width: 40px;
+  height: 4.5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-ink, #ffffff) 30%, transparent);
+  transition: all 0.15s ease;
+}
+.cm-dock-resize-bar:hover .cm-dock-resize-grip,
+.cm-dock-resize-bar:active .cm-dock-resize-grip {
+  width: 54px;
+  background: color-mix(in srgb, var(--cm-ink, #ffffff) 70%, transparent);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
 }
